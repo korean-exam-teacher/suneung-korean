@@ -307,6 +307,7 @@ mark{background:#FFE58A;color:#1B2230;padding:0 1px}
 .tag.skill{border-color:transparent;background:var(--bg-sub);color:var(--text-sub)}
 .detail .tag.skill{background:var(--bg)}
 .d-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.d-actions a.do-report{text-decoration:none;display:inline-flex;align-items:center}
 .btn-line{
   border:1px solid var(--brand);background:var(--bg);color:var(--brand);
   font-size:13.5px;font-weight:700;padding:7px 14px;border-radius:3px;
@@ -614,6 +615,7 @@ img.fig{display:block;max-width:min(100%,640px);height:auto;margin:6px auto 0;ba
       <button class="gnb-link" type="button" id="bkLink">담은 문제<span class="gnb-count bk" id="bkCount"></span></button>
       <a class="gnb-link sub" href="#exams">회차별 보기</a>
       <a class="gnb-link sub" href="#guide">이용 안내</a>
+      <a class="gnb-link sub" href="https://docs.google.com/forms/d/e/1FAIpQLSdCkEn1SwTAvnc03M6mEtuhApm3kOqn1BMdI0A_H7iGOQREGg/viewform" target="_blank" rel="noopener">의견 보내기</a>
     </nav>
   </div>
 </header>
@@ -777,6 +779,11 @@ img.fig{display:block;max-width:min(100%,640px);height:auto;margin:6px auto 0;ba
         <summary>원본 그림(제시 자료·지문 속 그림·매체 화면)</summary>
         <p>그래프·도식·표·사진·만화·매체 화면처럼 글자로 옮길 수 없는 부분은 원본 문제지(PDF)에서 그 자리를 잘라 낸 그림으로 보여 줍니다. 문항 252개의 제시 자료(&lt;보기&gt;·&lt;자료&gt;·&lt;학습 활동&gt; 등, 이 중 10문항은 그림으로 된 선택지까지)와 지문 72개(그림이 든 독서·화법과 작문 지문, 화면으로 된 언어와 매체 지문)가 해당합니다. 그림 아래 "글자로 보기"를 누르면 원본에서 뽑아 둔 글자만 볼 수 있습니다(검색은 늘 이 글자로 합니다). 그림은 글자를 새로 짓지 않고 원본을 그대로 잘라 낸 것이며, 글꼴 크기 단추로는 커지지 않습니다. 2028학년도 예시문항은 원본 문제지 PDF에서 화법과 언어 6번, 독서와 작문 20·28·30번의 자료를 잘라 넣었습니다.</p>
       </details>
+      <details>
+        <summary>오류 신고 · 의견 보내기</summary>
+        <p>문항을 펼치면 아래쪽에 "오류 신고" 버튼이 있습니다. 누르면 새 창에서 신고 양식(구글 설문지)이 열리고, 어느 회차 몇 번 문항인지가 자동으로 채워집니다. 지문·선택지 오탈자, 정답·해설 오류, 그림이 빠지거나 잘린 곳, 유형 분류가 이상한 곳을 알려 주세요. 사이트 전체에 대한 건의는 맨 위 메뉴의 "의견 보내기"로 보낼 수 있습니다. 로그인 없이 익명으로 보낼 수 있으며, 이름이나 학교는 적지 않아도 됩니다.</p>
+        <p><a href="https://docs.google.com/forms/d/e/1FAIpQLSdCkEn1SwTAvnc03M6mEtuhApm3kOqn1BMdI0A_H7iGOQREGg/viewform" target="_blank" rel="noopener">신고·의견 양식 열기</a></p>
+      </details>
     </div>
     <div class="foot-copy">문항·지문·선택지는 한국교육과정평가원 시행 문제지에서 옮긴 것이며, 학습용으로 정리했습니다.</div>
   </div>
@@ -847,6 +854,14 @@ function areaKey(a){
 }
 function areaBadge(a){ return `<span class="area" data-k="${areaKey(a)}">${escapeHtml(a)}</span>`; }
 function itemKey(it){ return `${it.exam_id}||${it.영역}||${it.문항번호}`; }
+
+/* ---------- 오류 신고 · 의견 보내기 (구글 설문지, 문항 위치 칸을 미리 채움) ---------- */
+const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSdCkEn1SwTAvnc03M6mEtuhApm3kOqn1BMdI0A_H7iGOQREGg/viewform';
+const FEEDBACK_ENTRY_ITEM = 'entry.1414482263';
+function reportUrl(it){
+  const where = `${it.명칭} ${it.영역} ${it.문항번호}번 [${itemKey(it)}]`;
+  return `${FEEDBACK_FORM}?usp=pp_url&${FEEDBACK_ENTRY_ITEM}=${encodeURIComponent(where)}`;
+}
 
 function getPassage(exam_id, area, range){
   if(!range || range === '(독립 문항)') return null;
@@ -944,6 +959,7 @@ function detailHtml(it, withJump, num){
     <div class="d-actions">
       <button type="button" class="btn-plain do-basket ${inBasket(itemKey(it))?'on':''}" data-key="${escapeHtml(itemKey(it))}" aria-pressed="${inBasket(itemKey(it))}">${bkBtnLabel(inBasket(itemKey(it)))}</button>
       <button type="button" class="btn-plain goto-similar" data-key="${escapeHtml(itemKey(it))}" title="같은 문항 유형${(it.갈래||[]).length?'과 같은 지문 갈래':''}의 다른 회차 문항을 모아 봅니다.">같은 유형 문항 보기</button>
+      <a class="btn-plain do-report" href="${reportUrl(it)}" target="_blank" rel="noopener" title="이 문항의 오탈자, 정답·해설 오류, 그림 문제 등을 알려 주세요. 새 창에서 신고 양식이 열리고 문항 위치가 자동으로 채워집니다.">오류 신고</a>
       ${it._h ? `<button type="button" class="btn-plain do-explain" data-key="${escapeHtml(itemKey(it))}" aria-expanded="false">해설 보기</button>` : ''}
       ${withJump ? `<button type="button" class="btn-line goto-exam" data-exam="${escapeHtml(it.exam_id)}" data-key="${escapeHtml(itemKey(it))}">지문과 함께 보기 →</button>` : ''}
     </div>
