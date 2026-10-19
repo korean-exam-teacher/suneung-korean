@@ -1,0 +1,365 @@
+# Stage 27 2022학년도 수능 예시문항 파이프라인 (Version 49)
+
+########## merge_v42.py
+#!/usr/bin/env python3
+"""Version 49: 2022학년도 수능 예시문항(공통+선택 체제, 56문항)을 전개년 기출문제에 넣는다.
+merge_v41.py → site_v41.html → (이 단계) → site_v42.html. 자료: /home/claude/ex22/out.json (ex22/assemble.py)"""
+import json, re, sys, subprocess
+subprocess.run([sys.executable, '/home/claude/merge_v41.py'], check=True)
+s = open('/home/claude/site_v41.html', encoding='utf-8').read()
+D = json.load(open('/home/claude/ex22/out.json', encoding='utf-8'))
+def setconst(name, fn):
+    global s
+    m = re.search(rf'^const {name} = (.*);$', s, re.M)
+    v = fn(json.loads(m.group(1)))
+    s = s[:m.start(1)] + json.dumps(v, ensure_ascii=False) + s[m.end(1):]
+def rep(old, new, count=1):
+    global s
+    n = s.count(old)
+    if n != count: sys.exit(f'patch miss ({n} != {count}): {old[:80]!r}')
+    s = s.replace(old, new)
+setconst('ITEMS', lambda v: [i for i in v if i['exam_id'] != '2022-예시'] + D['items'])
+setconst('PASSAGES', lambda v: {**v, **D['passages']})
+setconst('CHOICES', lambda v: {**v, **D['choices']})
+setconst('PASSAGE_NOTES', lambda v: {**v, **D['notes']})
+# 회차 이름·순서·표
+rep("  if(m === '예비') return {code:`${y}`, kind:`예비 시행${form}`};",
+    "  if(m === '예비') return {code:`${y}`, kind:`예비 시행${form}`};\n  if(m === '예시') return {code:`${y}`, kind:'예시문항'};")
+rep("  const mm = m === '예비' ? 0 : (Number(m) || 0);", "  const mm = (m === '예비' || m === '예시') ? 0 : (Number(m) || 0);")
+rep("    const col = m === '예비' ? 'pre' : Number(m);", "    const col = (m === '예비' || m === '예시') ? 'pre' : Number(m);")
+rep("    const name = `${y}학년도 ${LABEL[col]}${f ? ` ${f}형` : ''}`;",
+    "    const name = `${y}학년도 ${id.includes('예시') ? '예시문항' : LABEL[col]}${f ? ` ${f}형` : ''}`;")
+rep("""    if(byYear[y].pre) h += `<tr class="pre-row"><td>${y}학년도 <small>예비 시행</small></td><td colspan="3" class="pre-cell">${btns(y,'pre',byYear[y].pre)}<span class="pre-note">수준별 국어 도입 전 ${Number(y)-2}년에 시행</span></td></tr>`;""",
+    """    if(byYear[y].pre){
+      const ex = byYear[y].pre.some(id=>id.includes('예시'));
+      h += `<tr class="pre-row"><td>${y}학년도 <small>${ex ? '예시문항' : '예비 시행'}</small></td><td colspan="3" class="pre-cell">${btns(y,'pre',byYear[y].pre)}<span class="pre-note">${ex ? '공통+선택 과목 체제 도입을 앞두고 평가원이 공개한 예시문항(실제 시행되지 않음)' : `수준별 국어 도입 전 ${Number(y)-2}년에 시행`}</span></td></tr>`;
+    }""")
+# 이용 안내
+rep('모두 67개 회차 3,202문항을', '모두 68개 회차 3,258문항(2022학년도 수능 예시문항 56문항 포함)을')
+rep('3,202문항 중 2,924문항', '3,258문항 중 2,924문항')
+rep('3,202문항 중 3,194문항의 선택지', '3,258문항 중 3,250문항의 선택지')
+rep('<b>2018~2027학년도</b>:', '<b>2022학년도 수능 예시문항</b>: 공통 과목(독서·문학) 34문항과 선택 과목(화법과 작문·언어와 매체) 각 11문항, 모두 56문항입니다. 평가원 예시문항 문제지 PDF에서 글자 단위로 옮겼고, 정답·배점은 평가원 「2022학년도 대학수학능력시험 예시문항 정답표」로 넣었습니다(공통 과목 배점 합 76점 일치 확인). 표·도식·그래프·매체 화면은 원본 문제지에서 잘라 낸 그림으로 함께 보여 줍니다. 유형과 소재 표시는 해설 자료 없이 문항 내용을 보고 붙인 것이라 "유형 확인" 표시가 없습니다. 실제로 시행된 시험이 아니므로 회차 표에서는 "예시문항" 줄로 따로 보입니다.</p>\n        <p><b>2018~2027학년도</b>:')
+open('/home/claude/site_v42.html', 'w', encoding='utf-8').write(s)
+print('ok', len(s))
+
+########## ex22/parse.py
+import json, re, sys
+sys.path.insert(0, '/home/claude/chk'); sys.path.insert(0, '/home/claude/fig/tools')
+from openpyxl import load_workbook
+from pua_map import READ, compose, EXTRA
+from box import HDR
+wb = load_workbook("/home/claude/chk/직접확인_목록_원본.xlsx"); ws = wb["2 옛한글·기호(글자별)"]
+CODE = {}
+for r in ws.iter_rows(min_row=2, values_only=True):
+    num, code, typed = r[0].split("-")[1], r[2], r[6]
+    if typed: CODE[chr(int(code[2:], 16))] = typed
+    elif num in READ: CODE[chr(int(code[2:], 16))] = compose(READ[num])
+CODE["\U000f0854"] = "『"; CODE["\U000f0855"] = "』"; CODE.update(EXTRA)
+def fix(t): return ''.join(CODE.get(c, '□' if (0xE000 <= ord(c) <= 0xF8FF or ord(c) >= 0xF0000) else c) for c in t)
+L = json.load(open('/home/claude/chk/streams2/2022-예시.json'))
+L.sort(key=lambda l: (l['pg'], l['col'], l['top']))
+def junk(l):
+    t = l['t'].strip()
+    if not t: return True
+    if l['top'] < 140 and (HDR.match(t) or len(t) <= 30 and re.search(r'(예시문항 문제지|제 1 교시|홀수형|국어 영역)', t)): return True
+    if '저작권' in t and '평가원' in t: return True
+    if re.fullmatch(r'\d{1,2}(\s+\d{1,2})?', t): return True
+    return False
+def area(pg, n):
+    if pg <= 11: return '공통'
+    return '화법과 작문' if pg <= 15 else '언어와 매체'
+lines = []
+stop = False
+for l in L:
+    if junk(l): continue
+    t = l['t'].strip()
+    if t.startswith('* 확인 사항') or t.startswith('◦ 답안지') or t == '하시오.' and lines and '확인' in lines[-1]['t']:
+        continue
+    t2 = fix(t); ts2 = fix(l.get('ts', t)).strip()
+    if (re.search(r'[가-힣]{12,}', t2) and ts2.count(' ') > t2.count(' ')) or ts2.count(' ') >= t2.count(' ') + 3:
+        u = ts2
+        u = re.sub(r'^(\d{1,2}\.)(?=\S)', r'\1 ', u)
+        u = re.sub(r'([①②③④⑤])(?=\S)', r'\1 ', u)
+        u = re.sub(r'([㉠-㉦ⓐ-ⓔ㉮-㉲]):(?=\S)', r'\1: ', u)
+        t2 = u
+    lines.append(dict(l, t=t2, ts=ts2))
+json.dump(lines, open('/home/claude/ex22/lines.json', 'w', encoding='utf-8'), ensure_ascii=False)
+# 덩어리 나누기
+SET = re.compile(r'^\[(\d{1,2})\s*[～~∼]\s*(\d{1,2})\]\s*(.*)')
+ITEM = re.compile(r'^(\d{1,2})\.\s*(.*)')
+blocks = []; cur = None; part = None; expect = {}
+for l in lines:
+    t = l['t']; ar = area(l['pg'], 0)
+    m = SET.match(t)
+    if m:
+        cur = {'kind': 'set', 'area': ar, 'range': (int(m.group(1)), int(m.group(2))), 'head': [l], 'body': []}; blocks.append(cur); part = 'head'; expect[ar] = int(m.group(1)); continue
+    m = ITEM.match(t)
+    if m and int(m.group(1)) == expect.get(ar, 1):
+        expect[ar] = int(m.group(1)) + 1
+        cur = {'kind': 'item', 'area': ar, 'num': int(m.group(1)), 'lines': [l]}; blocks.append(cur); continue
+    if cur is None: continue
+    if cur['kind'] == 'set':
+        if part == 'head' and not re.match(r'^(\(가\)|\[|<|\()', t) and len(cur['head']) < 3 and cur['head'][-1]['t'].rstrip().endswith(('하여','이고,','따라','는','과','와','고,','이며,','메신저로','인터넷', '서로')) :
+            cur['head'].append(l); continue
+        part = 'body'; cur['body'].append(l)
+    else:
+        cur['lines'].append(l)
+json.dump(blocks, open('/home/claude/ex22/blocks.json', 'w', encoding='utf-8'), ensure_ascii=False)
+for b in blocks:
+    if b['kind'] == 'set': print('SET', b['area'], b['range'], ' / '.join(x['t'] for x in b['head'])[:90], len(b['body']))
+    else: print('  ', b['area'], b['num'], b['lines'][0]['t'][:50], len(b['lines']))
+
+########## ex22/build.py
+import json, re, collections
+blocks = json.load(open('/home/claude/ex22/blocks.json', encoding='utf-8'))
+lines = json.load(open('/home/claude/ex22/lines.json', encoding='utf-8'))
+colR = collections.defaultdict(float); colL = collections.defaultdict(lambda: 9999)
+for l in lines:
+    k = (l['pg'], l['col']); colR[k] = max(colR[k], l['x1']); colL[k] = min(colL[k], l['x0'])
+def join(ls, verse=False):
+    out = ''
+    for i, l in enumerate(ls):
+        t = l['t']
+        if i == 0: out = t; continue
+        p = ls[i-1]; k = (p['pg'], p['col'])
+        samecol = (l['pg'], l['col']) == k
+        gap = l['top'] - p['top'] if samecol else 18.4
+        short = p['x1'] < colR[k] - 14
+        indent = l['x0'] - colL[(l['pg'], l['col'])] > 6
+        if gap > 30: out += '\n\n' + t if verse else '\n' + t
+        elif short or (indent and not verse and re.match(r'^\S', t) and p['t'].rstrip().endswith(('.', '다', '?', '!', '”', '’', ')'))):
+            out += '\n' + t
+        else:
+            out += (' ' if p.get('te') else '') + t
+    return out
+res = {'sets': [], 'items': []}
+cur_set = None
+for b in blocks:
+    if b['kind'] == 'set':
+        cur_set = b
+        res['sets'].append({'area': b['area'], 'range': b['range'], 'head': ' '.join(x['t'] for x in b['head']), 'text': join(b['body'], verse=True), 'n': len(b['body'])})
+        continue
+    ls = b['lines']
+    # 발문 끝
+    j = 0
+    while j < len(ls) - 1 and not re.search(r'(\?|\[3점\])\s*$', ls[j]['t']): j += 1
+    stem = join(ls[:j+1]).replace('\n', ' ')
+    k = j + 1
+    while k < len(ls) and not ls[k]['t'].startswith('①'): k += 1
+    bogi = join(ls[j+1:k]) if k > j + 1 else ''
+    chtxt = ' '.join(x['t'] for x in ls[k:])
+    parts = re.split(r'\s*([①②③④⑤])\s*', chtxt)
+    ch = {}
+    for a, c in zip(parts[1::2], parts[2::2]): ch.setdefault('①②③④⑤'.index(a) + 1, c.strip())
+    # 줄 단위 이어 붙이기(선택지 안 줄 바꿈은 te 기준)
+    chl = []; curc = None
+    for x in ls[k:]:
+        segs = re.split(r'(?=[①②③④⑤])', x['t'])
+        for sg in segs:
+            if not sg.strip(): continue
+            if sg[0] in '①②③④⑤': curc = [sg[1:].strip()]; chl.append(curc)
+            elif curc is not None: curc.append(('\x01' if not prevte else ' ') + sg.strip())
+        prevte = x.get('te')
+    choices = [''.join(c).replace('\x01', '') for c in chl]
+    res['items'].append({'area': b['area'], 'num': b['num'], 'set': list(cur_set['range']) if cur_set and cur_set['area'] == b['area'] and cur_set['range'][0] <= b['num'] <= cur_set['range'][1] else None,
+                         'stem': stem, 'bogi': bogi, 'choices': choices, 'pg': ls[0]['pg']})
+json.dump(res, open('/home/claude/ex22/raw.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+for it in res['items']:
+    flag = '' if len(it['choices']) == 5 else f' !!{len(it["choices"])}'
+    print(it['area'][:2], it['num'], it['set'], flag, '|', it['stem'][:60], '| bogi', len(it['bogi']))
+
+########## ex22/assemble.py
+# 2022학년도 수능 예시문항 → 문제은행 자료(ITEMS/PASSAGES/CHOICES/PASSAGE_NOTES 조각)
+import json, re, collections
+R = json.load(open('/home/claude/ex22/raw.json', encoding='utf-8'))
+site = open('/home/claude/site_v41.html', encoding='utf-8').read()
+OLD = json.loads(re.search(r'^const ITEMS = (.*);$', site, re.M).group(1))
+EX = '2022-예시'; NAME = '2022학년도 대학수학능력시험 예시문항'
+# 정답표: 한국교육과정평가원 「2022학년도 대학수학능력시험 예시문항 정답표」(국어)
+KEY_C = dict(zip(range(1, 35), [(4,2),(2,2),(3,2),(1,3),(5,2),(1,2),(1,2),(4,3),(3,2),(3,2),(5,2),(3,2),(1,2),(5,2),(4,3),(2,2),(5,2),
+                                (4,3),(1,2),(2,2),(4,3),(2,2),(5,2),(4,2),(4,3),(2,2),(4,2),(5,2),(4,3),(2,2),(2,2),(2,2),(3,3),(5,2)]))
+KEY_HJ = dict(zip(range(35, 46), [(1,2),(3,3),(2,2),(3,2),(5,2),(3,2),(4,3),(3,2),(4,2),(1,2),(2,2)]))
+KEY_EM = dict(zip(range(35, 46), [(1,2),(5,2),(2,3),(4,2),(5,2),(3,2),(2,2),(3,2),(4,2),(2,2),(1,3)]))
+AREA_C = {(1,4):'문학',(5,10):'독서',(11,15):'문학',(16,21):'독서',(22,25):'문학',(26,29):'문학',(30,34):'독서'}
+
+def P(t): return t
+# ---------- 지문 ----------
+passages = {}; notes = {}
+def pkey(area, a, b): return f'{EX}||{area}||{a}~{b}'
+for st in R['sets']:
+    a, b = st['range']; area = st['area'] if st['area'] != '공통' else AREA_C[(a, b)]
+    t = st['text'].strip()
+    t = re.sub(r'\n(\(화법과 작문\) )?홀수형\n', '\n', t)
+    t = re.sub(r'(-)\*(\S)', r'\1\n*\2', t)              # 출전 표기 뒤 각주
+    passages[pkey(area, a, b)] = t
+FIX = {
+ pkey('문학',11,15): [('돌아오더라.노복이', '돌아오더라.\n노복이'), ('어떤 연고인고?”박씨', '어떤 연고인고?”\n박씨'), ('하시는지요?”그러나', '하시는지요?”\n그러나')],
+ pkey('문학',26,29): [('되든지.”우선은', '되든지.”\n우선은'), ('앉았다.형식의', '앉았다.\n형식의'), ('…….” 하면서 형식의', '…….”\n하면서 형식의')],
+ pkey('화법과 작문',38,41): [('되겠다.민지:', '되겠다.\n민지:'), ('빌려 줄게. 민지:', '빌려 줄게.\n민지:')],
+ pkey('독서',16,21): [('\nRezitation\n', '\n')],
+}
+for k, reps in FIX.items():
+    for a, b in reps:
+        assert a in passages[k], (k, a); passages[k] = passages[k].replace(a, b)
+# 22~25: 사진 곁글(두 단 배치)을 원본 순서대로 다시 씀
+k = pkey('문학',22,25); t = passages[k]
+i0 = t.index('국립중앙박물관에는'); i1 = t.index('추철회시문다완(萩鐵繪詩文茶碗)') + len('추철회시문다완(萩鐵繪詩文茶碗)')
+t = t[:i0] + ('국립중앙박물관에는 ‘하기야키’라고 불리는 도자기 가운데 한 점이 소장되어 있다([사진]). ‘하기야키’는 진주 지방에서 도자기 비법을 이어 오다가 임진왜란 때에 일본으로 끌려간 도공 형제와 그 후손들이 일본 하기 지방에서 만든 도자기이다. [사진]의 도자기에는 한글로 (가)와 같은 시조가 씌어 있다.\n'
+              '[사진] 추철회시문다완(萩鐵繪詩文茶碗)') + t[i1:]
+for a, b in [('□겨ᄉᆞ라', '딩겨ᄉᆞ라'), ('잦미우랴낯선', '잦미우랴\n낯선'), ('자연(自然) 박살-작자 미상', '자연(自然) 박살\n-작자 미상')]:
+    assert a in t, a; t = t.replace(a, b)
+passages[k] = t
+# 언매 40~42 (가) 종이 신문: 원본 지면 순서대로 다시 씀
+k = pkey('언어와 매체',40,42); t = passages[k]
+news = """(가)
+3면 2020년 2월 △△일 목요일 사회 제2456호 ○○신문
+넘치는 ‘가짜 뉴스’ … 사실 왜곡과 사회적 갈등 유발 심각
+누리소통망 통해 빠르게, 널리 퍼져
+‘사실 뉴스’보다 더 많이 공유되기도
+㉠‘가짜 뉴스’가 날로 늘어나며 사회적 문제를 야기하고 있다. 인터넷의 발전과 스마트폰의 보급, 누리소통망의 발달 등 매체 환경의 변화가 가짜 뉴스의 파급력을 크게 키웠다는 분석이다.
+○○에서는 ‘가짜 뉴스 개념과 대응 방안’이라는 토론회를 개최하였다. ㉡토론 과정에서 매체 환경의 변화로 특히 뉴스의 생산과 유포 양상이 바뀌었다는 점이 지적되었다. 인터넷 등의 매체를 통해 누구나 뉴스를 생산하고 유포할 수 있게 되었다는 점이 가짜 뉴스의 문제점을 심각하게 만들고 있다는 것이다.
+㉢미국의 △△ 기관은 지난 미국 대통령 선거 시기에 허위로 조작된 정보가 선거에 영향을 미쳤다고 분석하였다. ㉣실제로 미국 일부 지역에서는 ‘가짜 뉴스’가 잘못된 여론을 형성하여 사회적 갈등을 유발하였다.
+[사진] 지난 2월 ○○일 ○○에서는 가짜 뉴스 개념과 대응 방안 토론회가 열렸다. 이○○ 기자
+㉤이 토론회에서는 이와 함께 가짜 뉴스를 무엇으로 정의할 것인가에 대한 논의, 가짜 뉴스를 막기 위한 대응 방안에 대한 논의도 있었다.
+언론은 정확하고 수준 높은 보도를 하고, 언론 소비자는 가짜 뉴스를 판별하기 위한 능력을 갖추기 위해 노력해야 한다는 것이다.
+김○○ 기자 kimth@□□□.co.kr
+세계 도시 63% 하계 올림픽 개최 곤란 2050년… “지구 온난화 영향 탓”
+미세 플라스틱, 1주에 신용카드 1장 삼켜
+"""
+j = t.index('(나)'); passages[k] = news + '\n' + t[j:]
+# 화작 42~45 (나): 블로그 글(원본에서 그림으로 된 부분을 보고 옮김)
+k = pkey('화법과 작문',42,45); t = passages[k]
+assert t.rstrip().endswith('(나)')
+passages[k] = t.rstrip() + '\n나는 평소 잘 걷지 않는 편이다. 그런데 걷기에 대한 조사 보고서를 작성하고 걷기가 내게는 어떤 의미가 있을지 궁금했다. 그래서 집 앞 공원을 걸어 보았다. 천천히 걷다 보니 어떤 진로를 택할지, 과제를 함께하던 친구가 왜 화를 냈는지, 이런저런 생각들이 꼬리를 물고 이어졌다. 한동안 걷다 보니 몇 가지 물음에 해답을 찾게 되어 걷기 전보다 마음이 훨씬 가벼워졌다. 바쁜 일상을 보내느라 정작 중요한 고민들은 미뤄 두기 일쑤였는데, 걷기가 삶을 찬찬히 돌아볼 수 있는 시간을 내게 만들어 준 것이다. 밥을 먹으면 몸이 자라고, 공부를 하면 지식이 자라는 것처럼, 걷기는 앞으로 내 마음을 한 뼘쯤 자라게 해 줄 것 같다.'
+# 언매 43~45: 대화 말하는 이 이름 띄우기, (나) 발표 자료 초안 글자
+k = pkey('언어와 매체',43,45); t = passages[k]
+t = re.sub(r'(?m)^(보미|윤영|상호|정민)(?=\S)', r'\1 ', t)
+assert t.rstrip().endswith('(나)')
+t = t.rstrip() + """
+제목: 발표 자료 초안 글쓴이: 정민
+댓글로 의견 달면 참고해서 수정할게.
+얘들이 <글벗>이 왜 만들어졌는지 먼저 아는 게 좋을 거 같아서 첫 번째 슬라이드는 이렇게 구성했어.
+1. <글벗>이 만들어진 배경
+학교 공간 혁신의 개념: 미래를 위한 학교 공간을 조성하고 창의적 교육 문화를 만들어 가는 과정 / 획일화된 학교에서 벗어나 기존의 공간을 학생의 관점에서 다양하고 유연한 공간으로 재구조화하는 사업
+학교 공간 혁신의 추진 방향: 체험형 놀이터, 창의적 학습 공간 등 공감형 공간 조성 / 교육과정과 연계하여 학생과 교사가 적극적으로 참여
+연도별 시행 상황(단위: 교): 2019년 170, 2020년(예정) 270, 2021년(예정) 360
+자료 출처: 학교 공간 혁신 누리집(www.△△△.kr)
+얘들이 <글벗>을 이용하는 데 도움이 되도록 공간을 중심으로 두 번째 슬라이드를 구성했어.
+2. <글벗>의 공간 구성과 활용 방법
+<글벗>의 공간 구성(도면) / 공간별 활용 방법(인터뷰 동영상)
+세 번째 슬라이드는 <글벗> 이용 모습을 포함해서 구성했어.
+3. <글벗> 이용 현황과 학생들의 만족도
+학생들의 <글벗> 이용 모습(사진) / 학생 만족도(단위: 명): 만족 75, 불만족 15, 모르겠음 20 / 개선 필요 사항(단위: 명): 조명 20, 스터디룸 30, 소음 25"""
+passages[k] = t
+# 각주 → 낱말 풀이
+for k, t in passages.items():
+    ns = []
+    for m in re.finditer(r'(?m)^\*\s*([^:\n]+?)\s*:\s*(.+)$', t):
+        ns.append([m.group(1).strip(), m.group(2).strip(), m.group(0)])
+    if ns: notes[k] = ns
+
+# ---------- 문항 ----------
+SETS = {}
+TYPE = {  # 번호: (해설식 유형 이름, 유형 묶음)
+ ('문학',1):('표현상의 특징 비교','표현·서술상의 특징'), ('문학',2):('공간의 의미 파악','소재·배경의 기능'), ('문학',3):('시구의 의미 이해','시어·시구·구절의 의미'),
+ ('문학',4):('외적 준거에 따른 작품 감상','외적 준거에 따른 감상'), ('독서',5):('독서의 목적에 따른 글 추천','독서 방법·활동'), ('독서',6):('세부 내용 파악','세부·핵심 내용 파악'),
+ ('독서',7):('입장에 따른 대답 추론','내용 추론'), ('독서',8):('구체적 사례에 적용','구체적 사례·상황 적용'), ('독서',9):('주장에 대한 비판','비판적 이해·평가'),
+ ('독서',10):('문맥적 의미 파악(바꿔 쓰기)','어휘의 문맥적 의미'), ('문학',11):('작품 내용 이해','작품 내용·상황 이해'), ('문학',12):('공간과 사건의 관계 파악','소재·배경의 기능'),
+ ('문학',13):('장면 비교 이해','작품 내용·상황 이해'), ('문학',14):('인물에 대한 평가','인물의 심리·태도·성격'), ('문학',15):('외적 준거에 따른 작품 감상','외적 준거에 따른 감상'),
+ ('독서',16):('두 글의 내용 전개 방식 비교','글의 구조·전개 방식'), ('독서',17):('견해에 부합하는 진술 추론','내용 추론'), ('독서',18):('다른 견해와 비교(보기)','견해·관점 비교'),
+ ('독서',19):('이념의 실천 내용 추론','내용 추론'), ('독서',20):('관점에 따른 비평','견해·관점 비교'), ('독서',21):('독서 활동 과정(재구성하기)','독서 방법·활동'),
+ ('문학',22):('해석을 바탕으로 한 작품 감상','외적 준거에 따른 감상'), ('문학',23):('소재 중심 작품 비교','작품 간 비교'), ('문학',24):('작품 간 변모 양상 구별','작품 간 비교'),
+ ('문학',25):('작품의 향유 양상 추론','작품 감상·수용'), ('문학',26):('장면 비교 이해','작품 내용·상황 이해'), ('문학',27):('인물의 심리·인식 파악','인물의 심리·태도·성격'),
+ ('문학',28):('구절의 의미 파악','시어·시구·구절의 의미'), ('문학',29):('외적 준거에 따른 작품 감상','외적 준거에 따른 감상'), ('독서',30):('세부 내용 파악(일치)','세부·핵심 내용 파악'),
+ ('독서',31):('실용 자료에 적용(근거 찾기)','구체적 사례·상황 적용'), ('독서',32):('의견의 적절성 판단','비판적 이해·평가'), ('독서',33):('그래프에 적용','구체적 사례·상황 적용'),
+ ('독서',34):('다의어의 의미 파악','어휘의 문맥적 의미'),
+ ('화법과 작문',35):('발표 계획의 반영 여부','화법: 내용 생성·조직'), ('화법과 작문',36):('청중을 고려한 발표 전략(자료 활용)','화법: 자료·매체 활용'),
+ ('화법과 작문',37):('청중의 듣기 활동 평가','화법: 내용 이해·평가'), ('화법과 작문',38):('대화 참여자의 말하기 방식','화법: 말하기 방식·표현 전략'),
+ ('화법과 작문',39):('표현 전략과 대화의 원리','화법: 말하기 방식·표현 전략'), ('화법과 작문',40):('초고에 대한 상호 평가','작문: 점검·고쳐쓰기'),
+ ('화법과 작문',41):('쓰기 전략 파악(비평문)','작문: 내용 생성·조직'), ('화법과 작문',42):('글쓰기 계획의 반영 여부','작문: 계획·맥락 반영'),
+ ('화법과 작문',43):('조언을 반영한 고쳐 쓰기','작문: 점검·고쳐쓰기'), ('화법과 작문',44):('작문 맥락 이해','작문: 계획·맥락 반영'), ('화법과 작문',45):('쓰기 윤리','작문: 점검·고쳐쓰기'),
+ ('언어와 매체',35):('합성어의 유형 분류','형태소·단어 형성'), ('언어와 매체',36):('합성어의 의미 관계 적용','형태소·단어 형성'), ('언어와 매체',37):('표준 발음과 음운 변동','음운·음운 변동'),
+ ('언어와 매체',38):('부정 표현(짧은·긴 부정문)','문법 요소'), ('언어와 매체',39):('중세 국어의 특징','중세 국어·국어의 변천'), ('언어와 매체',40):('매체의 특성 이해(신문·포털)','매체의 특성·정보 구성'),
+ ('언어와 매체',41):('게이트 키핑과 뉴스 수용','매체 자료의 수용·제작'), ('언어와 매체',42):('매체 언어의 표현','매체 언어의 표현 방법'), ('언어와 매체',43):('매체 대화의 특성','매체의 특성·정보 구성'),
+ ('언어와 매체',44):('발표 자료 제작 계획','매체 자료의 수용·제작'), ('언어와 매체',45):('댓글을 반영한 발표 자료 수정','매체 자료의 수용·제작'),
+}
+SETINFO = {
+ '1~4': ('백석 「수라」·김선우 「신(神)의 방」', '현대시 복합', ['현대시'], ['백석, 「수라(修羅)」', '김선우, 「신(神)의 방」']),
+ '5~10': ('정신과 육체에 대한 이원론과 동일론', '인문(철학)', ['인문·예술'], []),
+ '11~15': ('「박씨전」과 야담 「조보」 속 비범한 여성', '고전소설·야담 복합', ['고전소설'], ['작자 미상, 「박씨전」', '작자 미상, 「조보」']),
+ '16~21': ('『여씨춘추』의 음악관과 표현주의 음악(주제 통합)', '인문·예술(음악) 주제 통합', ['인문·예술'], []),
+ '22~25': ('‘개’를 소재로 한 시조의 전승과 변모', '고전시가(시조·사설시조)와 해설', ['고전시가'], ['작자 미상, 「살구」']),
+ '26~29': ('이광수 「무정」', '현대소설', ['현대소설'], ['이광수, 「무정」']),
+ '30~34': ('충전지의 충전 원리와 충전 중단 방식', '기술(전기·전자)', ['과학·기술'], []),
+ '화35~37': ('명태가 사라져 가는 실태와 되찾기 노력(발표)', '화법-발표', [], []),
+ '화38~41': ('「레 미제라블」 독후 대화와 서평 쓰기', '화법-대화·작문-서평', [], []),
+ '화42~45': ('걷기의 가치에 대한 조사 보고서와 블로그 글', '작문-보고서·블로그', [], []),
+ '언35~36': ('합성어의 분류(통사적·비통사적, 대등·종속·융합)', '문법-단어 형성', [], []),
+ '언40~42': ('가짜 뉴스를 다룬 종이 신문과 포털 뉴스 검색 화면', '매체-신문·인터넷 포털', [], []),
+ '언43~45': ('학습 공간 <글벗> 발표 준비 메신저 대화와 블로그 발표 자료', '매체-메신저·블로그', [], []),
+}
+SOLO = {37: ('표준 발음과 음운 변동 (독립 문항)', '문법(독립 문항)'), 38: ('짧은 부정문과 긴 부정문 (독립 문항)', '문법(독립 문항)'), 39: ('『훈민정음』 언해와 중세 국어 (독립 문항)', '문법(독립 문항)')}
+# 역량: 같은 유형 묶음 기존 문항에서 절반 이상 붙은 역량
+by = collections.defaultdict(list)
+for o in OLD: by[o['유형묶음']].append(o.get('역량') or [])
+def skills(g):
+    L = by[g]; c = collections.Counter(s for x in L for s in x)
+    return [s for s, n in c.most_common() if n * 2 >= len(L)] if L else []
+BOGI = {  # 원본 표·도식 제시 자료는 원본 그림과 함께 글자로도 옮겨 둔다
+ ('독서',16): '[공통점]\n◦음악에 대한 견해를 설명하기 위해 그 견해와 대비되는 견해를 제시함. ……ⓐ\n[차이점]\n◦(가)와 달리 (나)는 특정 음악 작품을 예로 제시함. ……ⓑ\n◦(나)와 달리 (가)는 음악을 다른 예술 갈래와 비교함. ……ⓒ',
+ ('독서',21): '질문하기: 좋은 곡을 작곡하기 위해 어떤 노력이 필요할까?\n↓ 탐색하기: 음악에 대한 이해를 돕는 글 찾기\n↓ 분석적 읽기: (가), (나)를 읽고 주제, 관점, 내용 등을 비교하여 종합하기\n↓ 재구성하기: 분석 내용을 바탕으로 질문에 대한 답을 재구성하여 글로 쓰기',
+ ('화법과 작문',36): '<보 기>\n[발표 전 청중 특성 분석] ㉠ 명태에 대해 흥미가 적음. ㉡ 명태가 우리 바다에서 사라져 가고 있는 상황을 모름. ㉢ 실생활에 도움이 되는 정보를 알기 원함.\n[발표 중 청중 반응 분석] ㉣ 동해의 표층 온도와 명태의 관련성을 잘 이해하지 못하고 있음. ㉤ ‘프로젝트’ 진행 과정을 간략하게 설명하기를 원하고 있음.',
+ ('화법과 작문',37): '[학생 1] ◦명태 이름 유래: 명천 태 씨 ◦명태의 새끼＝노가리 ◦음식점에서 명태의 원산지가 러시아라는 표기를 본 적이 있음. ◦○○수산연구소 누리집\n[학생 2] ◦남획과 지구 온난화 ⇒ 명태가 동해에서 사라져 가고 있음. ⇒ 명태 살리기 프로젝트 추진 ◦명절에 먹었던 동태전이 명태로 만든 것이었군.',
+ ('화법과 작문',39): '[표현 전략] ⓐ 준언어적 표현 ⓑ 비언어적 표현\n[대화의 원리] ㉮ 상대의 처지를 고려하면서 상대가 부담스럽지 않게 말하기 ㉯ 상대를 배려하며 문제의 원인을 자신의 탓으로 돌려서 말하기 ㉰ 자신에 대한 칭찬을 최소화하고 자신을 낮추어 말하기',
+ ('화법과 작문',40): '<상호 평가 활동지>\n[잘한 점]\n• 1문단: ‘활동 1’에 언급된, 작품의 사회적 배경을 구체화하여 이를 장 발장의 상황과 연결시킨 점 ……①\n• 1문단: ‘활동 1’에 언급되지 않았던, 작품 제목에 대한 정보를 추가하여 문답의 방식으로 제목의 의미를 제시한 점 ……②\n• 2문단: ‘활동 1’에 언급된, 작가에 관한 내용을 활용하여 미리엘 주교의 행동이 지닌 한계를 제시한 점 ……③\n• 4문단: ‘활동 1’에 언급되지 않았던, 작품 서문의 내용을 추가하여 작품의 의미를 강조하며 마무리한 점 ……④\n[수정할 점]\n• 3문단: 앞 문단과의 관계를 드러내는 담화 표지를 적절하게 사용하지 못한 점 ……⑤',
+ ('독서',31): '유의 사항\n◦충전지에 표시된 전압보다 전원 전압이 높은 충전기를 사용해야 합니다. ……①\n◦충전지에 표시된 충전 허용 전류보다 충전 전류의 세기가 강하면 충전지의 수명이 줄어듭니다. ……②\n◦충전지의 온도가 과도하게 상승하면 충전을 중지해야 합니다. ……③\n◦충전지를 사용하다가 수시로 충전해도 무방합니다. ……④\n◦과도하게 방전시키면 충전지의 수명이 줄어듭니다. ……⑤',
+ ('화법과 작문',42): '보고서를 쓸 때 먼저 ①사회적 추세와는 다른 우리 학교 학생들의 모습이 조사 동기가 되었음을 언급해야겠어. 또 ②조사 결과에 설문지의 질문 내용을 밝혀 제시하고, ③조사 대상별로 소제목을 달아 본문의 내용을 서술하자. 표면적 수치만 나열하기보다 ④학생과 성인의 설문 조사 결과들을 대비하여 조사 결과의 의미를 해석하는 것이 좋겠어. 그리고 ⑤일부 문항의 응답 결과를 비교하여 막대그래프로 표현해야지.',
+ ('독서',34): '', ('문학',24): '', ('언어와 매체',35): '',
+}
+CHOICE = {
+ ('독서',31): ['충전지에 표시된 전압보다 전원 전압이 높은 충전기를 사용해야 합니다.', '충전지에 표시된 충전 허용 전류보다 충전 전류의 세기가 강하면 충전지의 수명이 줄어듭니다.', '충전지의 온도가 과도하게 상승하면 충전을 중지해야 합니다.', '충전지를 사용하다가 수시로 충전해도 무방합니다.', '과도하게 방전시키면 충전지의 수명이 줄어듭니다.'],
+ ('화법과 작문',40): ['1문단: ‘활동 1’에 언급된, 작품의 사회적 배경을 구체화하여 이를 장 발장의 상황과 연결시킨 점', '1문단: ‘활동 1’에 언급되지 않았던, 작품 제목에 대한 정보를 추가하여 문답의 방식으로 제목의 의미를 제시한 점', '2문단: ‘활동 1’에 언급된, 작가에 관한 내용을 활용하여 미리엘 주교의 행동이 지닌 한계를 제시한 점', '4문단: ‘활동 1’에 언급되지 않았던, 작품 서문의 내용을 추가하여 작품의 의미를 강조하며 마무리한 점', '3문단: 앞 문단과의 관계를 드러내는 담화 표지를 적절하게 사용하지 못한 점'],
+ ('화법과 작문',42): ['사회적 추세와는 다른 우리 학교 학생들의 모습이 조사 동기가 되었음을 언급해야겠어.', '조사 결과에 설문지의 질문 내용을 밝혀 제시하고,', '조사 대상별로 소제목을 달아 본문의 내용을 서술하자.', '학생과 성인의 설문 조사 결과들을 대비하여 조사 결과의 의미를 해석하는 것이 좋겠어.', '일부 문항의 응답 결과를 비교하여 막대그래프로 표현해야지.'],
+ ('독서',34): ['ⓐ: 그 사람에게 그런 식은 안 통한다. / ⓑ: 전깃줄에 전류가 통한다.', 'ⓐ: 그와 나는 서로 통하는 면이 있다. / ⓑ: 청년기를 통해 노력의 중요성을 익혔다.', 'ⓐ: 이 길은 바다로 가는 길과 통해 있다. / ⓑ: 모두 비상구를 통해 안전하게 빠져나갔다.', 'ⓐ: 이곳은 바람이 잘 통해 빨래가 잘 마른다. / ⓑ: 그런 얄팍한 수는 나에게 통하지 않는다.', 'ⓐ: 철저한 실습을 통해 이론을 확실히 익힌다. / ⓑ: 망원경을 통해 저 멀리까지 내다보았다.'],
+ ('문학',24): ['ⓐ (가) → (나) / ⓑ (나) → (다) / ⓒ (다) → (라)', 'ⓐ (가) → (나) / ⓑ (다) → (라) / ⓒ (나) → (다)', 'ⓐ (나) → (가) / ⓑ (나) → (다) / ⓒ (다) → (라)', 'ⓐ (나) → (가) / ⓑ (다) → (라) / ⓒ (나) → (다)', 'ⓐ (다) → (라) / ⓑ (나) → (다) / ⓒ (가) → (나)'],
+ ('독서',16): ['ⓐ 적절 / ⓑ 적절 / ⓒ 적절', 'ⓐ 적절 / ⓑ 적절 / ⓒ 부적절', 'ⓐ 적절 / ⓑ 부적절 / ⓒ 적절', 'ⓐ 부적절 / ⓑ 적절 / ⓒ 적절', 'ⓐ 부적절 / ⓑ 부적절 / ⓒ 부적절'],
+ ('화법과 작문',39): ['[A] 표현 전략 ⓐ, 대화의 원리 ㉰', '[A] 표현 전략 ⓑ, 대화의 원리 ㉮', '[B] 표현 전략 ⓐ, 대화의 원리 ㉯', '[B] 표현 전략 ⓑ, 대화의 원리 ㉯', '[B] 표현 전략 ⓑ, 대화의 원리 ㉰'],
+ ('언어와 매체',35): ['㉠ 먹고살다 / ㉡ 새색시', '㉠ 뛰놀다 / ㉡ 먹거리', '㉠ 갈라서다 / ㉡ 척척박사', '㉠ 걸어오다 / ㉡ 큰아버지', '㉠ 빛나다 / ㉡ 돌다리'],
+}
+JUNK = re.compile(r'\s*(◦\s*답안지의 해당란.*|\(언어와 매체\)\s*홀수형.*|2022학년도 대학수학.*)$')
+items = []; choices = {}
+for r in R['items']:
+    a = r['area']; n = r['num']
+    if a == '공통': area = AREA_C[tuple(r['set'])]
+    else: area = a
+    key = (area, n)
+    if a == '공통': ans, pt = KEY_C[n]
+    elif a == '화법과 작문': ans, pt = KEY_HJ[n]
+    else: ans, pt = KEY_EM[n]
+    rng = f"{r['set'][0]}~{r['set'][1]}" if r['set'] else '(독립 문항)'
+    stem = r['stem'].strip()
+    if pt == 3: assert stem.endswith('[3점]'), (key, stem)
+    bogi = BOGI.get(key, r['bogi'].strip())
+    ch = CHOICE.get(key) or [JUNK.sub('', c).strip() for c in r['choices']]
+    ch = [c.replace('사연을소개해야겠다', '사연을 소개해야겠다') for c in ch]
+    assert len(ch) == 5, key
+    choices[f'{EX}||{area}||{n}'] = ch
+    if rng == '(독립 문항)':
+        so, bun = SOLO[n]; gal = []; works = []
+    else:
+        sk = ('화' if a == '화법과 작문' else '언' if a == '언어와 매체' else '') + rng
+        so, bun, gal, works = SETINFO[sk]
+    yt, grp = TYPE[key]
+    tg = '독서' if area == '독서' else '문학' if area == '문학' else ('화법' if n <= 39 else '작문') if area == '화법과 작문' else ('문법' if n <= 39 else '매체')
+    if area == '독서': ref = '독서와 작문'
+    elif area == '문학': ref = '문학'
+    elif area == '화법과 작문': ref = '화법과 언어' if n <= 37 else '화법과 언어/독서와 작문(확인 필요)' if n <= 41 else '독서와 작문'
+    else: ref = '화법과 언어' if n <= 39 else '매체-경과'
+    plen = len(re.sub(r'\s', '', passages.get(f'{EX}||{area}||{rng}', '')))
+    items.append({'연도': 2022, '시행월': None, '시행유형': '예시문항', '명칭': NAME, 'exam_id': EX, '문항번호': n, '영역': area, '지문범위': rng,
+                  '소재': so, '분야': bun, '발문': stem, '배점': pt, '유형': yt, '정답': ans, '개편매핑_과목': ref, '보기': bogi,
+                  '역량': skills(grp), '유형묶음': grp, '유형갈래': tg, '갈래': gal, '작품': works, '지문길이': plen,
+                  '_정답출처': '한국교육과정평가원 2022학년도 대학수학능력시험 예시문항 정답표'})
+assert len(items) == 56
+json.dump({'items': items, 'passages': passages, 'choices': choices, 'notes': notes}, open('/home/claude/ex22/out.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+print(len(items), len(passages), len(notes), sum(i['배점'] for i in items if i['영역'] in ('독서','문학')), [i['문항번호'] for i in items if not i['역량']])

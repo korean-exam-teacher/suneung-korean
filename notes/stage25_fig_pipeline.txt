@@ -1,0 +1,452 @@
+# Stage 25 그림 파이프라인 (Version 45~46)
+
+########## merge_v41.py
+#!/usr/bin/env python3
+"""Version 45: 원본 그림(제시 자료·선택지·지문 속 그림·매체 화면)을 site_v40.html에 얹어 site_v41.html을 만든다.
+먼저 merge_v40.py로 site_v40.html을 다시 만든 뒤 실행한다. 그림 파일은 fig/ 아래(fig/fig_index.json의 f 경로)."""
+import json, re, sys, subprocess
+subprocess.run([sys.executable, '/home/claude/merge_v40.py'], check=True)
+SRC, OUT = '/home/claude/site_v40.html', '/home/claude/site_v41.html'
+s = open(SRC, encoding='utf-8').read()
+FIGS = json.load(open('/home/claude/fig/fig_index.json', encoding='utf-8'))
+css = open('/home/claude/v41/figs.css', encoding='utf-8').read()
+js = open('/home/claude/v41/figs.js', encoding='utf-8').read()
+
+def rep(old, new, count=1):
+    global s
+    n = s.count(old)
+    if n != count: sys.exit(f'patch miss ({n} != {count}): {old[:80]!r}')
+    s = s.replace(old, new)
+
+# 1) 글자만 있는 <보기> 두 개는 원본을 보고 글자로 옮긴다(그림 대신 글자)
+TEXT_BOGI = {
+    ('2016-09-B', '문학', 36): '<보 기> 사랑이 이루어진 상황을 사랑의 결실이라고 부르는 것은, 사랑을 이루기 위해 지극한 노력이 필요하기 때문이다. 사랑하기로 마음먹는 것만으로 사랑의 결실을 얻을 수는 없다. 사랑하는 대상에게 지속적으로 관심을 쏟아야 하고, 그 대상을 빼앗으려 하거나 위협하는 것들에 맞서야 한다. 이는 연인은 물론 다른 대상을 향한 사랑에서도 마찬가지이다.',
+    ('2016-09-B', '문학', 38): '<보 기> ｢보리｣에서 글쓴이는 파종된 보리가 자라는 과정을 인간의 삶에 접목하여 그 인격적 속성을 제시함으로써 보리의 모습에서 알 수 있는 다양한 가치를 드러내고 있다.',
+}
+m = re.search(r'^const ITEMS = (\[.*\]);$', s, re.M)
+items = json.loads(m.group(1)); done = 0
+for it in items:
+    k = (it['exam_id'], it['영역'], it['문항번호'])
+    if k in TEXT_BOGI:
+        assert not (it.get('보기') or '').strip(); it['보기'] = TEXT_BOGI[k]; done += 1
+assert done == 2
+s = s[:m.start(1)] + json.dumps(items, ensure_ascii=False) + s[m.end(1):]
+
+# 1-1) 2012학년도 6월 화법과 작문 8~9번은 따로 된 지문 없이 세트 머리말만 있다(원문 그대로)
+m2 = re.search(r'^const PASSAGES = (\{.*\});$', s, re.M)
+P = json.loads(m2.group(1)); k = '2012-06||화법과 작문||8~9'
+if not P.get(k): P[k] = '‘우유 팩 재활용 활성화’에 대해 글을 쓰려고 한다.'
+s = s[:m2.start(1)] + json.dumps(P, ensure_ascii=False) + s[m2.end(1):]
+# 2) 그림 목록
+rep('\nfunction escapeHtml(s){', '\nconst FIGS = ' + json.dumps(FIGS, ensure_ascii=False, separators=(',', ':')) + ';\nfunction escapeHtml(s){')
+# 3) 문항 화면
+rep("    ${it.보기 ? `<div class=\"bogi\"><div class=\"bogi-label\">제시 자료</div><div class=\"bogi-text\">${escapeHtml(it.보기)}</div></div>` : ''}",
+    "    ${figBogiHtml(it)}")
+rep("  const ch = (it.exam_id === '2028-예시' ? CHOICES_2028 : CHOICES)[key];",
+    "  const ch = (it.exam_id === '2028-예시' ? CHOICES_2028 : CHOICES)[key] || figChoices(it);")
+# 4) 지문 화면
+rep("  if(!t) return '<span class=\"na\">이 지문은 원문이 수록되어 있지 않습니다.</span>';",
+    "  if(!t){ const pf0 = figP(examId, g.영역, g.지문범위); return pf0 ? figPassageHtml(pf0, '') : '<span class=\"na\">이 지문은 원문이 수록되어 있지 않습니다.</span>'; }")
+rep("  return body + notesHtml + pex;\n}",
+    "  const pf = figP(examId, g.영역, g.지문범위);\n  if(pf) return figPassageHtml(pf, body + notesHtml) + pex;\n  return body + notesHtml + pex;\n}")
+# 5) CSS · JS
+rep('@media (prefers-reduced-motion: reduce)', css + '\n@media (prefers-reduced-motion: reduce)')
+rep('/* 좁은 화면에서는 검색 조건을 접어 둔다 */', js + '\n/* 좁은 화면에서는 검색 조건을 접어 둔다 */')
+# 6) 이용 안내
+ni = len(FIGS['i']); npg = len(FIGS['p'])
+rep('나머지 8문항은 선택지가 그래프·도식 그림이라 "선택지 정보를 표시할 수 없습니다"로 표시됩니다.',
+    '나머지 8문항은 선택지가 그래프·도식 그림이라 원본 문제지에서 잘라 낸 그림으로 보여 주고, 번호만 골라 채점할 수 있게 했습니다.')
+rep('선택지나 제시 자료(&lt;보기&gt; 등)가 그림·표인 문항, 원본에서 그림(화면)으로 된 매체 지문, 지문 속 [그림]은 인쇄본에 "원본 문제지를 확인하세요"라고 적어 두고 담은 문제 목록에도 표시합니다.',
+    '그림·표·화면이 들어 있는 제시 자료와 지문은 원본 문제지에서 잘라 낸 그림 그대로 인쇄됩니다(이 부분은 고른 글꼴로 바뀌지 않습니다). 원본 그림을 구하지 못한 문항은 인쇄본에 "원본 문제지를 확인하세요"라고 적어 두고 담은 문제 목록에도 표시합니다.')
+GUIDE = f'''      <details>
+        <summary>원본 그림(제시 자료·지문 속 그림·매체 화면)</summary>
+        <p>그래프·도식·표·사진·만화·매체 화면처럼 글자로 옮길 수 없는 부분은 원본 문제지(PDF)에서 그 자리를 잘라 낸 그림으로 보여 줍니다. 문항 {ni}개의 제시 자료(&lt;보기&gt;·&lt;자료&gt;·&lt;학습 활동&gt; 등, 이 중 10문항은 그림으로 된 선택지까지)와 지문 {npg}개(그림이 든 독서·화법과 작문 지문, 화면으로 된 언어와 매체 지문)가 해당합니다. 그림 아래 "글자로 보기"를 누르면 원본에서 뽑아 둔 글자만 볼 수 있습니다(검색은 늘 이 글자로 합니다). 그림은 글자를 새로 짓지 않고 원본을 그대로 잘라 낸 것이며, 글꼴 크기 단추로는 커지지 않습니다. 2028학년도 예시문항 화법과 언어 6번의 &lt;보기&gt;는 원본 PDF가 없어 아직 비어 있습니다.</p>
+      </details>
+    </div>
+    <div class="foot-copy">'''
+rep('''      </details>
+    </div>
+    <div class="foot-copy">''', '\n'.join(['      </details>', GUIDE.split('      <details>', 1)[0] + '      <details>' + GUIDE.split('      <details>', 1)[1]]) if False else '      </details>\n' + GUIDE)
+open(OUT, 'w', encoding='utf-8').write(s)
+print('ok', len(s), 'items with fig', ni, 'passages with fig', npg)
+
+########## v41/figs.js
+/* ---------- 원본 그림(문제지에서 잘라 낸 그림·표·화면) ---------- */
+function figImg(f, alt){ return `<img class="fig" src="${f.f}" width="${f.w}" height="${f.h}" loading="lazy" alt="${escapeHtml(alt)}">`; }
+function figBogiHtml(it){
+  const fi = figI(it);
+  if(!fi) return it.보기 ? `<div class="bogi"><div class="bogi-label">제시 자료</div><div class="bogi-text">${escapeHtml(it.보기)}</div></div>` : '';
+  const label = fi.m === 'ch' ? '제시 자료 · 선택지 — 원본 문제지 그림' : '제시 자료 — 원본 문제지 그림';
+  return `<div class="bogi fig-box"><div class="bogi-label">${label}</div>${figImg(fi, '원본 문제지의 제시 자료 부분')}
+    ${it.보기 ? `<details class="fig-txt"><summary>글자로 보기</summary><div class="bogi-text">${escapeHtml(it.보기)}</div></details>` : ''}</div>`;
+}
+/* 선택지가 그림인 문항: 번호만 골라 채점할 수 있게 한다 */
+function figChoices(it){
+  const fi = figI(it);
+  return fi && fi.m === 'ch' ? [1,2,3,4,5].map(n=>`위 그림의 ${CIRCLED[n]}`) : null;
+}
+function figPassageHtml(pf, textHtml){
+  return `<div class="pfig-wrap">
+    <div class="pfig-bar"><span>원본 문제지 그림으로 보는 중</span>${textHtml ? '<button type="button" class="btn-plain pfig-toggle" aria-expanded="false">글자로 보기</button>' : ''}</div>
+    <div class="pfig">${pf.map(f=>figImg(f, '원본 문제지의 지문 부분')).join('')}</div>
+    ${textHtml ? `<div class="ptext" hidden>${textHtml}</div>` : ''}
+  </div>`;
+}
+document.addEventListener('click', e=>{
+  const b = e.target.closest('.pfig-toggle'); if(!b) return;
+  const w = b.closest('.pfig-wrap'); const txt = w.querySelector('.ptext'), fig = w.querySelector('.pfig');
+  const toText = txt.hidden;
+  txt.hidden = !toText; fig.hidden = toText;
+  b.textContent = toText ? '원본 그림으로 보기' : '글자로 보기';
+  b.setAttribute('aria-expanded', String(toText));
+  w.querySelector('.pfig-bar span').textContent = toText ? '글자로 보는 중 (그림은 빠져 있음)' : '원본 문제지 그림으로 보는 중';
+});
+
+########## v41/figs.css
+/* ---------- 원본 그림 ---------- */
+img.fig{display:block;max-width:min(100%,640px);height:auto;margin:6px auto 0;background:#fff;border-radius:2px}
+.fig-box{background:var(--bg)}
+.fig-txt{margin-top:8px;font-size:13px}
+.fig-txt summary{cursor:pointer;color:var(--brand);font-weight:700}
+.fig-txt .bogi-text{margin-top:6px}
+.pfig-wrap{border:1px solid var(--line);background:var(--paper);padding:10px 12px}
+.pfig-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--text-sub);font-weight:700}
+.pfig-bar .btn-plain{padding:4px 10px;font-size:12.5px}
+.pfig img.fig{max-width:min(100%,720px);margin-top:10px}
+.pfig img.fig + img.fig{margin-top:4px}
+.ptext{margin-top:10px}
+:root[data-theme="dark"] img.fig{filter:brightness(.92)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) img.fig{filter:brightness(.92)}}
+
+########## fig/tools/box.py
+# 문항의 그림 자리를 원본 PDF에서 잘라 낸다.
+# mode 'bogi': 발문 마지막 줄 아래 ~ 첫 선택지(①) 줄 위 ; mode 'ch': 발문 마지막 줄 아래 ~ 다음 문항/세트 머리 위
+import sys, json, re, os, subprocess
+sys.path.insert(0, "/home/claude/chk")
+from streams import fname, SRC
+from PIL import Image, ImageOps
+DPI = 200; SC = DPI/72
+def lines(ex):
+    p = f"/home/claude/chk/streams2/{ex}.json"
+    return json.load(open(p if os.path.exists(p) else f"/home/claude/chk/streams/{ex}.json"))
+def page(ex, pg):
+    base = f"/tmp/claude-0/B{DPI}_{ex}_{pg}"
+    if not os.path.exists(base+".png"):
+        subprocess.run(["pdftoppm","-r",str(DPI),"-f",str(pg+1),"-l",str(pg+1),"-png","-singlefile",SRC+fname(ex),base],check=True,stderr=subprocess.DEVNULL)
+    return Image.open(base+".png").convert("L")
+class _H:
+    R = re.compile(r"^[\d/∕]*((국어|언어|영역|영|역|홀수형|짝수형|\(?화법과작문\)?|\(?언어와매체\)?|\(?독서\)?|\(?문학\)?|\(?[AB]형\)?)[\d/∕]*)*$")
+    def match(self, t):
+        u = re.sub(r"\s", "", t)
+        if self.R.match(u): return True
+        if len(u) <= 3 and not re.search(r"[가-힣A-Za-z]", u): return True
+        if len(u) <= 22 and re.match(r"^[\d/∕]*(홀수형|짝수형)?[\d/∕]*(국어|언어)?영역", u) and not re.search(r"[.?]$", u): return True
+        if re.search(r"문제지[\d]*$", u) and len(u) < 50: return True
+        return False
+HDR = _H()
+def body(L, pg, col):
+    hd = lambda l: HDR.match(l["t"]) or (l["top"] < 140 and len(l["t"].strip()) <= 26 and not re.match(r"^\s*(\[\s*\d|\d{1,2}\s*\.)", l["t"]))
+    B = [l for l in L if l["pg"]==pg and l["col"]==col and not hd(l)]
+    allb = [l for l in L if l["col"]==col and not HDR.match(l["t"]) and "저작권" not in l["t"] and "확인 사항" not in l["t"]]
+    bots = sorted(l.get("bot", l["top"]+14) for l in allb)
+    xs0 = sorted(l["x0"] for l in allb); xs1 = sorted(l.get("x1", l["x0"]+250) for l in allb)
+    H = [l for l in L if l["pg"]==pg and l["col"]==col and hd(l) and l["top"] < 140]
+    H2 = [l for l in L if l["pg"]==pg and hd(l) and l["top"] < 140]
+    hb = max([l.get("bot", l["top"]+14) for l in H + H2], default=None)
+    top = hb + 14 if hb is not None else (min(l["top"] for l in B) - 6 if B else 60)
+    if pg == 0:
+        st = [l["top"] for l in L if l["pg"] == 0 and re.match(r"^\s*(\[\s*\d+\s*[~～∼]|1\s*\.)", l["t"])]
+        if st: top = max(top, min(st) - 6)
+    return top, bots[int(len(bots)*0.995)-1] + 6, xs0[int(len(xs0)*0.02)] - 8, xs1[int(len(xs1)*0.98)] + 8
+def unrule(im):
+    # 가장자리의 세로 단 구분선(높이의 60% 이상 이어진 검은 세로줄)을 지운다
+    W, H = im.size; px = im.load(); im = im.copy(); px = im.load()
+    for xs in (range(0, min(14, W)), range(max(0, W-14), W)):
+        for x in xs:
+            dark = sum(1 for y in range(0, H, 2) if px[x, y] < 140)
+            if dark > 0.6 * (H/2):
+                for y in range(H): px[x, y] = 255
+    return im
+def trim(im, pad=10, thr=235):
+    im = unrule(im)
+    inv = ImageOps.invert(im.point(lambda v: 255 if v>thr else v))
+    bb = inv.getbbox()
+    if not bb: return im
+    x0,y0,x1,y1 = bb
+    return im.crop((max(0,x0-pad),max(0,y0-pad),min(im.width,x1+pad),min(im.height,y1+pad)))
+def seg_img(ex, L, pg, col, top, bot):
+    im = page(ex, pg); W,H = im.size
+    bt, bb, x0, x1 = body(L, pg, col)
+    top = max(top, bt); bot = min(bot, bb)
+    y0, y1 = int(max(0,top*SC)), int(min(H,bot*SC))
+    if y1 <= y0 + 2: return Image.new("L", (max(1, int((x1-x0)*SC)), 4), 255)
+    return im.crop((int(x0*SC), y0, int(x1*SC), y1))
+def find_item(L, num, after=0):
+    for i in range(after, len(L)):
+        if re.match(rf"^\s*{num}\s*\.", L[i]["t"]): return i
+    return None
+def region(ex, num, mode, area_hint=None, start=0):
+    L = lines(ex); i0 = find_item(L, num, start)
+    # 발문 끝: 다음 줄이 같은 단에서 20pt 넘게 떨어지면 끝
+    j = i0
+    while j+1 < len(L) and L[j+1]["pg"]==L[j]["pg"] and L[j+1]["col"]==L[j]["col"] and L[j+1]["top"]-L[j]["top"] < 26 and not L[j+1]["t"].strip().startswith(("①","<")): j += 1
+    a = L[j]
+    k = j+1
+    if mode == "bogi":
+        while k < len(L) and not L[k]["t"].strip().startswith("①"): k += 1
+    else:
+        while k < len(L) and not (re.match(rf"^\s*{num+1}\s*\.", L[k]["t"]) or re.match(r"^\s*\[\s*\d+\s*[~～∼]", L[k]["t"]) or "확인 사항" in L[k]["t"]): k += 1
+    b = L[k] if k < len(L) else None
+    return L, a, b
+def cut(ex, num, mode, out, start=0, extra_bot=None):
+    L, a, b = region(ex, num, mode, start=start)
+    segs = []
+    if b and (b["pg"],b["col"]) == (a["pg"],a["col"]):
+        segs.append((a["pg"],a["col"],a.get("bot",a["top"]+14)+3,(extra_bot or b["top"])-4))
+    else:
+        segs.append((a["pg"],a["col"],a.get("bot",a["top"]+14)+3,1400))
+        if b: segs.append((b["pg"],b["col"],0,b["top"]-4))
+    ims = [trim(seg_img(ex, L, *s)) for s in segs]
+    ims = [i for i in ims if i.height > 40] or ims[:1]
+    W = max(i.width for i in ims); H = sum(i.height for i in ims)
+    o = Image.new("L",(W,H),255); y=0
+    for i in ims: o.paste(i,(0,y)); y+=i.height
+    o.save(out, optimize=True); return out, segs, a["t"][:30], (b["t"][:30] if b else None)
+if __name__ == "__main__":
+    ex, num, mode, out = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
+    print(cut(ex, num, mode, out))
+
+def passage(ex, rng, out, occ=-1, stop_num=None):
+    """세트 머리 [a~b] 아래 ~ 첫 문항 발문 위를 단별로 잘라 이어 붙인다."""
+    L = lines(ex); a, b = rng.split("~")
+    hs = [i for i, l in enumerate(L) if re.match(rf"^\s*\[\s*{a}\s*[~～∼]\s*{b}\s*\]", l["t"])]
+    i0 = hs[occ]
+    first = int(stop_num or a)
+    i1 = find_item(L, first, i0+1)
+    h = L[i0]; e = L[i1]
+    segs = []; cur = (h["pg"], h["col"]); top = h.get("bot", h["top"]+14) + 2
+    while True:
+        if cur == (e["pg"], e["col"]):
+            segs.append((cur[0], cur[1], top, e["top"]-4)); break
+        segs.append((cur[0], cur[1], top, 1400))
+        cur = (cur[0], 1) if cur[1] == 0 else (cur[0]+1, 0); top = 0
+    ims = [trim(seg_img(ex, L, *s)) for s in segs]
+    ims = [i for i in ims if i.height > 40]
+    W = max(i.width for i in ims); H = sum(i.height for i in ims) + 16*(len(ims)-1)
+    o = Image.new("L", (W, H), 255); y = 0
+    for i in ims: o.paste(i, (0, y)); y += i.height + 16
+    o.save(out, optimize=True); return out, segs, o.size
+
+########## fig/tools/crop_items.py
+import re, json, os, sys
+sys.path.insert(0, "/home/claude/fig/tools")
+from box import lines, seg_img, trim, body
+from PIL import Image
+s = open('/home/claude/site_v40.html', encoding='utf-8').read()
+items = json.loads(re.search(r'^const ITEMS = (.*);$', s, re.M).group(1))
+OUT = "/home/claude/fig/items/"; os.makedirs(OUT, exist_ok=True)
+cache = {}; man = {}
+OVR = {
+ '2011-11||화법과 작문||8': [(3,0,213.4,530)], '2010-11||독서||21': [(5,1,195.1,455)],
+ '2014-예비-B||화법과 작문||2': [(0,1,454.4,565)], '2015-06-A||언어와 매체||14': [(4,1,195.1,598)],
+ '2015-06-B||언어와 매체||15': [(5,0,195.1,598)], '2020-06||화법과 작문||2': [(0,1,265.2,398)],
+ '2020-11||화법과 작문||2': [(0,1,265.2,398)],
+ '2024-06||화법과 작문||40': 'ch', '2019-11||독서||27': 'ch',
+ '2010-09||독서||38': 'ch', '2010-11||독서||49': 'ch', '2012-06||독서||48': 'ch', '2013-06||독서||25': 'ch',
+ '2013-09||독서||18': 'ch', '2014-09-A||독서||21': 'ch',
+}
+def locate(L, it):
+    n = it['문항번호']
+    stem = re.sub(r'^\s*\d+\s*\.\s*', '', it['발문']).replace(' ', '')
+    for i, l in enumerate(L):
+        t = l['t']; m = re.search(rf"(^|\s){n}\s*\.\s*", t)
+        if not m or m.start() > 12: continue
+        rest = t[m.end():].replace(' ', '')
+        if rest[:6] and (stem.startswith(rest[:6]) or rest[:6].startswith(stem[:6])): return i
+        h1 = re.sub(r'[^가-힣]', '', rest)[:5]; h2 = re.sub(r'[^가-힣]', '', stem)[:5]
+        if len(h1) >= 4 and h1 == h2: return i
+    return None
+def run(only=None):
+    for it in items:
+        ex = it['exam_id']; key = f"{ex}||{it['영역']}||{it['문항번호']}"
+        if only and key not in only: continue
+        if ex not in cache:
+            try: cache[ex] = lines(ex)
+            except Exception: cache[ex] = None
+        L = cache[ex]
+        if not L: continue
+        i0 = locate(L, it)
+        if i0 is None: continue
+        j = i0
+        while j+1 < len(L) and (L[j+1]['pg'], L[j+1]['col']) == (L[j]['pg'], L[j]['col']) and L[j+1]['top']-L[j]['top'] < 26 and not L[j+1]['t'].strip().startswith('①') and not re.match(r"^\s*[<〈]\s*[^<>〈〉]{1,10}\s*[>〉]\s*$", L[j+1]['t']): j += 1
+        k = j+1
+        n1 = it['문항번호'] + 1
+        ov = OVR.get(key)
+        while k < len(L) and (ov == 'ch' or not L[k]['t'].strip().startswith('①')) and k-j < 120:
+            mm = re.search(rf"(^|\s){n1}\s*\.\s*\S", L[k]['t'])
+            if (mm and mm.start() < 12) or re.match(r"^\s*\[\s*\d+\s*[~～∼]", L[k]['t']) or '확인 사항' in L[k]['t']: break
+            k += 1
+        if k >= len(L): continue
+        a, b = L[j], L[k]
+        same = (a['pg'], a['col']) == (b['pg'], b['col'])
+        gap = b['top'] - a.get('bot', a['top']+14) if same else 999
+        tl = k-j-1; bogi = len(it.get('보기') or '')
+        if not ((same and gap - (tl*18.4 + (30 if bogi else 0)) > 45) or (not same and tl < 3) or only or ov):
+            continue
+        segs = []
+        cur = (a['pg'], a['col']); top = a.get('bot', a['top']+14) + 3
+        while True:
+            if cur == (b['pg'], b['col']): segs.append((cur[0], cur[1], top, b['top']-4)); break
+            segs.append((cur[0], cur[1], top, 1400)); cur = (cur[0], 1) if cur[1] == 0 else (cur[0]+1, 0); top = 0
+            if len(segs) > 4: break
+        if isinstance(ov, list): segs = [tuple(x) for x in ov]
+        ims = [trim(seg_img(ex, L, *sg)) for sg in segs]
+        ims = [i for i in ims if i.height > 40]
+        if not ims: continue
+        W = max(i.width for i in ims); H = sum(i.height for i in ims) + 16*(len(ims)-1)
+        o = Image.new('L', (W, H), 255); y = 0
+        for im in ims: o.paste(im, (0, y)); y += im.height + 16
+        fn = key.replace('||', '_').replace(' ', '') + '.png'
+        o.save(OUT + fn, optimize=True)
+        man[key] = {'file': fn, 'mode': 'ch' if ov == 'ch' else 'bogi', 'segs': segs, 'gap': gap, 'tl': tl, 'bogi': bogi, 'w': W, 'h': H}
+    json.dump(man, open('/home/claude/fig/items_manifest.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
+    print(len(man))
+if __name__ == '__main__': run()
+
+########## fig/tools/crop_passages.py
+import re, json, os, sys
+sys.path.insert(0, "/home/claude/fig/tools")
+from box import lines, seg_img, body, page, SC, trim, unrule
+from PIL import Image, ImageOps
+s = open('/home/claude/site_v40.html', encoding='utf-8').read()
+items = json.loads(re.search(r'^const ITEMS = (.*);$', s, re.M).group(1))
+OUT = "/home/claude/fig/pass/"; os.makedirs(OUT, exist_ok=True)
+def tight(im, pad=10, thr=235):
+    im = unrule(im)
+    inv = ImageOps.invert(im.point(lambda v: 255 if v > thr else v)); bb = inv.getbbox()
+    if not bb: return None
+    x0, y0, x1, y1 = bb
+    return im.crop((max(0, x0-pad), max(0, y0-pad), min(im.width, x1+pad), min(im.height, y1+pad)))
+groups = {}
+for it in items:
+    r = it['지문범위']
+    if not r or r == '(독립 문항)': continue
+    groups.setdefault((it['exam_id'], it['영역'], r), []).append(it)
+# 같은 회차에서 같은 범위가 여러 영역에 있으면 시험지 순서(영역 첫 문항 등장 순)대로 몇 번째인지
+order = {}
+for (ex, ar, r), its in groups.items():
+    order.setdefault((ex, r), []).append(ar)
+AREA_SEQ = ['화법과 작문', '독서', '문학', '언어와 매체']
+FORCE = set(os.environ.get('FORCE','').split(',')) - {''}
+man = json.load(open('/home/claude/fig/pass_manifest.json')) if FORCE else {}
+cache = {}
+for (ex, ar, r), its in sorted(groups.items()):
+    if FORCE and f'{ex}||{ar}||{r}' not in FORCE: continue
+    if ex not in cache:
+        try: cache[ex] = lines(ex)
+        except Exception: cache[ex] = None
+    L = cache[ex]
+    if not L: continue
+    a, b = r.split('~') if '~' in r else (r, r)
+    hs = [i for i, l in enumerate(L) if re.match(rf"^\s*\[\s*{a}\s*[~～∼]\s*{b}\s*\]", l['t'])]
+    if not hs: continue
+    areas = order[(ex, r)]
+    if len(areas) > 1 and len(hs) > 1:
+        # 2022학년도 이후 선택과목: 화법과 작문이 먼저, 언어와 매체가 나중
+        idx = 0 if ar == '화법과 작문' else len(hs)-1
+    else: idx = 0
+    i0 = hs[min(idx, len(hs)-1)]
+    first = min(i['문항번호'] for i in its)
+    i1 = None
+    for k in range(i0+1, min(len(L), i0+400)):
+        m = re.search(rf"(^|\s){first}\s*\.\s*\S", L[k]['t'])
+        if m and m.start() < 12: i1 = k; break
+    if i1 is None: continue
+    while i0+1 < i1 and '답하시오' not in L[i0]['t'] and '답하라' not in L[i0]['t'] and (L[i0+1]['pg'], L[i0+1]['col']) == (L[i0]['pg'], L[i0]['col']) and 0 < L[i0+1]['top'] - L[i0]['top'] < 26:
+        i0 += 1
+    h, e = L[i0], L[i1]
+    segs = []; cur = (h['pg'], h['col']); top = h.get('bot', h['top']+14) + 2
+    while True:
+        bt, bb, _, _ = body(L, cur[0], cur[1])
+        if cur == (e['pg'], e['col']): segs.append((cur[0], cur[1], max(top, bt), e['top']-4)); break
+        segs.append((cur[0], cur[1], max(top, bt), bb)); cur = (cur[0], 1) if cur[1] == 0 else (cur[0]+1, 0); top = 0
+        if len(segs) > 6: break
+    figs = []
+    for (pg, col, t0, t1) in segs:
+        ls = [l for l in L[i0+1:i1] if l['pg'] == pg and l['col'] == col and t0 - 2 <= l['top'] <= t1]
+        ys = [(t0, None)] + [(l['top'], l) for l in ls] + [(t1, None)]
+        prev_bot = t0; prev_line = None
+        for (y, l) in ys[1:]:
+            if y - prev_bot > 50:
+                im = seg_img(ex, L, pg, col, prev_bot + 1, y - 2)
+                ti = tight(im)
+                if ti is not None and ti.height > 60 and ti.width > 150:
+                    hist = ti.histogram(); ink = sum(hist[:128]) / (ti.width*ti.height)
+                    if ink >= 0.02:
+                        figs.append({'pg': pg, 'col': col, 'top': prev_bot+1, 'bot': y-2, 'ink': round(ink,3)})
+            if l is not None: prev_bot = l.get('bot', l['top']+14); prev_line = l
+    if figs or FORCE:
+        out = []
+        for si, sg in enumerate(segs):
+            ti = trim(seg_img(ex, L, *sg))
+            if ti.height < 40: continue
+            fn = f"{ex}_{ar}_{r}_s{si}.png".replace(' ', '')
+            ti.save(OUT + fn, optimize=True); out.append({'file': fn, 'w': ti.width, 'h': ti.height, 'seg': sg})
+        man[f"{ex}||{ar}||{r}"] = {'segs': out, 'figs': figs}
+json.dump(man, open('/home/claude/fig/pass_manifest.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
+print(len(man), sum(len(v) for v in man.values()))
+
+########## fig/tools/pack.py
+import json, os
+from PIL import Image
+import numpy as np
+im_m = json.load(open('items_manifest.json')); p_m = json.load(open('pass_manifest.json'))
+SKIP = {'2016-09-B||문학||36', '2016-09-B||문학||38'}
+SEGSKIP = {'2024-11_언어와매체_35~36_s1.png'}
+PSKIP = {'2016-09-B||문학||42~45', '2016-06-A||화법과 작문||8~10', '2015-09-B||화법과 작문||6~8', '2015-11-B||화법과 작문||9~10'}
+OUT = 'pub/fig/'
+def cuts(img):
+    a = np.asarray(img); white = (a > 225).all(axis=1)
+    res = []; y = 0; H = len(white)
+    while y < H:
+        if white[y]:
+            y0 = y
+            while y < H and white[y]: y += 1
+            if y - y0 >= 3: res.append((y0 + y)//2)
+        else: y += 1
+    return res
+def save(src, name):
+    img = Image.open(src).convert('L')
+    q = img.point(lambda v: min(255, (v // 17) * 17 + (0 if v < 238 else 255)))
+    q = q.quantize(16, dither=Image.Dither.NONE) if hasattr(Image, 'Dither') else q.quantize(16)
+    q.save(OUT + name, optimize=True)
+    return {'f': 'fig/' + name, 'w': img.width, 'h': img.height, 'c': cuts(img)}
+FIG = {'i': {}, 'p': {}}
+n = 0
+for k, v in im_m.items():
+    if k in SKIP: continue
+    n += 1; d = save('items/' + v['file'], f'i{n:03d}.png'); d['m'] = v.get('mode', 'bogi'); FIG['i'][k] = d
+n = 0
+for k, v in p_m.items():
+    if k in PSKIP: continue
+    segs = []
+    for sg in v['segs']:
+        if sg['h'] < 80 or sg['file'] in SEGSKIP: continue
+        n += 1; segs.append(save('pass/' + sg['file'], f'p{n:03d}.png'))
+    if segs: FIG['p'][k] = segs
+json.dump(FIG, open('fig_index.json', 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+print(len(FIG['i']), len(FIG['p']), sum(len(x) for x in FIG['p'].values()))
+
+########## fig/tools/manual.py
+# 수동 좌표로 자르기: python3 manual.py PDF PAGE(1-base) x0 y0 x1 y1 (pt) out
+import sys, subprocess, os
+sys.path.insert(0, "/home/claude/fig/tools")
+from PIL import Image
+from box import trim
+f, p = sys.argv[1], int(sys.argv[2]); x0,y0,x1,y1 = map(float, sys.argv[3:7]); out = sys.argv[7]
+base = f"/tmp/claude-0/M200_{abs(hash(f))}_{p}"
+if not os.path.exists(base+".png"):
+    subprocess.run(["pdftoppm","-r","200","-f",str(p),"-l",str(p),"-png","-singlefile",f,base],check=True,stderr=subprocess.DEVNULL)
+im = Image.open(base+".png").convert("L"); sc = 200/72
+o = trim(im.crop((int(x0*sc),int(y0*sc),int(x1*sc),int(y1*sc))))
+o.save(out, optimize=True); print(out, o.size)
