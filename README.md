@@ -8,7 +8,7 @@
 
 | 폴더 | 내용 |
 |---|---|
-| `docs/` | **완성된 사이트.** GitHub Pages가 이 폴더를 그대로 보여 줍니다. `index.html`(모든 문항·지문 데이터 포함), `explain.json`(해설, 처음 누를 때 내려받음), `fig/`(원본 문제지에서 잘라 낸 그림 367개) |
+| `docs/` | **완성된 사이트.** `fonts/`는 옛한글을 한 글자로 모아 보이게 하는 부분 글꼴(Noto CJK, OFL)입니다. GitHub Pages가 이 폴더를 그대로 보여 줍니다. `index.html`(모든 문항·지문 데이터 포함), `explain.json`(해설, 처음 누를 때 내려받음), `fig/`(원본 문제지에서 잘라 낸 그림 367개) |
 | `pipeline.zip` | 사이트를 만들고 고칠 때 쓴 프로그램(Python)과 중간 자료. 파일이 많아 zip 하나로 묶었습니다. 압축을 풀면 `pipeline/` 폴더가 나옵니다. |
 | `notes/` | 단계별 작업 기록(Claude 프로젝트 문서 사본) |
 | `pipeline_ul/` | 밑줄·글자 상자 되살리기(Version 50)와 오류 신고 버튼 재적용(Version 51) 단계의 프로그램과 결과. `gh_head.txt`·`gh_tail.txt`는 GitHub용 index.html 앞뒤에 붙이는 껍데기입니다. |
@@ -47,7 +47,9 @@
 스크립트 안의 경로는 원래 작업 환경 기준이라, 쓰기 전에 경로를 바꿔야 합니다. 원래 경로는 `/home/claude/...`, 원본 PDF는 `/mnt/user-data/uploads/평가원 기출 문제 모음/`입니다.
 
 ```
-pipeline_ul/merge_v44.py   # 마지막 단계: 오류 신고 버튼·의견 보내기 → site_v44.html (= docs/index.html 본문)
+pipeline_ul/merge_v46.py   # 마지막 단계: 옛한글 글꼴(docs/fonts/oh-*.woff) → site_v46.html (= docs/index.html 본문)
+  └ pipeline_ul/merge_v45.py  # 사이트 이름 '불휘 기픈 남ᄀᆞᆫ(뿌리 깊은 나무)', 제목용 옛한글 글꼴
+pipeline_ul/merge_v44.py   # 오류 신고 버튼·의견 보내기 → site_v44.html
   └ pipeline_ul/merge_v43.py  # 밑줄·글자 상자 (pipeline_ul/spans.json)
       └ pipeline/merge_v42.py  # 2022 예시문항 합류 → site_v42.html
           └ merge_v41.py       # 원본 그림(fig) 합류
