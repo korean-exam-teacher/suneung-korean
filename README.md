@@ -11,6 +11,7 @@
 | `docs/` | **완성된 사이트.** GitHub Pages가 이 폴더를 그대로 보여 줍니다. `index.html`(모든 문항·지문 데이터 포함), `explain.json`(해설, 처음 누를 때 내려받음), `fig/`(원본 문제지에서 잘라 낸 그림 367개) |
 | `pipeline.zip` | 사이트를 만들고 고칠 때 쓴 프로그램(Python)과 중간 자료. 파일이 많아 zip 하나로 묶었습니다. 압축을 풀면 `pipeline/` 폴더가 나옵니다. |
 | `notes/` | 단계별 작업 기록(Claude 프로젝트 문서 사본) |
+| `pipeline_ul/` | 밑줄·글자 상자 되살리기(Version 50)와 오류 신고 버튼 재적용(Version 51) 단계의 프로그램과 결과. `gh_head.txt`·`gh_tail.txt`는 GitHub용 index.html 앞뒤에 붙이는 껍데기입니다. |
 
 ## 사이트 열기 (GitHub Pages)
 
@@ -29,6 +30,8 @@
 > `docs/index.html`을 아티팩트로 게시해 줘. `explain.json`과 `fig/` 폴더의 그림들도 같은 경로로 함께 올려 줘.
 
 - `index.html` 맨 위의 `<!doctype html>…<body>`와 맨 끝의 `</body></html>`은 GitHub Pages용으로 덧붙인 것입니다. 아티팩트로 올릴 때는 빼도 됩니다.
+- GitHub용으로 만들 때는 `<head>`에 `<style>[hidden]{display:none!important}</style>`가 꼭 있어야 합니다(아티팩트는 자동으로 넣어 주지만 일반 웹사이트에는 없어서, 숨겨야 할 안내문이 보입니다). `pipeline_ul/gh_head.txt`에 들어 있습니다.
+- **주의:** 저장소에 바뀐 파일을 올리기 전에, 저장소의 최근 커밋에 다른 곳(다른 Claude 대화 등)에서 고친 내용이 없는지 먼저 확인하세요. 예전 사본으로 올리면 그 사이의 변경이 덮여 사라집니다.
 - 파일이 255개를 넘으므로 두세 번에 나눠 올려야 합니다.
 
 ## 고치는 방법 (Claude에게 맡길 때 알려 줄 것)
@@ -44,10 +47,12 @@
 스크립트 안의 경로는 원래 작업 환경 기준이라, 쓰기 전에 경로를 바꿔야 합니다. 원래 경로는 `/home/claude/...`, 원본 PDF는 `/mnt/user-data/uploads/평가원 기출 문제 모음/`입니다.
 
 ```
-pipeline/merge_v42.py      # 마지막 단계: 2022 예시문항 합류 → site_v42.html (= docs/index.html 본문)
-  └ merge_v41.py           # 원본 그림(fig) 합류
-      └ merge_v40.py       # 문제 담기·모아 풀기·16쪽 인쇄 (v40/basket.js, basket.css)
-          └ base/site_v39.html
+pipeline_ul/merge_v44.py   # 마지막 단계: 오류 신고 버튼·의견 보내기 → site_v44.html (= docs/index.html 본문)
+  └ pipeline_ul/merge_v43.py  # 밑줄·글자 상자 (pipeline_ul/spans.json)
+      └ pipeline/merge_v42.py  # 2022 예시문항 합류 → site_v42.html
+          └ merge_v41.py       # 원본 그림(fig) 합류
+              └ merge_v40.py   # 문제 담기·모아 풀기·16쪽 인쇄 (v40/basket.js, basket.css)
+                  └ base/site_v39.html
 pipeline/merge_v35.py ~ merge_v39.py   # base/site_v34.html에서 site_v39.html까지(해설·□ 복원·줄 나눔 등)
 ```
 
