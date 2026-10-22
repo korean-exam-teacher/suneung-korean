@@ -8,3 +8,4 @@
 4. `merge_v43.py` — site_v42.html에 표시 글자를 넣고 화면 코드를 고쳐 site_v43.html을 만듭니다.
 
 글 속 표시: U+FDD0…U+FDD1 = 밑줄, U+FDD2…U+FDD3 = 상자. 화면에서 `escapeHtml`이 `<u class="ul">`, `<span class="bx">`로 바꿉니다. 검색할 때는 `plainText`로 표시 글자를 뺍니다.
+5. `merge_v44.py` — 다른 대화에서 넣었던 '오류 신고' 버튼·'의견 보내기' 링크를 다시 얹어 site_v44.html을 만들고, `gh_head.txt`+본문+`gh_tail.txt`로 docs/index.html을 씁니다.
