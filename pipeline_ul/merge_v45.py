@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Version 52: 사이트 이름을 '불휘 기픈 남ᄀᆞᆫ'(뿌리 깊은 나무, 용비어천가 제2장)으로 바꾼다.
+"""Version 52 (2026-10-26 Version 54에서 현대어 풀이를 '뿌리 깊은 나무는'으로 고침): 사이트 이름을 '불휘 기픈 남ᄀᆞᆫ'(뿌리 깊은 나무는, 용비어천가 제2장)으로 바꾼다.
 앞으로 LEET·공무원 국어·학력평가·국어 연구 자료까지 담을 수 있도록 '수능'·'기출'을 큰 이름에서 뺐다.
-- 상단 로고: 중세 국어 원문(명조) + 현대어 '뿌리 깊은 나무'
+- 상단 로고: 중세 국어 원문(명조) + 현대어 '뿌리 깊은 나무는'
 - 브라우저 탭 제목·설명: 현대어(옛한글이 시스템 글꼴에서 깨질 수 있어서)
 - 바닥글: 제2장 원문 한 줄, 이용 안내에 '이름에 대하여' 항목
 
@@ -16,8 +16,8 @@ def _font(w):
     # Noto Serif CJK KR(OFL)에서 이름·원문에 쓰는 글자만 뽑은 글꼴. 구글 웹 글꼴 Noto Serif KR은 옛한글 자모를 한 글자로 모아 주지 못한다.
     return base64.b64encode(open(os.path.join(HERE, f'oldhangul-{w}.woff'), 'rb').read()).decode()
 
-TAB_TITLE = '뿌리 깊은 나무 · 국어 기출과 연구 자료'
-META_DESC = ('불휘 기픈 남ᄀᆞᆫ(뿌리 깊은 나무) — 평가원 모의평가·수능 국어 기출을 소재·유형·작품으로 찾아 풀어 보고, '
+TAB_TITLE = '뿌리 깊은 나무는 · 국어 기출과 연구 자료'
+META_DESC = ('불휘 기픈 남ᄀᆞᆫ(뿌리 깊은 나무는) — 평가원 모의평가·수능 국어 기출을 소재·유형·작품으로 찾아 풀어 보고, '
              '앞으로 여러 국어 시험 기출과 국어 연구 자료를 함께 모아 가는 비영리 학습용 국어 자료실')
 OLD_META_DESC = '2009~2027학년도 평가원 모의평가·수능 국어 기출을 소재·유형·작품으로 찾아 풀어 보는 비영리 학습용 문제은행'
 VERSE = 'ᄇᆞᄅᆞ매 아니 뮐ᄊᆡ 곶 됴코 여름 하ᄂᆞ니'
@@ -41,9 +41,9 @@ def patch_body(s):
     rep('''    <a class="logo" href="#page-top" aria-label="수능국어 기출문제은행 처음으로">
       <span class="logo-mark">국</span>
       <span class="logo-text">수능국어 <em>기출문제은행</em></span>
-    </a>''', '''    <a class="logo" href="#page-top" aria-label="불휘 기픈 남ᄀᆞᆫ(뿌리 깊은 나무) 처음으로">
+    </a>''', '''    <a class="logo" href="#page-top" aria-label="불휘 기픈 남ᄀᆞᆫ(뿌리 깊은 나무는) 처음으로">
       <span class="logo-mark">국</span>
-      <span class="logo-text"><span class="logo-old" lang="okm">불휘 기픈 남ᄀᆞᆫ</span><span class="logo-gloss">뿌리 깊은 나무</span></span>
+      <span class="logo-text"><span class="logo-old" lang="okm">불휘 기픈 남ᄀᆞᆫ</span><span class="logo-gloss">뿌리 깊은 나무는</span></span>
     </a>''')
     rep('''.logo-text em{font-style:normal;color:var(--brand)}
 ''', '''.logo-text em{font-style:normal;color:var(--brand)}
@@ -58,7 +58,7 @@ def patch_body(s):
 
     # 바닥글 이름 + 원문 한 줄
     rep('''      <span class="foot-name">수능국어 기출문제은행</span>''',
-        f'''      <span class="foot-name"><span class="okm" lang="okm">불휘 기픈 남ᄀᆞᆫ</span> · 뿌리 깊은 나무
+        f'''      <span class="foot-name"><span class="okm" lang="okm">불휘 기픈 남ᄀᆞᆫ</span> · 뿌리 깊은 나무는
         <span class="foot-verse" lang="okm">불휘 기픈 남ᄀᆞᆫ {VERSE}<small>「용비어천가」 제2장</small></span></span>''')
 
     # 이용 안내: 이름에 대하여 (맨 앞)
