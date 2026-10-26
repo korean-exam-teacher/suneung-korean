@@ -48,7 +48,7 @@
 
 ```
 pipeline_ul/merge_v46.py   # 마지막 단계: 옛한글 글꼴(docs/fonts/oh-*.woff) → site_v46.html (= docs/index.html 본문)
-  └ pipeline_ul/merge_v45.py  # 사이트 이름 '불휘 기픈 남ᄀᆞᆫ(뿌리 깊은 나무)', 제목용 옛한글 글꼴
+  └ pipeline_ul/merge_v45.py  # 사이트 이름 '불휘 기픈 남ᄀᆞᆫ(뿌리 깊은 나무는)', 제목용 옛한글 글꼴
 pipeline_ul/merge_v44.py   # 오류 신고 버튼·의견 보내기 → site_v44.html
   └ pipeline_ul/merge_v43.py  # 밑줄·글자 상자 (pipeline_ul/spans.json)
       └ pipeline/merge_v42.py  # 2022 예시문항 합류 → site_v42.html
