@@ -2,7 +2,7 @@
 
 양식에서 잰 값(A3 297×420mm 기준, A4·B4는 너비 비율로 줄이거나 늘림)
 - 여백: 왼쪽·오른쪽 31mm. 머리 줄(굵은 가로선)은 위에서 51.9mm(첫 쪽은 76.8mm).
-- 2단: 단 너비 112mm, 가운데 세로줄 하나(0.21mm), 단 사이 10.7mm. 단 아래 끝 371.4mm.
+- 2단: 단 너비 112mm, 가운데 세로줄 하나(0.21mm), 단 사이 10.7mm. 단 아래 끝 376.4mm(평가원 문제지 실측 — 받은 양식은 371.4mm).
 - 머리: 홀수 쪽은 오른쪽, 짝수 쪽은 왼쪽에 큰 쪽 번호. 가운데에 "국어 영역".
   첫 쪽: 윗줄 시험 이름, "제 1 교시" 둥근 상자, 큰 "국어 영역", 굵은 가로선.
 - 꼬리: 가운데 작은 상자에 대각선으로 "쪽/전체 쪽".
@@ -79,7 +79,7 @@ def patch(s):
 .pnote{font-size:.84em;line-height:1.5;text-indent:0;margin-top:.12em;padding-left:.8em}
 .pp + .pnote, .poem + .pnote{margin-top:.5em}
 .q{margin-top:2.4em}
-.pbox + .q, .pimg + .q, .pnote + .q{margin-top:2em}
+.pbox + .q, .pimg + .q, .pnote + .q{margin-top:1.9em}
 .qs{text-align:justify;padding-left:1.5em;text-indent:-1.5em}
 .qs .qn{font-family:"Times New Roman",Times,"Noto Serif KR","Noto Serif CJK KR",serif;font-weight:700;font-size:1.13em;display:inline-block;min-width:1.33em;text-indent:0;letter-spacing:0}
 .qb{position:relative;border:var(--tw) solid #000;padding:.35em .55em .4em;margin:.6em 0 .35em}
@@ -88,7 +88,7 @@ def patch(s):
 .qb.brk{border-bottom-style:dashed;margin-bottom:0}
 .qbl{position:absolute;left:50%;top:0;transform:translate(-50%,-52%);background:#fff;padding:0 .45em;white-space:nowrap;letter-spacing:0;line-height:1.2}
 .qbt{white-space:pre-wrap;text-align:justify}
-.qc{display:grid;gap:.15em 1.2em;margin-top:.45em;padding-left:.3em}
+.qc{display:grid;gap:0 1.2em;margin-top:.7em;padding-left:.3em}
 .qc > div{padding-left:1.25em;text-indent:-1.25em}
 .qna{margin-top:.35em;font-size:.88em;color:#444}
 .q.part{margin-top:.25em}
@@ -131,7 +131,7 @@ def patch(s):
     # ---- 판 크기 ----
     rep_between("function bkGeom(paper){", "function mm(v)", '''function bkGeom(paper){
   const p = BK_PAPER[paper] || BK_PAPER.A4; const s = p.w/210;   // 양식을 A4로 줄인 값 × 비율
-  return {w:p.w, h:p.h, s, mx:21.9*s, colW:79.2*s, rule1:54.3*s, rule:36.7*s, top1:57.1*s, top:39.5*s, bottom:p.h-262.6*s,
+  return {w:p.w, h:p.h, s, mx:21.9*s, colW:79.2*s, rule1:54.3*s, rule:36.7*s, top1:57.1*s, top:39.5*s, bottom:p.h-266.2*s,
     ftY:269.4*s, ftW:12.6*s, ftH:5.6*s, rw:0.3*s, cw:0.21*s, tw:0.085*s+0.06};
 }
 ''')
@@ -273,22 +273,24 @@ function bkCoverHtml(g, title, nItems, nPages){
   /* 단 채우기: 평가원 문제지처럼 단에 남는 빈칸을 문항 사이와 마지막 문항 아래에 똑같이 나눈다.
      (원본 실측: 짧은 두 문항이면 둘째 문항이 단 가운데쯤에서 시작하고, 문항 아래 빈칸이 서로 같다.)
      다음 단이 이어지는 지문·문항 조각으로 시작하면 마지막 아래 몫은 두지 않고 사이에만 나눈다.
-     글이 끝나는 마지막 단은 그대로 둔다. */
+     글이 끝나는 마지막 단은 마지막 문항이 단 아래(확인 사항 상자 위)에 닿도록 사이에만 나눈다(원본도 대개 그렇다). */
   const allCols = sheets.flatMap(sh=>[...sh.querySelectorAll('.sh-col')]);
   const real = c=>[...c.children].filter(x=>!x.classList.contains('chk'));
   const isUnit = x=>!!x && ((x.classList.contains('q') && !x.classList.contains('part')) || x.classList.contains('gh'));
   let lastIdx = -1; allCols.forEach((c, i)=>{ if(real(c).length) lastIdx = i; });
   allCols.forEach((c, i)=>{
-    if(i >= lastIdx) return;
+    if(i > lastIdx) return;
     const kids = real(c); if(kids.length < 2) return;
     const gaps = kids.slice(1).filter(isUnit);
     if(!gaps.length) return;
     const box = c.getBoundingClientRect();
-    const room = box.height - (kids[kids.length-1].getBoundingClientRect().bottom - box.top) - 2;
+    const chkEl = c.querySelector('.chk');
+    const reserve = chkEl ? chkEl.getBoundingClientRect().height + lineH : 0;
+    const room = box.height - (kids[kids.length-1].getBoundingClientRect().bottom - box.top) - 2 - reserve;
     if(room <= 1) return;
     const cur = gaps.map(x=>parseFloat(getComputedStyle(x).marginTop) || 0);
     const sum = cur.reduce((s, v)=>s+v, 0) + room;
-    const trail = isUnit(real(allCols[i+1])[0]) ? 1 : 0;
+    const trail = i < lastIdx && isUnit(real(allCols[i+1])[0]) ? 1 : 0;
     let G = sum / (gaps.length + trail);
     if(G < Math.max(...cur)) G = sum / gaps.length;
     gaps.forEach(x=>{ x.style.marginTop = G.toFixed(1) + 'px'; });
