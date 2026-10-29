@@ -2493,24 +2493,28 @@ function bkLayoutSync(pt){
   if(room < lineH*0.8){                     // 오른쪽 단에 자리가 없으면 새 쪽(오른쪽 단 아래)에 싣는다
     cur.removeChild(chk); newSheet(); cur = cols[1]; cur.appendChild(chk);
   }
-  /* 단 채우기: 원본 문제지처럼 문항 사이 빈칸을 늘려 단 아래까지 고르게 채운다.
-     글이 끝나는 마지막 단은 그대로 두고, 한 칸에 더하는 빈칸은 6줄까지만(남으면 단 아래에 남긴다). */
+  /* 단 채우기: 평가원 문제지처럼 단에 남는 빈칸을 문항 사이와 마지막 문항 아래에 똑같이 나눈다.
+     (원본 실측: 짧은 두 문항이면 둘째 문항이 단 가운데쯤에서 시작하고, 문항 아래 빈칸이 서로 같다.)
+     다음 단이 이어지는 지문·문항 조각으로 시작하면 마지막 아래 몫은 두지 않고 사이에만 나눈다.
+     글이 끝나는 마지막 단은 그대로 둔다. */
   const allCols = sheets.flatMap(sh=>[...sh.querySelectorAll('.sh-col')]);
   const real = c=>[...c.children].filter(x=>!x.classList.contains('chk'));
+  const isUnit = x=>!!x && ((x.classList.contains('q') && !x.classList.contains('part')) || x.classList.contains('gh'));
   let lastIdx = -1; allCols.forEach((c, i)=>{ if(real(c).length) lastIdx = i; });
   allCols.forEach((c, i)=>{
     if(i >= lastIdx) return;
     const kids = real(c); if(kids.length < 2) return;
-    const gaps = kids.slice(1).filter(x=>(x.classList.contains('q') && !x.classList.contains('part')) || x.classList.contains('gh'));
+    const gaps = kids.slice(1).filter(isUnit);
     if(!gaps.length) return;
     const box = c.getBoundingClientRect();
     const room = box.height - (kids[kids.length-1].getBoundingClientRect().bottom - box.top) - 2;
     if(room <= 1) return;
-    const w = gaps.map(x=>x.classList.contains('gh') ? 1.4 : 1), W = w.reduce((a, b)=>a+b, 0);
-    gaps.forEach((x, k)=>{
-      const add = Math.min(room*w[k]/W, lineH*6);
-      x.style.marginTop = ((parseFloat(getComputedStyle(x).marginTop) || 0) + add).toFixed(1) + 'px';
-    });
+    const cur = gaps.map(x=>parseFloat(getComputedStyle(x).marginTop) || 0);
+    const sum = cur.reduce((s, v)=>s+v, 0) + room;
+    const trail = isUnit(real(allCols[i+1])[0]) ? 1 : 0;
+    let G = sum / (gaps.length + trail);
+    if(G < Math.max(...cur)) G = sum / gaps.length;
+    gaps.forEach(x=>{ x.style.marginTop = G.toFixed(1) + 'px'; });
   });
   const pages = sheets.length;
   sheets.forEach(sh=>{ const b = sh.querySelector('.sh-ft .b'); if(b) b.textContent = pages; });
