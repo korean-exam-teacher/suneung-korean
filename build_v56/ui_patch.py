@@ -103,7 +103,7 @@ HERO = """<section class="search-band hero" id="hero">
   </div>
   <div class="inner hero-inner">
     <p class="hero-eyebrow">평가원 수능·모의평가<i></i>국어 기출 문제은행</p>
-    <p class="hero-copy">뿌리 깊은 공부는<br>어떤 시험에도 흔들리지 않습니다</p>
+    <p class="hero-copy">뿌리 깊은 나무는<br>바람에 흔들리지 않는다.</p>
     <h1 id="bandTitle">수능 국어 기출문제 검색</h1>
     <p class="sub" id="bandSub">평가원 모의평가·수능 국어 문항을 소재, 발문, 지문 속 낱말로 찾아볼 수 있습니다.</p>
     <form class="search-form" id="searchForm" role="search">
