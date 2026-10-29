@@ -784,6 +784,80 @@ footer .inner{padding-block:56px 48px}
 @media (prefers-reduced-motion: reduce){.hero-down{animation:none}}
 @media print{.hero-media{display:none}}
 </style>
+<style>
+/* ===== v65 조작 요소 다듬기: 지문·발문·선지(.passage .bogi .choices .ch)는 건드리지 않음 ===== */
+:root{--ease:cubic-bezier(.2,.7,.2,1);--ring:0 0 0 3px color-mix(in srgb,var(--brand) 26%,transparent);--pill:999px}
+button,select,.ylink,.qk,.btn-line,.btn-plain,.btn-fill,.qbtn,.pager button,.reset,.tools button.sz{transition:background-color .2s var(--ease),border-color .2s var(--ease),color .2s var(--ease),box-shadow .2s var(--ease),transform .2s var(--ease)}
+button:focus-visible,select:focus-visible,a:focus-visible,input:focus-visible{outline:none;box-shadow:var(--ring)}
+/* 체크 상자 */
+.check input[type=checkbox],.tools input[type=checkbox],.bk-fields input[type=checkbox],.nb-actions input[type=checkbox],.d-top input[type=checkbox]{
+  -webkit-appearance:none;appearance:none;width:18px;height:18px;margin:0;flex:none;cursor:pointer;
+  border:1.5px solid var(--line-strong);border-radius:6px;background:var(--bg) center/11px 11px no-repeat;display:inline-block;vertical-align:-4px}
+.check input[type=checkbox]:hover,.tools input[type=checkbox]:hover{border-color:var(--brand)}
+.check input[type=checkbox]:checked,.tools input[type=checkbox]:checked,.bk-fields input[type=checkbox]:checked,.nb-actions input[type=checkbox]:checked,.d-top input[type=checkbox]:checked{
+  background-color:var(--brand);border-color:var(--brand);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.2 6.3l2.4 2.4 5.2-5.4' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.check{border-radius:8px;padding:6px 8px;margin:0 -8px;gap:10px}
+.check:hover{background:var(--bg-sub)}
+.check:has(input:checked) span:not(.cnt){color:var(--brand);font-weight:600}
+.check .cnt{font-size:11.5px;background:var(--bg-sub);border-radius:var(--pill);padding:1px 8px;min-width:34px;text-align:center}
+.check:hover .cnt{background:var(--bg)}
+/* 고르기 */
+.field select,.tools select,.bk-fields select,#sortSel,select{
+  -webkit-appearance:none;appearance:none;cursor:pointer;
+  background:var(--bg-input) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.6l3 3 3-3' fill='none' stroke='%238A919E' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") right 12px center/12px no-repeat;
+  padding:0 34px 0 14px;border:1px solid var(--line);border-radius:12px;font-weight:500}
+.field select{height:42px}
+.tools select{height:34px;border-radius:var(--pill)}
+.field select:hover,.tools select:hover{border-color:var(--line-strong)}
+/* 단추 */
+html:root .btn-fill{border:0;border-radius:var(--pill);padding:10px 22px;background:linear-gradient(180deg,#27508F,#15305C);color:#fff;box-shadow:0 8px 18px -8px rgba(19,40,77,.6)}
+html:root .btn-fill:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 12px 24px -10px rgba(19,40,77,.7)}
+html:root .btn-fill:disabled{background:var(--bg-sub);box-shadow:none;color:var(--text-faint);border:1px solid var(--line)}
+.btn-line{border-radius:var(--pill);padding:9px 20px;border:1px solid color-mix(in srgb,var(--brand) 60%,transparent);background:transparent;color:var(--brand)}
+.btn-line:hover{background:var(--brand);border-color:var(--brand);color:#fff;transform:translateY(-1px)}
+.btn-plain{border-radius:var(--pill);padding:9px 18px;border:1px solid var(--line);background:var(--bg);color:var(--text-sub)}
+.btn-plain:hover{border-color:var(--text);color:var(--text);transform:translateY(-1px)}
+.qbtn{border-radius:12px;border-color:var(--line);height:38px}
+.qbtn:hover{transform:translateY(-1px)}
+.ylink{padding:7px 16px;border-color:var(--line);background:var(--bg)}
+.ylink::after{content:"→";margin-left:6px;opacity:0;display:inline-block;transform:translateX(-4px);transition:opacity .2s,transform .2s}
+.ylink:hover::after{opacity:1;transform:none}
+.ylink:hover{background:var(--brand);border-color:var(--brand);color:#fff}
+.ylink:hover .n{color:inherit}
+.tools button.sz{border-radius:var(--pill);height:32px;min-width:42px;border-color:var(--line)}
+.tools label:has(input[type=checkbox]){padding:5px 12px 5px 8px;border-radius:var(--pill);border:1px solid var(--line);gap:8px}
+.tools label:has(input[type=checkbox]):hover{border-color:var(--line-strong)}
+html:root .tools label input[type=checkbox]{width:30px;height:18px;border-radius:var(--pill);border:0;background:var(--line-strong);position:relative;vertical-align:middle}
+html:root .tools label input[type=checkbox]::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s var(--ease)}
+html:root .tools label input[type=checkbox]:checked{background:var(--brand);background-image:none}
+html:root .tools label input[type=checkbox]:checked::after{transform:translateX(12px)}
+.pager{gap:6px}
+.pager button{border:0;border-radius:var(--pill);background:transparent;min-width:38px;height:38px;color:var(--text-sub)}
+.pager button:hover:not(:disabled){background:var(--bg-sub);color:var(--text)}
+html:root .pager button.on{background:var(--text);color:var(--bg)}
+.reset{border-radius:var(--pill);border:1px solid var(--line);background:var(--bg-sub)}
+.reset:hover{background:var(--bg);border-color:var(--text-sub)}
+.more-years:hover{background:var(--bg-sub)}
+/* 조건 상자 */
+.side-box{border-radius:20px;border-color:var(--line);box-shadow:0 1px 2px rgba(16,24,40,.03)}
+.side-title{font-size:14px;padding:16px 18px 12px;border-bottom:0}
+.side-title small,.side-title span{font-weight:500}
+.side-list{padding:0 18px 14px}
+.side-fields{padding:4px 18px 18px}
+/* 꼬리표 */
+.tag{border:0;background:var(--bg-sub);padding:3px 10px}
+.tag.verified{background:color-mix(in srgb,var(--good) 12%,transparent);color:var(--good)}
+.tag.reform{background:var(--brand-soft)}
+.area{font-weight:700}
+.result-row:hover{background:var(--bg-sub)}
+.result-headrow{font-size:12.5px;letter-spacing:.04em;color:var(--text-faint)}
+.qk{border-radius:20px}
+.notice{border-radius:16px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn-fill{background:linear-gradient(180deg,#A9C3EE,#86A6DE);color:#0E1015}
+  :root:not([data-theme="light"]) .btn-line:hover{color:#0E1015}}
+</style>
+
 <div id="page-top"></div>
 <header class="gnb">
   <div class="inner">
