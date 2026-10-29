@@ -9,16 +9,16 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500&display=swap">
 <style>
 @font-face{font-family:"OldHangulSans";font-weight:400;font-display:swap;src:url(fonts/oh-sans.woff) format("woff");unicode-range:U+1100-11FF,U+A960-A97F,U+D7B0-D7FF,U+302E-302F,U+3165-318E}
-@font-face{font-family:"OldHangulSerif";font-weight:400;font-display:swap;src:url(fonts/oh-serif.woff) format("woff");unicode-range:U+1100-11FF,U+A960-A97F,U+D7B0-D7FF,U+302E-302F,U+3165-318E}
+@font-face{font-family:"YongbiTitle";font-weight:400 800;font-display:swap;src:url(fonts/oh-nanum.woff) format("woff")}
 :root{--ink:#0E1116;--paper:#FFFFFF;--sub:#4A5160;--faint:#8A919E;--line:#E5E7EB;--brand:#1D3A6B;--soft:#F4F5F7;
   --sans:"OldHangulSans","Pretendard Variable","Pretendard","Noto Sans KR","Noto Sans CJK KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-  --title:"OldHangulSerif","Noto Serif KR","Noto Serif CJK KR","Batang",serif}
+  --title:"YongbiTitle","Noto Serif KR","Noto Serif CJK KR","Batang",serif}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{font-family:var(--sans);color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
 a{color:inherit}
 :focus-visible{outline:2px solid #9DB9EA;outline-offset:3px}
-.old{font-family:var(--title);font-weight:500;letter-spacing:.01em}
+.old{font-family:var(--title);font-weight:400;letter-spacing:.01em}
 </style>
 <style>
 .top{position:absolute;inset:0 0 auto 0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px clamp(18px,3vw,40px)}

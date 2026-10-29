@@ -9,16 +9,16 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500&display=swap">
 <style>
 @font-face{font-family:"OldHangulSans";font-weight:400;font-display:swap;src:url(fonts/oh-sans.woff) format("woff");unicode-range:U+1100-11FF,U+A960-A97F,U+D7B0-D7FF,U+302E-302F,U+3165-318E}
-@font-face{font-family:"OldHangulSerif";font-weight:400;font-display:swap;src:url(fonts/oh-serif.woff) format("woff");unicode-range:U+1100-11FF,U+A960-A97F,U+D7B0-D7FF,U+302E-302F,U+3165-318E}
+@font-face{font-family:"YongbiTitle";font-weight:400 800;font-display:swap;src:url(fonts/oh-nanum.woff) format("woff")}
 :root{--ink:#0E1116;--paper:#FFFFFF;--sub:#4A5160;--faint:#8A919E;--line:#E5E7EB;--brand:#1D3A6B;--soft:#F4F5F7;
   --sans:"OldHangulSans","Pretendard Variable","Pretendard","Noto Sans KR","Noto Sans CJK KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-  --title:"OldHangulSerif","Noto Serif KR","Noto Serif CJK KR","Batang",serif}
+  --title:"YongbiTitle","Noto Serif KR","Noto Serif CJK KR","Batang",serif}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{font-family:var(--sans);color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
 a{color:inherit}
 :focus-visible{outline:2px solid #9DB9EA;outline-offset:3px}
-.old{font-family:var(--title);font-weight:500;letter-spacing:.01em}
+.old{font-family:var(--title);font-weight:400;letter-spacing:.01em}
 </style>
 <style>
 body{background:#07090D;color:#fff}
@@ -69,7 +69,7 @@ body{background:#07090D;color:#fff}
   .g-top{padding-top:40px}
   .verse{position:static;padding:22px 16px 30px;background:#07090D}
 }
-@media (prefers-reduced-motion: reduce){.gate,.gv,.shade{transition:none}}
+@media (prefers-reduced-motion: reduce){.gv{transition:filter .6s}}
 </style>
 </head>
 <body>
@@ -128,7 +128,8 @@ body{background:#07090D;color:#fff}
 <script>
 if(location.hash) location.replace('suneung.html' + location.hash);   /* 예전 주소(#…)는 수능 화면으로 */
 (function(){
-  const still = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator.connection && navigator.connection.saveData) || !matchMedia('(hover:hover) and (min-width:901px)').matches;
+  /* 마우스를 올리는 건 직접 한 동작이라 '움직임 줄이기' 설정과 상관없이 재생. 데이터 절약·터치 화면만 사진 */
+  const still = (navigator.connection && navigator.connection.saveData) || !matchMedia('(hover:hover) and (min-width:901px)').matches;
   if(still) return;
   document.querySelectorAll('.gate').forEach(g=>{
     const v = g.querySelector('.gv');
@@ -137,6 +138,8 @@ if(location.hash) location.replace('suneung.html' + location.hash);   /* 예전 
     g.addEventListener('mouseenter', on); g.addEventListener('focus', on);
     g.addEventListener('mouseleave', off); g.addEventListener('blur', off);
   });
+  /* 처음 화면이 다 뜨면 영상을 미리 받아 두어, 마우스를 올리자마자 재생 */
+  addEventListener('load', ()=>setTimeout(()=>document.querySelectorAll('.gv').forEach(v=>{ v.preload = 'auto'; if(!v.src) v.src = v.dataset.src; }), 600));
 })();
 </script>
 </body>
