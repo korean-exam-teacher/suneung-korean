@@ -1458,7 +1458,14 @@ sortSelect.value = prefs.sort;
 sortSelect.addEventListener('change', e=>{ prefs.sort = e.target.value; savePrefs(); state.page=1; render(); });
 const showAns = document.getElementById('showAns');
 showAns.checked = !!prefs.showAns;
-showAns.addEventListener('change', e=>{ prefs.showAns = e.target.checked; savePrefs(); render(); });
+showAns.addEventListener('change', e=>{ prefs.showAns = e.target.checked; savePrefs(); keepOpen(render); });
+function keepOpen(fn){
+  const sy = window.scrollY;
+  const open = [...document.querySelectorAll('[aria-expanded="true"][data-key]')].map(el=>[[...el.classList].filter(c=>!/^(on|is-|active)/.test(c)).join('.'), el.dataset.key]);
+  fn();
+  open.forEach(([c,k])=>{ const el = [...document.querySelectorAll('.'+c+'[data-key]')].find(x=>x.dataset.key===k && x.offsetParent!==null); if(el && el.getAttribute('aria-expanded')!=='true') el.click(); });
+  window.scrollTo(0, sy);
+}
 document.addEventListener('click', e=>{
   const b = e.target.closest('button.sz'); if(b){
     prefs.rs = Math.min(1.45, Math.max(0.85, Math.round((prefs.rs + Number(b.dataset.sz)*0.1)*100)/100));
