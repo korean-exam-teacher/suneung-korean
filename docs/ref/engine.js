@@ -93,7 +93,9 @@ function setFig(on,scene,anchor){ const y=anchor?anchor.getBoundingClientRect().
   if(on){ cur=null; requestAnimationFrame(()=>{resize(); if(anchor){const mob=innerWidth<=900; const target=mob?($('stage').getBoundingClientRect().bottom+12):y; scrollBy(0,anchor.getBoundingClientRect().top-target);} if(scene) show(scene); else pick();}); }
   else if(anchor){ requestAnimationFrame(()=>scrollBy(0,anchor.getBoundingClientRect().top-y)); } }
 /* 문제를 다 푼 뒤에만 그림을 열 수 있음 (문제은행 채점 기록 = localStorage 'kbank-records-v1', 같은 사이트) */
-function solvedCount(){ const keys=window.REF_ITEMS||[]; let rec={}; try{rec=JSON.parse(localStorage.getItem('kbank-records-v1')||'{}')||{};}catch(e){} return [keys.filter(k=>rec[k]&&rec[k].r).length, keys.length]; }
+function solvedCount(){ let g=window.REF_ITEMS||[]; if(g.length&&!Array.isArray(g[0])) g=[g]; g=g.filter(x=>x.length); let rec={}; try{rec=JSON.parse(localStorage.getItem('kbank-records-v1')||'{}')||{};}catch(e){} if(!g.length) return [0,0];
+  /* A·B형처럼 같은 지문이 여러 회차에 있으면 그중 한 회차의 문항을 다 풀면 열림 */
+  const r=g.map(keys=>[keys.filter(k=>rec[k]&&rec[k].r).length, keys.length]); r.sort((a,b)=>(b[0]/b[1])-(a[0]/a[1])); return r[0]; }
 function gate(){ const [d,n]=solvedCount(), open=!n||d>=n; document.body.classList.toggle('locked',!open);
   const g=$('gate'); if(g){ g.hidden=open; g.innerHTML=open?'':`<b>문제를 먼저 풀어 보세요.</b> 이 지문의 문항 ${n}개를 문제은행에서 모두 풀고 채점하면 그림이 열립니다. <span class="gate-n">지금 ${d}개 / ${n}개</span> <a href="../suneung.html">문제은행에서 풀기</a>`; }
   if(!open && document.body.classList.contains('fig')) document.body.classList.remove('fig');
