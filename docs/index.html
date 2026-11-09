@@ -71,12 +71,18 @@ body{background:#07090D;color:#fff}
 }
 @media (prefers-reduced-motion: reduce){.gv{transition:filter .6s}}
 </style>
+<style>
+/* v85: 다섯 갈래 */
+.sea{position:absolute;inset:0;z-index:-2;background:radial-gradient(120% 90% at 30% 20%,#2F6F86 0%,#163E55 45%,#0A1E2E 100%)}
+.badge:not(.on){background:rgba(0,0,0,.25)}
+@media (min-width:901px){.g-desc{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}.g-old{font-size:clamp(26px,2.6vw,44px)}}
+</style>
 </head>
 <body>
 <header class="top">
   <a class="brand" href="./" aria-label="국어의 모든 것 첫 화면"><span class="old">국어의 모든 것</span><small>국어 시험 기출 자료실</small></a>
   <nav class="top-nav" aria-label="바로 가기">
-    <a href="suneung.html">수능</a><a href="saemi.html">대학 논술</a><a href="kkot.html">PSAT · LEET · 임용</a>
+    <a href="suneung.html">수능</a><a href="/nonsul-korean/">대학 논술</a><a href="/advanced-korean/">PSAT · LEET · 임용</a><a href="/middle-korean/">중학교·기초</a><a href="/seonsul-korean/">서·논술형</a>
     <a class="dim" href="https://docs.google.com/forms/d/e/1FAIpQLSdCkEn1SwTAvnc03M6mEtuhApm3kOqn1BMdI0A_H7iGOQREGg/viewform" target="_blank" rel="noopener">의견 보내기</a>
   </nav>
 </header>
@@ -95,7 +101,7 @@ body{background:#07090D;color:#fff}
       <span class="g-btn">바로 가기<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
     </span>
   </a>
-  <a class="gate" href="saemi.html" data-k="saemi">
+  <a class="gate" href="/nonsul-korean/" data-k="saemi">
     <video class="gv" muted playsinline loop preload="none" poster="media/hero2.jpg" data-src="media/hero2.mp4" aria-hidden="true"></video>
     <span class="shade" aria-hidden="true"></span>
     <span class="g-in">
@@ -109,7 +115,7 @@ body{background:#07090D;color:#fff}
       <span class="g-btn">바로 가기<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
     </span>
   </a>
-  <a class="gate" href="kkot.html" data-k="kkot">
+  <a class="gate" href="/advanced-korean/" data-k="kkot">
     <video class="gv" muted playsinline loop preload="none" poster="media/hero4.jpg" data-src="media/hero4.mp4" aria-hidden="true"></video>
     <span class="shade" aria-hidden="true"></span>
     <span class="g-in">
@@ -123,8 +129,36 @@ body{background:#07090D;color:#fff}
       <span class="g-btn">바로 가기<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
     </span>
   </a>
+  <a class="gate" href="/middle-korean/" data-k="middle">
+    <video class="gv" muted playsinline loop preload="none" poster="media/hero3.jpg" data-src="media/hero3.mp4" aria-hidden="true"></video>
+    <span class="shade" aria-hidden="true"></span>
+    <span class="g-in">
+      <span class="g-top"><span class="g-num">04</span><span class="badge">준비 중</span></span>
+      <span class="g-old old" lang="okm">내히 이러</span>
+      <span class="g-gloss">냇물을 이루어</span>
+      <span class="g-rule" aria-hidden="true"></span>
+      <span class="g-exam">중학교 국어 · 기초학력</span>
+      <span class="g-desc">중학교 국어 수업에 쓰는 자료와 학생이 혼자 공부하는 자료, 낱말·문장부터 차근차근 쌓는 기초학력 읽기를 담을 곳입니다.</span>
+      <span class="g-tags"><span>중학교 국어</span><span>기초학력</span><span>문학 그림</span></span>
+      <span class="g-btn">미리 보기<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </span>
+  </a>
+  <a class="gate" href="/seonsul-korean/" data-k="seonsul">
+    <span class="sea" aria-hidden="true"></span>
+    <span class="shade" aria-hidden="true"></span>
+    <span class="g-in">
+      <span class="g-top"><span class="g-num">05</span><span class="badge">준비 중</span></span>
+      <span class="g-old old" lang="okm">바ᄅᆞ래 가ᄂᆞ니</span>
+      <span class="g-gloss">바다에 가느니</span>
+      <span class="g-rule" aria-hidden="true"></span>
+      <span class="g-exam">서·논술형</span>
+      <span class="g-desc">서술형·논술형 문항을 직접 써 보고, 채점 기준과 예시 답안으로 스스로 점검하는 곳입니다.</span>
+      <span class="g-tags"><span>서술형</span><span>논술형</span><span>채점 기준·예시 답안</span></span>
+      <span class="g-btn">미리 보기<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </span>
+  </a>
 </main>
-<p class="verse"><span class="old" lang="okm">불휘 기픈 남ᄀᆞᆫ ᄇᆞᄅᆞ매 아니 뮐ᄊᆡ</span>「용비어천가」 제2장에서 이름을 따왔습니다</p>
+<p class="verse"><span class="old" lang="okm">불휘 기픈 남ᄀᆞᆫ ᄇᆞᄅᆞ매 아니 뮐ᄊᆡ 곶 됴코 여름 하ᄂᆞ니 / ᄉᆡ미 기픈 므른 ᄀᆞᄆᆞ래 아니 그츨ᄊᆡ 내히 이러 바ᄅᆞ래 가ᄂᆞ니</span>「용비어천가」 제2장에서 이름을 따왔습니다</p>
 <script>
 if(location.hash) location.replace('suneung.html' + location.hash);   /* 예전 주소(#…)는 수능 화면으로 */
 (function(){
@@ -132,7 +166,7 @@ if(location.hash) location.replace('suneung.html' + location.hash);   /* 예전 
   const still = (navigator.connection && navigator.connection.saveData) || !matchMedia('(hover:hover) and (min-width:901px)').matches;
   if(still) return;
   document.querySelectorAll('.gate').forEach(g=>{
-    const v = g.querySelector('.gv');
+    const v = g.querySelector('.gv'); if(!v) return;
     const on = ()=>{ if(!v.src) v.src = v.dataset.src; const p = v.play(); if(p && p.catch) p.catch(()=>{}); };
     const off = ()=>{ try{ v.pause(); }catch(e){} };
     g.addEventListener('mouseenter', on); g.addEventListener('focus', on);
