@@ -304,7 +304,7 @@ function match(i){
   if(S.q){ for(const w of S.q.toLowerCase().split(/\s+/).filter(Boolean)) if(!i._h.includes(w)) return false; }
   return true;
 }
-function srcs(id,kind,parts){ return parts.length===1?[`pic/ns/${id}-${kind}.webp`]:parts.map((_,n)=>`pic/ns/${id}-${kind}-${n+1}.webp`); }
+function srcs(id,kind,parts){ return parts.length===1?[`/nonsul-korean/pic/ns/${id}-${kind}.webp`]:parts.map((_,n)=>`/nonsul-korean/pic/ns/${id}-${kind}-${n+1}.webp`); }
 function imgs(id,kind,parts,alt){ return srcs(id,kind,parts).map((s,n)=>`<div class="pic"><img src="${s}" width="${parts[n][0]}" height="${parts[n][1]}" loading="lazy" decoding="async" alt="${esc(alt)}"></div>`).join(''); }
 function row(i){
   return `<div class="row" data-id="${esc(i.id)}" role="button" tabindex="0" aria-expanded="${S.open===i.id}"><span class="ex"><b>${i.y}학년도</b><small>${esc(i.uni)}</small></span><span class="no">${esc(i.short)}</span><span class="badge">${esc(i.kind)}</span><span class="tx"><b>${hl(i.topic,S.q)}</b>${i.keys?`<span>${hl(i.keys,S.q)}</span>`:''}<small>${esc((i.qtype||[]).join(' · '))}${i.subj?` · ${esc(i.subj)}`:''}</small></span><span class="an"><small>${esc(i.tm||'')}</small></span></div>`;

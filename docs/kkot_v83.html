@@ -354,8 +354,8 @@ function setOf(i){ if(isP(i)) return i.set&&i.set.replace('~','-'); if(!isM(i)) 
 function setLab(i){ if(!isM(i)) return i.set; const p=MPICS[i.exam]; return p.lab[setOf(i)]; }
 function picQ(i){ if(isP(i)){ const p=PPICS[i.exam]; return p&&p.q&&p.q[i.no]; } if(isM(i)){ const p=MPICS[i.exam]; return p&&p.q&&p.q[i.id]; } const p=PICS[i.exam]; return p&&p.q&&p.q[i.no]; }
 function picP(i){ const s=setOf(i); if(!s) return null; const p=isP(i)?PPICS[i.exam]:isM(i)?MPICS[i.exam]:PICS[i.exam]; return p&&p.p&&p.p[s]; }
-function qsrc(i){ if(isP(i)) return `pic/psat/${i.exam}-q${String(i.no).padStart(2,'0')}.webp`; return isM(i)?`pic/im/${i.exam}-q${String(MPICS[i.exam].n[i.id]).padStart(2,'0')}.webp`:`pic/leet/${i.exam}-q${String(i.no).padStart(2,'0')}.webp`; }
-function psrc(i){ if(isP(i)) return `pic/psat/${i.exam}-p${setOf(i)}.webp`; return isM(i)?`pic/im/${i.exam}-p${setOf(i)}.webp`:`pic/leet/${i.exam}-p${i.set.replace('~','-')}.webp`; }
+function qsrc(i){ if(isP(i)) return `/advanced-korean/pic/psat/${i.exam}-q${String(i.no).padStart(2,'0')}.webp`; return isM(i)?`/advanced-korean/pic/im/${i.exam}-q${String(MPICS[i.exam].n[i.id]).padStart(2,'0')}.webp`:`/advanced-korean/pic/leet/${i.exam}-q${String(i.no).padStart(2,'0')}.webp`; }
+function psrc(i){ if(isP(i)) return `/advanced-korean/pic/psat/${i.exam}-p${setOf(i)}.webp`; return isM(i)?`/advanced-korean/pic/im/${i.exam}-p${setOf(i)}.webp`:`/advanced-korean/pic/leet/${i.exam}-p${i.set.replace('~','-')}.webp`; }
 function noLab(i){ return isM(i)&&MPICS[i.exam]&&MPICS[i.exam].rs?`${i.sec} ${i.no}번`:`${i.no}번`; }
 function img(src,wh,alt){ return `<div class="pic"><img src="${src}" width="${wh[0]}" height="${wh[1]}" loading="lazy" decoding="async" alt="${esc(alt)}"></div>`; }
 const PK={};
