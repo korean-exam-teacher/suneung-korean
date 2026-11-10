@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>선생님 화면 — 국어의 모든 것</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+@font-face{font-family:"YongbiTitle";font-weight:400 800;font-display:swap;src:url(fonts/oh-nanum.woff) format("woff")}
+:root{--bg:#FEFEFD;--surface:#FFFFFF;--soft:#F5F4F1;--line:#E7E7E4;--line-strong:#D2D2CD;--text:#262625;--sub:#62625E;--faint:#9A9A95;--brand:#2F4F7F;--ok:#1f7a4d;--no:#b33a2b;
+  --sans:"Pretendard Variable","Pretendard","Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;--title:"YongbiTitle","Noto Serif KR",serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1a19;--surface:#222120;--soft:#2a2927;--line:#36342f;--line-strong:#4a4741;--text:#ecebe7;--sub:#b3b0a9;--faint:#86837c;--brand:#9cc0e4;--ok:#5fd09a;--no:#f08a7a}}
+:root[data-theme="dark"]{--bg:#1b1a19;--surface:#222120;--soft:#2a2927;--line:#36342f;--line-strong:#4a4741;--text:#ecebe7;--sub:#b3b0a9;--faint:#86837c;--brand:#9cc0e4;--ok:#5fd09a;--no:#f08a7a}
+*{box-sizing:border-box}html,body{margin:0}
+body{font-family:var(--sans);color:var(--text);background:var(--bg);line-height:1.6;letter-spacing:-.01em;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.top{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:58px;padding:0 clamp(16px,3.2vw,56px);background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.brand{font-family:var(--title);font-size:21px;text-decoration:none}
+.top nav{display:flex;gap:2px}.top nav button{border:0;background:none;font:inherit;font-size:15px;color:var(--sub);padding:8px 12px;cursor:pointer;border-radius:8px}.top nav button.on{color:var(--text);font-weight:700}
+.wrap{max-width:1180px;margin:0 auto;padding:28px clamp(16px,3.2vw,40px) 80px}
+h1{font-size:26px;letter-spacing:-.03em;margin:0 0 4px}h2{font-size:19px;margin:28px 0 10px}
+.sub{color:var(--sub);font-size:14px;margin:0 0 18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px}
+input,select,textarea{font:inherit;font-size:15px;color:inherit;background:transparent;border:1px solid var(--line-strong);border-radius:10px;padding:10px 12px}
+textarea{width:100%;min-height:90px}
+.btn{border:1px solid var(--line-strong);background:transparent;color:inherit;border-radius:999px;padding:9px 18px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}.btn.sm{padding:5px 12px;font-size:13px}.btn:disabled{opacity:.45;cursor:default}
+.lnk{border:0;background:none;padding:0;font:inherit;color:var(--brand);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.msg{color:var(--no);font-size:14px;min-height:20px;margin-top:8px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
+.kp{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 20px}.kp div{background:var(--soft);border-radius:14px;padding:14px 16px}.kp b{display:block;font-size:24px;letter-spacing:-.02em}.kp small{color:var(--sub);font-size:12.5px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th{font-size:12.5px;font-weight:600;color:var(--sub);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--soft)}
+td{padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr{cursor:pointer}tbody tr:hover td{background:var(--soft)}tbody tr:last-child td{border-bottom:0}
+td.num{text-align:right}th.num{text-align:right}
+.pc{display:inline-block;min-width:44px;text-align:right}.pc.lo{color:var(--no)}.pc.hi{color:var(--ok)}
+.cnt{color:var(--faint);font-size:12px;margin-left:4px}
+.dots{display:flex;gap:2px}.dots i{width:7px;height:14px;border-radius:2px;background:var(--line)}.dots i.on{background:var(--brand);opacity:.75}
+.cls{width:110px;padding:5px 8px;font-size:13.5px}
+.empty{color:var(--sub);padding:30px;text-align:center}
+.det{margin-top:18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.bars div{display:grid;grid-template-columns:180px 1fr 90px;gap:10px;align-items:center;font-size:13.5px;margin:6px 0}.bars em{display:block;height:7px;border-radius:4px;background:var(--soft);overflow:hidden}.bars em i{display:block;height:100%;background:var(--brand);opacity:.75}.bars small{color:var(--sub);text-align:right}
+ul.ev{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto}ul.ev li{display:flex;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
+.ok{color:var(--ok)}.no{color:var(--no)}
+.asg{border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px;background:var(--surface)}
+.asg h3{margin:0 0 2px;font-size:16px}.asg .meta{color:var(--sub);font-size:13px}
+.asg table{margin-top:10px}
+.tag{font-size:12.5px;border-radius:999px;padding:2px 10px;background:var(--soft);color:var(--sub)}
+.how{background:var(--soft);border-radius:14px;padding:16px 18px;font-size:14px;line-height:1.75;color:var(--sub)}
+.wans{white-space:pre-wrap;font-size:14px;background:var(--soft);border-radius:10px;padding:10px 12px;margin:6px 0}
+@media (max-width:760px){.kp{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.bars div{grid-template-columns:120px 1fr 70px}.top nav button{padding:8px 8px;font-size:14px}}
+</style>
+</head>
+<body>
+<header class="top"><a class="brand" href="/suneung-korean/">국어의 모든 것</a><nav id="nav" hidden><button type="button" data-v="st" class="on">학생 현황</button><button type="button" data-v="asg">과제</button><button type="button" data-v="nt">공지</button><button type="button" data-v="adm" id="admTab" hidden>선생님 관리</button><button type="button" id="out">나가기</button></nav></header>
+<main class="wrap" id="main"></main>
+<script src="js/account.js?v=100" data-noui></script>
+<script>
+(function(){
+/* account.js 와 같은 서버 주소를 쓴다 */
+var ON=!!(window.KMA&&KMA.on), FBM=!!(window.KMA&&KMA.fb);
+var G={hak:'개념 학습',seo:'서·논술형',sn:'수능',non:'대학 논술',adv:'PSAT·LEET·임용·공무원'}, GO=['hak','seo','sn','non','adv'];
+var SUB={gm:'공무원',psat:'PSAT',leet:'LEET',im:'임용'}, GS={hak:'개념 학습',seo:'서·논술형',sn:'수능',non:'대학 논술',adv:'PSAT 등'};
+var $=function(id){return document.getElementById(id);}, M=$('main');
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function pct(c,t){ if(!t) return '<span class="pc">–</span>'; var p=Math.round(c/t*100); return '<span class="pc '+(p<50?'lo':p>=80?'hi':'')+'">'+p+'%</span>'; }
+function day(t){ if(!t) return '–'; var d=new Date(t); return (d.getMonth()+1)+'.'+d.getDate(); }
+function ago(t){ if(!t) return '–'; var h=(Date.now()-t)/3600000; return h<1?'방금':h<24?Math.floor(h)+'시간 전':Math.floor(h/24)+'일 전'; }
+function nice(k){ var p=k.split(':'); if(p[0]==='adv') return (SUB[p[1]]||p[1])+' '+p.slice(2).join(':'); return (G[p[0]]||p[0])+' · '+p.slice(1).join(':'); }
+function stt(e){ return e.f&&e.o?'<span class="ok">맞힘</span>':e.f?'<span class="no">처음엔 맞힘 · 최근 틀림</span>':e.o?'<span class="ok">다시 풀어 맞힘</span>':'<span class="no">틀림</span>'; }
+var ADM=false, PW=sessionStorage.getItem('kma.tpw')||'', D=null, VIEW=(location.hash||'#st').slice(1), CLS='', OPEN=null;
+function call(fn,args){ return KMA.call(fn,args); }
+
+if(!ON){ M.innerHTML='<h1>선생님 화면</h1><p class="sub">아직 서버 주소가 없어요. 앱스 스크립트(Site.gs)를 배포한 뒤 나온 주소를 /suneung-korean/js/account.js 의 KMA_URL 과 이 파일에 넣어 주세요.</p>'; return; }
+function loginView(msg){
+  $('nav').hidden=true;
+  if(FBM){
+    M.innerHTML='<div class="card" style="max-width:420px;margin:40px auto"><h1>선생님 화면</h1><p class="sub">선생님 아이디로 들어갑니다. 처음이면 사이트 오른쪽 아래 \'로그인\' → \'처음 왔어요\'에서 선생님 아이디를 만든 뒤, Firebase에 선생님으로 등록하면 됩니다.</p>'+
+      '<form id="f"><input type="text" id="tid" autocomplete="username" placeholder="선생님 아이디" style="width:100%"><input type="password" id="pw" autocomplete="current-password" placeholder="비밀번호" style="width:100%;margin-top:8px"><div class="msg" id="m" role="alert">'+esc(msg||'')+'</div><button class="btn pri" type="submit" style="margin-top:6px">들어가기</button></form></div>';
+    $('f').onsubmit=function(e){ e.preventDefault(); $('m').textContent='';
+      call('siteLogin',[$('tid').value.trim(),$('pw').value]).then(function(r){ if(!r.ok){ $('m').textContent=r.msg||'들어가지 못했어요.'; return; }
+        try{ localStorage.setItem('kma.s',JSON.stringify({id:r.id,token:'fb'})); }catch(x){}
+        call('teacherPing',[]).then(function(t){ if(!t.ok){ $('m').textContent=t.msg; return; } ADM=!!t.admin; PW='fb'; sessionStorage.setItem('kma.tpw','fb'); load(); }); }); };
+    setTimeout(function(){ $('tid')&&$('tid').focus(); },30); return;
+  }
+  M.innerHTML='<div class="card" style="max-width:420px;margin:40px auto"><h1>선생님 화면</h1><p class="sub">학생 기록 시트의 \'설정\' 탭 B1 칸에 적은 선생님 비밀번호로 들어갑니다. 공무원 기출 연습장의 선생님 비밀번호와 같아요.</p>'+
+    '<form id="f"><input type="password" id="pw" autocomplete="current-password" placeholder="선생님 비밀번호" style="width:100%"><div class="msg" id="m" role="alert">'+esc(msg||'')+'</div><button class="btn pri" type="submit" style="margin-top:6px">들어가기</button></form></div>';
+  $('f').onsubmit=function(e){ e.preventDefault(); var v=$('pw').value; call('teacherPing',[v]).then(function(r){ if(!r.ok){ $('m').textContent=r.msg||'들어가지 못했어요.'; return; } PW=v; sessionStorage.setItem('kma.tpw',v); load(); }); };
+  setTimeout(function(){ $('pw')&&$('pw').focus(); },30);
+}
+function load(){
+  M.innerHTML='<p class="sub">불러오는 중…</p>';
+  call('teacherSite',[PW]).then(function(r){
+    if(!r.ok){ sessionStorage.removeItem('kma.tpw'); PW=''; return loginView(r.msg); }
+    D=r; $('nav').hidden=false; $('admTab').hidden=!ADM; paint();
+  });
+}
+document.querySelectorAll('#nav [data-v]').forEach(function(b){ b.onclick=function(){ VIEW=b.dataset.v; OPEN=null; history.replaceState(null,'','#'+VIEW); paint(); }; });
+$('out').onclick=function(){ sessionStorage.removeItem('kma.tpw'); PW=''; if(FBM){ call('siteLogout',[]); try{ localStorage.removeItem('kma.s'); }catch(x){} } loginView(''); };
+function paint(){
+  document.querySelectorAll('#nav [data-v]').forEach(function(b){ b.classList.toggle('on',b.dataset.v===VIEW); });
+  if(VIEW==='asg') return asgView(); if(VIEW==='nt') return ntView(); if(VIEW==='adm'&&ADM) return admView(); stView();
+}
+/* ---------- 학생 현황 ---------- */
+function classes(){ var c={}; D.rows.forEach(function(r){ if(r.sum.cls) c[r.sum.cls]=1; }); return Object.keys(c).sort(); }
+function asgFor(r){ return D.asg.filter(function(a){ return !a.cls||a.cls===r.sum.cls; }); }
+function stView(){
+  var rows=D.rows.filter(function(r){ return !CLS||r.sum.cls===CLS; }).sort(function(a,b){ return (b.sum.last||0)-(a.sum.last||0); });
+  var wk=rows.filter(function(r){ return r.sum.wk; }).length, tot=rows.reduce(function(a,r){return a+r.sum.n;},0), f=rows.reduce(function(a,r){return a+r.sum.f;},0);
+  var dd=[]; for(var i=13;i>=0;i--){ var d=new Date(Date.now()-i*86400000+9*3600000).toISOString().slice(0,10); dd.push(d); }
+  var h='<h1>학생 현황</h1><p class="sub">'+new Date(D.at).toLocaleString('ko-KR')+' 기준 · 학생 줄을 누르면 자세히 볼 수 있어요. <button class="lnk" type="button" id="rl">새로 고침</button></p>'+
+    '<div class="kp"><div><b>'+rows.length+'</b><small>학생</small></div><div><b>'+wk+'</b><small>최근 7일 공부한 학생</small></div><div><b>'+tot.toLocaleString()+'</b><small>푼 문제(모두)</small></div><div><b>'+(tot?Math.round(f/tot*100)+'%':'–')+'</b><small>첫 시도 정답률</small></div></div>'+
+    '<div class="bar"><label>반 <select id="cf"><option value="">모두</option>'+classes().map(function(c){return '<option'+(c===CLS?' selected':'')+'>'+esc(c)+'</option>';}).join('')+'</select></label></div>';
+  if(!rows.length){ M.innerHTML=h+'<div class="tw"><p class="empty">아직 학생이 없어요. 학생들이 사이트 오른쪽 아래 \'로그인\'에서 아이디를 만들면 여기에 나타나요.</p></div>'; bindTop(); return; }
+  h+='<div class="tw"><table><thead><tr><th>아이디</th><th>반</th><th>마지막 공부</th><th>최근 14일</th><th class="num">7일</th><th class="num">푼 문제</th><th class="num">정답률</th><th class="num">남은 오답</th>'+
+    GO.map(function(g){return '<th class="num" title="'+G[g]+'">'+GS[g]+'</th>';}).join('')+'<th class="num">과제</th>'+(FBM?'':'<th class="num">공무원 앱</th>')+'</tr></thead><tbody>'+
+    rows.map(function(r){ var s=r.sum, A=asgFor(r), sd=A.filter(function(a){return r.sub[a.id];}).length;
+      return '<tr data-id="'+esc(r.id)+'"><td><b>'+esc(r.id)+'</b></td><td><input class="cls" data-c="'+esc(r.id)+'" value="'+esc(s.cls)+'" placeholder="반" aria-label="'+esc(r.id)+' 반"></td><td>'+ago(s.last)+'</td>'+
+        '<td><span class="dots">'+dd.map(function(d){return '<i class="'+(s.days.indexOf(d)>=0?'on':'')+'" title="'+d+'"></i>';}).join('')+'</span></td>'+
+        '<td class="num">'+s.wk+'</td><td class="num">'+s.n+'</td><td class="num">'+pct(s.f,s.n)+'</td><td class="num">'+s.wrong+'</td>'+
+        GO.map(function(g){ var v=s.byG[g]; return '<td class="num">'+(v?pct(v.c,v.t)+'<span class="cnt">'+v.t+'</span>':'<span class="cnt">–</span>')+'</td>'; }).join('')+
+        '<td class="num">'+(A.length?sd+'/'+A.length:'–')+'</td>'+(FBM?'':'<td class="num">'+(s.app?pct(s.app.c,s.app.t)+'<span class="cnt">'+s.app.t+'</span>':'–')+'</td>')+'</tr>'; }).join('')+'</tbody></table></div><div id="det"></div>';
+  M.innerHTML=h; bindTop();
+  M.querySelectorAll('tbody tr').forEach(function(tr){ tr.onclick=function(e){ if(e.target.closest('input')) return; detail(tr.dataset.id); }; });
+  M.querySelectorAll('input.cls').forEach(function(i){ i.onchange=function(){ var v=i.value.trim(); call('setClass',[PW,i.dataset.c,v]).then(function(r){ if(r.ok){ D.rows.forEach(function(x){ if(x.id===i.dataset.c) x.sum.cls=v; }); } }); }; });
+  if(OPEN) detail(OPEN);
+}
+function bindTop(){ var cf=$('cf'); if(cf) cf.onchange=function(){ CLS=cf.value; paint(); }; var rl=$('rl'); if(rl) rl.onclick=load; }
+function detail(id){
+  OPEN=id; var el=$('det'); el.innerHTML='<p class="sub" style="margin-top:18px">'+esc(id)+' 불러오는 중…</p>';
+  call('teacherStudent',[PW,id]).then(function(r){
+    if(!r.ok){ el.innerHTML='<p class="msg">'+esc(r.msg)+'</p>'; return; }
+    var s=r.sum, A=Object.keys(s.byA).sort().map(function(k){ var v=s.byA[k], p=k.split('|'); return '<div><span>'+(p[0]==='adv'?'':esc(GS[p[0]]||p[0])+' · ')+esc(p[1])+'</span><em><i style="width:'+Math.round(v.c/v.t*100)+'%"></i></em><small>'+Math.round(v.c/v.t*100)+'% · '+v.t+'</small></div>'; }).join('');
+    var subs=D.asg.filter(function(a){return r.sub[a.id];}).map(function(a){ var d=r.sub[a.id];
+      var w=a.items.filter(function(it){return !it.nc;}).map(function(it){ return '<div style="font-size:13px;color:var(--sub);margin-top:8px">'+esc(it.title||nice(it.k))+'</div><div class="wans">'+esc(d.ans[it.k]||'(빈칸)')+'</div>'; }).join('');
+      return '<li><span>'+esc(a.title)+'</span><span>'+(d.n?d.sc+'/'+d.n+'점':'제출')+' · '+day(d.at)+(d.tries>1?' · '+d.tries+'번째':'')+'</span></li>'+(w?'<li style="display:block">'+w+'</li>':''); }).join('');
+    el.innerHTML='<div class="card det"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">'+esc(id)+(s.cls?' <span class="tag">'+esc(s.cls)+'</span>':'')+'</h2><button class="btn sm" type="button" id="dx">닫기</button></div>'+
+      '<div class="grid2"><div><h2>영역별 첫 시도 정답률</h2><div class="bars">'+(A||'<p class="sub">기록 없음</p>')+'</div>'+
+      '<h2>과제 제출</h2><ul class="ev">'+(subs||'<li>제출한 과제 없음</li>')+'</ul>'+
+      (FBM?'<h2>기록 옮기기</h2><p class="sub" style="margin:0 0 8px">비밀번호를 잊은 학생은 새 아이디를 만들게 한 뒤, 이 학생의 기록을 새 아이디로 옮겨 주세요.</p><div class="bar"><input type="text" id="mvTo" placeholder="새 아이디" style="width:160px"><button class="btn sm" type="button" id="mvGo">이 기록을 옮기기</button><span class="msg" id="mvM" style="margin:0"></span></div>':'')+'</div>'+
+      '<div><h2>최근 푼 문제</h2><ul class="ev">'+(r.ev.length?r.ev.slice(0,120).map(function(e){ return '<li><span>'+esc(nice(e.k))+(e.a?' <span class="cnt">'+esc(e.a)+'</span>':'')+'</span><span>'+stt(e)+(e.c>1?' · '+e.c+'번':'')+' · '+day(e.t)+'</span></li>'; }).join(''):'<li>기록 없음</li>')+'</ul></div></div></div>';
+    $('dx').onclick=function(){ OPEN=null; el.innerHTML=''; };
+    var mg=$('mvGo'); if(mg) mg.onclick=function(){ var to=$('mvTo').value.trim(); if(!to) return; if(!mg.dataset.sure){ mg.dataset.sure=1; mg.textContent=to+'(으)로 정말 옮기기'; return; }
+      mg.disabled=true; call('moveStudent',[PW,id,to]).then(function(r){ mg.disabled=false; if(!r.ok){ $('mvM').textContent=r.msg; return; } OPEN=null; load(); }); };
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+}
+/* ---------- 과제 ---------- */
+function asgView(){
+  var h='<h1>과제</h1><p class="sub">과제는 각 갈래 화면에서 냅니다.</p><div class="how">① 이 창(탭)에서 선생님 화면에 들어온 채로 문제 화면(예: 바ᄅᆞ래 가ᄂᆞ니)으로 갑니다.<br>② 문제를 펼쳐 \'＋ 시험지에 담기\'로 담습니다.<br>③ 아래 \'시험지 만들기\' → \'과제로 내기\'를 누르고 제목·마감일·반을 정합니다.<br>객관식은 학생이 제출하면 바로 채점되고, 서술형 답은 아래 학생별로 읽을 수 있어요.</div>';
+  if(!D.asg.length){ M.innerHTML=h+'<p class="empty">아직 낸 과제가 없어요.</p>'; return; }
+  h+='<div style="margin-top:18px">'+D.asg.slice().reverse().map(function(a){
+    var who=D.rows.filter(function(r){ return !a.cls||r.sum.cls===a.cls; });
+    var done=who.filter(function(r){return r.sub[a.id];});
+    var avg=done.length&&done[0].sub[a.id].n?Math.round(done.reduce(function(x,r){return x+r.sub[a.id].sc/r.sub[a.id].n;},0)/done.length*100)+'%':'–';
+    return '<div class="asg"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h3>'+esc(a.title)+'</h3><div class="meta">'+a.items.length+'문항 · '+(a.cls?esc(a.cls):'모든 학생')+(a.due?' · 마감 '+esc(a.due):'')+' · 낸 날 '+day(a.created)+'</div></div>'+
+      '<button class="btn sm" type="button" data-del="'+esc(a.id)+'">지우기</button></div>'+
+      '<div class="meta" style="margin-top:8px">제출 <b>'+done.length+'/'+who.length+'</b> · 평균 '+avg+(who.length>done.length?' · 아직: '+who.filter(function(r){return !r.sub[a.id];}).map(function(r){return esc(r.id);}).join(', '):'')+'</div>'+
+      (done.length?'<div class="tw" style="margin-top:10px"><table><thead><tr><th>아이디</th><th class="num">점수</th><th>제출</th><th class="num">횟수</th></tr></thead><tbody>'+done.map(function(r){ var d=r.sub[a.id]; return '<tr data-id="'+esc(r.id)+'"><td>'+esc(r.id)+'</td><td class="num">'+(d.n?d.sc+'/'+d.n:'서술형')+'</td><td>'+day(d.at)+'</td><td class="num">'+(d.tries||1)+'</td></tr>'; }).join('')+'</tbody></table></div>':'')+'</div>';
+  }).join('')+'</div>';
+  M.innerHTML=h;
+  M.querySelectorAll('[data-del]').forEach(function(b){ b.onclick=function(){
+    if(!b.dataset.sure){ b.dataset.sure=1; b.textContent='정말 지우기'; return; }
+    call('deleteSiteAssign',[PW,b.dataset.del]).then(function(r){ if(r.ok){ D.asg=r.list; paint(); } }); }; });
+  M.querySelectorAll('tbody tr').forEach(function(tr){ tr.onclick=function(){ VIEW='st'; OPEN=tr.dataset.id; paint(); }; });
+}
+/* ---------- 선생님 관리(관리자만) ---------- */
+function admView(){
+  M.innerHTML='<h1>선생님 관리</h1><p class="sub">관리자만 보는 화면입니다. 다른 선생님이 사이트에서 아이디를 만든 뒤, 그 아이디를 여기에 넣으면 선생님 화면을 쓸 수 있어요.</p>'+
+    '<div class="card"><div class="bar" style="margin:0"><input type="text" id="taId" placeholder="선생님 아이디" style="width:200px"><button class="btn pri" type="button" id="taGo">선생님으로 등록</button></div><div class="msg" id="taM"></div></div><div id="taL" style="margin-top:16px"><p class="sub">불러오는 중…</p></div>';
+  function list(r){ if(!r.ok){ $('taL').innerHTML='<p class="msg">'+esc(r.msg||'불러오지 못했어요.')+'</p>'; return; }
+    $('taL').innerHTML=r.list.length?'<div class="tw"><table><thead><tr><th>선생님 아이디</th><th>등록한 날</th><th></th></tr></thead><tbody>'+r.list.map(function(t){ return '<tr><td><b>'+esc(t.id)+'</b></td><td>'+day(t.at)+'</td><td class="num"><button class="btn sm" type="button" data-rm="'+esc(t.uid)+'">선생님에서 빼기</button></td></tr>'; }).join('')+'</tbody></table></div>':'<p class="empty">등록한 선생님이 없어요. 관리자는 따로 등록하지 않아도 선생님 화면을 씁니다.</p>';
+    $('taL').querySelectorAll('[data-rm]').forEach(function(b){ b.onclick=function(){ if(!b.dataset.sure){ b.dataset.sure=1; b.textContent='정말 빼기'; return; } call('teacherRemove',[PW,b.dataset.rm]).then(list); }; }); }
+  call('teacherList',[]).then(list);
+  $('taGo').onclick=function(){ var v=$('taId').value.trim(); if(!v) return; $('taM').textContent=''; call('teacherAdd',[PW,v]).then(function(r){ if(!r.ok){ $('taM').textContent=r.msg; return; } $('taId').value=''; list(r); }); };
+}
+/* ---------- 공지 ---------- */
+function ntView(){
+  var h='<h1>공지</h1><p class="sub">학생이 로그인하면 \'공지\' 칸에서 봅니다. 공무원 기출 연습장 공지와 같은 목록이에요.</p>'+
+    '<div class="card"><input type="text" id="nT" maxlength="60" placeholder="제목" style="width:100%"><textarea id="nB" maxlength="1000" placeholder="내용" style="margin-top:8px"></textarea><div class="msg" id="nM"></div><button class="btn pri" type="button" id="nS">올리기</button></div>'+
+    '<div style="margin-top:16px">'+(D.nt||[]).slice().reverse().map(function(n){ return '<div class="asg"><div style="display:flex;justify-content:space-between;gap:10px"><h3>'+esc(n.title)+'</h3><button class="btn sm" type="button" data-nd="'+esc(n.id)+'">지우기</button></div><div style="white-space:pre-wrap;font-size:14.5px;margin-top:4px">'+esc(n.body)+'</div><div class="meta">'+day(n.created)+'</div></div>'; }).join('')+'</div>';
+  M.innerHTML=h;
+  $('nS').onclick=function(){ call('saveNotice',[PW,{title:$('nT').value,body:$('nB').value}]).then(function(r){ if(!r.ok){ $('nM').textContent=r.msg; return; } D.nt=r.list; paint(); }); };
+  M.querySelectorAll('[data-nd]').forEach(function(b){ b.onclick=function(){ if(!b.dataset.sure){ b.dataset.sure=1; b.textContent='정말 지우기'; return; } call('deleteNotice',[PW,b.dataset.nd]).then(function(r){ if(r.ok){ D.nt=r.list; paint(); } }); }; });
+}
+if(FBM){ M.innerHTML='<p class="sub">확인하는 중…</p>'; call('teacherPing',[]).then(function(t){ if(t.ok){ ADM=!!t.admin; PW='fb'; sessionStorage.setItem('kma.tpw','fb'); load(); } else loginView(''); }); } else if(PW) load(); else loginView('');
+})();
+</script>
+</body>
+</html>

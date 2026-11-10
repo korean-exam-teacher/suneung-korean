@@ -1972,6 +1972,7 @@ document.addEventListener('click', e=>{
     const r = records[key] || {n:0, w:0};
     r.n += 1; if(!ok) r.w += 1; r.r = ok ? 'O' : 'X'; r.c = n; r.t = Date.now();
     records[key] = r; saveJSON(REC_KEY, records);
+    if(window.KMA) KMA.record('sn:'+key, ok, it.영역);
     revealIn(bar.parentElement, it, n);
     const msg = bar.querySelector('.solve-msg');
     msg.className = 'solve-msg ' + (ok ? 'ok' : 'no');
@@ -2289,6 +2290,7 @@ function renderBasket(){
       <div><h2>담은 문제</h2><p>${total ? `${total}문항 · 지문 ${passN}개 · 배점 합 ${points}점 · 번호는 담은 순서대로 새로 매깁니다.` : '문항을 펼쳐 "문제 담기"를 누르면 여기에 모입니다.'}</p></div>
       ${total ? `<div class="bk-bar">
         <button type="button" class="btn-fill" id="bkSolve">모아 풀기</button>
+        ${window.KMA&&KMA.on ? '<button type="button" class="btn-plain" id="bkAsgBtn">과제로 내기</button>' : ''}
         <button type="button" class="btn-plain" id="bkSortArea" title="독서 → 문학 → 화법과 작문 → 언어와 매체 순으로 묶음을 다시 늘어놓습니다.">영역 순으로 정리</button>
         ${bkConfirm ? `<span class="bk-confirm">모두 비울까요?</span><button type="button" class="btn-plain" id="bkClearYes" style="color:var(--bad);border-color:var(--bad)">비우기</button><button type="button" class="btn-plain" id="bkClearNo">취소</button>` : `<button type="button" class="btn-plain" id="bkClear">모두 비우기</button>`}
       </div>` : ''}
@@ -2393,6 +2395,17 @@ function startBkTimer(){
   }, 1000);
 }
 function stopBkTimer(){ if(bkTimerId){ clearInterval(bkTimerId); bkTimerId = null; } }
+/* v100: 담은 문제 → 과제(글자로: 지문은 같은 지문의 첫 문항에만) */
+function snAssignItems(){
+  const seen = new Set();
+  return basket.keys.map(itemByKey).filter(Boolean).map(it=>{
+    const pk = it.exam_id+'||'+it.영역+'||'+it.지문범위, first = !seen.has(pk); seen.add(pk);
+    const ch = bkChoices(it);
+    return { k:'sn:'+itemKey(it), a:it.영역, title:`${it.명칭} ${it.영역} ${it.문항번호}번`, topic:it.소재||'', src:`출처: ${it.명칭} 국어 ${it.문항번호}번 · 한국교육과정평가원`,
+      nc:5, q:[], p:null, txt:{ pas: first ? plainText(getPassage(it.exam_id, it.영역, it.지문범위)||'') : '', ask: plainText(it.발문||'').replace(/^\d+\.\s*/,''), body: plainText(it.보기||''),
+      ch: Array.isArray(ch) ? ch.map(c=>plainText(c)) : [] }, ans: Number(it.정답)||0 };
+  });
+}
 function bkGradeAll(){
   let ok = 0, graded = 0, score = 0, total = 0, noKey = 0;
   const wrong = [], blank = [];
@@ -2994,6 +3007,7 @@ function openBasket(){
 }
 basketSec.addEventListener('click', e=>{
   const t = e.target;
+  if(t.closest('#bkAsgBtn')){ KMA.assign(snAssignItems()); return; }
   if(t.closest('#bkSolve')){ bkView = 'solve'; renderBasket(); basketSec.scrollIntoView({behavior:'smooth', block:'start'}); return; }
   if(t.closest('#bkBack')){ bkView = 'list'; renderBasket(); basketSec.scrollIntoView({behavior:'smooth', block:'start'}); return; }
   if(t.closest('#bkGradeAll')){ bkGradeAll(); return; }
@@ -3384,5 +3398,6 @@ footer .guide details{border-color:var(--line)!important;background:none!importa
 <script src="/middle-korean/js/config.js?v=93"></script>
 <script src="/middle-korean/js/ink.js?v=93"></script>
 <script src="/middle-korean/js/live.js?v=93"></script>
+<script src="js/account.js?v=100"></script>
 </body>
 </html>
