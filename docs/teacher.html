@@ -52,13 +52,23 @@ ul.ev{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto}ul.ev li
 .tag{font-size:12.5px;border-radius:999px;padding:2px 10px;background:var(--soft);color:var(--sub)}
 .how{background:var(--soft);border-radius:14px;padding:16px 18px;font-size:14px;line-height:1.75;color:var(--sub)}
 .wans{white-space:pre-wrap;font-size:14px;background:var(--soft);border-radius:10px;padding:10px 12px;margin:6px 0}
+.mk-f{display:flex;gap:8px;margin:0 0 10px}.mk-f input{flex:1;min-width:0;font-size:16px;border-radius:999px;padding:11px 18px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}.chip{border:1px solid var(--line-strong);background:none;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;color:var(--sub);cursor:pointer}.chip.on{border-color:var(--brand);color:var(--brand);font-weight:700}
+.mk-l{list-style:none;margin:8px 0;padding:0;border-top:1px solid var(--line)}.mk-l li{border-bottom:1px solid var(--line)}
+.mk-r{display:grid;grid-template-columns:28px 170px 64px 90px 1fr 50px;gap:10px;align-items:center;padding:10px 4px;font-size:14px}
+.mk-r small{display:block;color:var(--faint);font-size:12px}.mk-r .tx{line-height:1.5;color:var(--text)}.mk-r .tg{font-size:12px;background:var(--soft);border-radius:999px;padding:2px 8px;text-align:center;color:var(--sub)}
+.mk-r input{width:18px;height:18px}.mk-v{padding:0 4px 14px 42px}.mk-v img{display:block;max-width:100%;height:auto;margin:6px 0;border-radius:4px}
+mark{background:rgba(242,214,92,.55);color:inherit;border-radius:2px}
+.mk-bk{position:sticky;top:58px;z-index:5;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bg);border:1px solid var(--brand);border-radius:14px;padding:10px 14px;margin:0 0 12px;font-size:14px}.mk-bk b{color:var(--brand)}
+.who{display:inline-block;font-size:12.5px;background:var(--brand);color:#fff;border-radius:999px;padding:2px 10px;margin-left:6px;vertical-align:3px;font-weight:600}
+@media (max-width:760px){.mk-r{grid-template-columns:24px minmax(0,1fr) 46px}.mk-r .hide{display:none}.mk-v{padding-left:4px}}
 @media (max-width:760px){.kp{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.bars div{grid-template-columns:120px 1fr 70px}.top nav button{padding:8px 8px;font-size:14px}}
 </style>
 </head>
 <body>
 <header class="top"><a class="brand" href="/suneung-korean/">국어의 모든 것</a><nav id="nav" hidden><button type="button" data-v="st" class="on">학생 현황</button><button type="button" data-v="asg">과제</button><button type="button" data-v="nt">공지</button><button type="button" data-v="adm" id="admTab" hidden>선생님 관리</button><button type="button" id="out">나가기</button></nav></header>
 <main class="wrap" id="main"></main>
-<script src="js/account.js?v=100" data-noui></script>
+<script src="js/account.js?v=102" data-noui></script>
 <script>
 (function(){
 /* account.js 와 같은 서버 주소를 쓴다 */
@@ -79,12 +89,12 @@ if(!ON){ M.innerHTML='<h1>선생님 화면</h1><p class="sub">아직 서버 주�
 function loginView(msg){
   $('nav').hidden=true;
   if(FBM){
-    M.innerHTML='<div class="card" style="max-width:420px;margin:40px auto"><h1>선생님 화면</h1><p class="sub">선생님 아이디로 들어갑니다. 처음이면 사이트 오른쪽 아래 \'로그인\' → \'처음 왔어요\'에서 선생님 아이디를 만든 뒤, Firebase에 선생님으로 등록하면 됩니다.</p>'+
+    M.innerHTML='<div class="card" style="max-width:440px;margin:40px auto"><h1>선생님 화면 <span class="who">선생님 전용</span></h1><p class="sub">선생님 아이디로 들어갑니다.<br>· 학생은 이 화면이 아니라 문제 화면 오른쪽 아래 <b>로그인 → 학생</b>으로 들어가요.<br>· 선생님 아이디가 없으면 문제 화면 오른쪽 아래 <b>로그인 → 선생님 → 선생님 아이디 만들기</b> 뒤, 관리자에게 등록을 부탁하세요.</p>'+
       '<form id="f"><input type="text" id="tid" autocomplete="username" placeholder="선생님 아이디" style="width:100%"><input type="password" id="pw" autocomplete="current-password" placeholder="비밀번호" style="width:100%;margin-top:8px"><div class="msg" id="m" role="alert">'+esc(msg||'')+'</div><button class="btn pri" type="submit" style="margin-top:6px">들어가기</button></form></div>';
     $('f').onsubmit=function(e){ e.preventDefault(); $('m').textContent='';
       call('siteLogin',[$('tid').value.trim(),$('pw').value]).then(function(r){ if(!r.ok){ $('m').textContent=r.msg||'들어가지 못했어요.'; return; }
         try{ localStorage.setItem('kma.s',JSON.stringify({id:r.id,token:'fb'})); }catch(x){}
-        call('teacherPing',[]).then(function(t){ if(!t.ok){ $('m').textContent=t.msg; return; } ADM=!!t.admin; PW='fb'; sessionStorage.setItem('kma.tpw','fb'); load(); }); }); };
+        call('teacherPing',[]).then(function(t){ if(!t.ok){ $('m').textContent='이 아이디는 아직 선생님으로 등록되지 않았어요. 관리자에게 아이디 \''+$('tid').value.trim()+'\'를 선생님으로 등록해 달라고 하세요.'; return; } ADM=!!t.admin; PW='fb'; sessionStorage.setItem('kma.tpw','fb'); load(); }); }); };
     setTimeout(function(){ $('tid')&&$('tid').focus(); },30); return;
   }
   M.innerHTML='<div class="card" style="max-width:420px;margin:40px auto"><h1>선생님 화면</h1><p class="sub">학생 기록 시트의 \'설정\' 탭 B1 칸에 적은 선생님 비밀번호로 들어갑니다. 공무원 기출 연습장의 선생님 비밀번호와 같아요.</p>'+
@@ -102,8 +112,8 @@ function load(){
 document.querySelectorAll('#nav [data-v]').forEach(function(b){ b.onclick=function(){ VIEW=b.dataset.v; OPEN=null; history.replaceState(null,'','#'+VIEW); paint(); }; });
 $('out').onclick=function(){ sessionStorage.removeItem('kma.tpw'); PW=''; if(FBM){ call('siteLogout',[]); try{ localStorage.removeItem('kma.s'); }catch(x){} } loginView(''); };
 function paint(){
-  document.querySelectorAll('#nav [data-v]').forEach(function(b){ b.classList.toggle('on',b.dataset.v===VIEW); });
-  if(VIEW==='asg') return asgView(); if(VIEW==='nt') return ntView(); if(VIEW==='adm'&&ADM) return admView(); stView();
+  document.querySelectorAll('#nav [data-v]').forEach(function(b){ b.classList.toggle('on',b.dataset.v===(VIEW==='make'?'asg':VIEW)); });
+  if(VIEW==='make') return makeView(); if(VIEW==='asg') return asgView(); if(VIEW==='nt') return ntView(); if(VIEW==='adm'&&ADM) return admView(); stView();
 }
 /* ---------- 학생 현황 ---------- */
 function classes(){ var c={}; D.rows.forEach(function(r){ if(r.sum.cls) c[r.sum.cls]=1; }); return Object.keys(c).sort(); }
@@ -151,8 +161,9 @@ function detail(id){
 }
 /* ---------- 과제 ---------- */
 function asgView(){
-  var h='<h1>과제</h1><p class="sub">과제는 각 갈래 화면에서 냅니다.</p><div class="how">① 이 창(탭)에서 선생님 화면에 들어온 채로 문제 화면(예: 바ᄅᆞ래 가ᄂᆞ니)으로 갑니다.<br>② 문제를 펼쳐 \'＋ 시험지에 담기\'로 담습니다.<br>③ 아래 \'시험지 만들기\' → \'과제로 내기\'를 누르고 제목·마감일·반을 정합니다.<br>객관식은 학생이 제출하면 바로 채점되고, 서술형 답은 아래 학생별로 읽을 수 있어요.</div>';
-  if(!D.asg.length){ M.innerHTML=h+'<p class="empty">아직 낸 과제가 없어요.</p>'; return; }
+  var h='<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div><h1>과제</h1><p class="sub" style="margin:0">객관식은 학생이 제출하면 바로 채점되고, 서술형 답은 학생별로 읽을 수 있어요.</p></div><button class="btn pri" type="button" id="mkGo">＋ 기출 골라 과제 만들기</button></div>'+
+    '<details style="margin:14px 0 0"><summary style="cursor:pointer;color:var(--sub);font-size:14px">다른 갈래(수능·PSAT 등) 문제로 내려면</summary><div class="how" style="margin-top:8px">문제 화면(예: 수능, 바ᄅᆞ래 가ᄂᆞ니)에서 문제를 담은 뒤 \'과제로 내기\'를 누르면 됩니다. 선생님으로 로그인한 채로 가면 단추가 보여요.</div></details>';
+  if(!D.asg.length){ M.innerHTML=h+'<p class="empty">아직 낸 과제가 없어요.</p>'; $('mkGo').onclick=function(){ VIEW='make'; paint(); }; return; }
   h+='<div style="margin-top:18px">'+D.asg.slice().reverse().map(function(a){
     var who=D.rows.filter(function(r){ return !a.cls||r.sum.cls===a.cls; });
     var done=who.filter(function(r){return r.sub[a.id];});
@@ -163,10 +174,84 @@ function asgView(){
       (done.length?'<div class="tw" style="margin-top:10px"><table><thead><tr><th>아이디</th><th class="num">점수</th><th>제출</th><th class="num">횟수</th></tr></thead><tbody>'+done.map(function(r){ var d=r.sub[a.id]; return '<tr data-id="'+esc(r.id)+'"><td>'+esc(r.id)+'</td><td class="num">'+(d.n?d.sc+'/'+d.n:'서술형')+'</td><td>'+day(d.at)+'</td><td class="num">'+(d.tries||1)+'</td></tr>'; }).join('')+'</tbody></table></div>':'')+'</div>';
   }).join('')+'</div>';
   M.innerHTML=h;
+  $('mkGo').onclick=function(){ VIEW='make'; paint(); };
   M.querySelectorAll('[data-del]').forEach(function(b){ b.onclick=function(){
     if(!b.dataset.sure){ b.dataset.sure=1; b.textContent='정말 지우기'; return; }
     call('deleteSiteAssign',[PW,b.dataset.del]).then(function(r){ if(r.ok){ D.asg=r.list; paint(); } }); }; });
   M.querySelectorAll('tbody tr').forEach(function(tr){ tr.onclick=function(){ VIEW='st'; OPEN=tr.dataset.id; paint(); }; });
+}
+/* ---------- 기출 골라 과제 만들기 (v102) ---------- */
+var MK={q:'',a:{},g:'',y:'',e:'',page:1,open:null,bk:[],step:1}, GML=null, GMQ={};
+function gmLoad(){ if(GML) return GML; GML=new Promise(function(res,rej){ var a=document.createElement('script'); a.src='/advanced-korean/gm/index.js?v=102'; a.onload=function(){ var b=document.createElement('script'); b.src='/advanced-korean/gm/gmfind.js?v=102'; b.onload=function(){ GMFind.load().then(res); }; b.onerror=rej; document.head.appendChild(b); }; a.onerror=rej; document.head.appendChild(a); }); return GML; }
+function gmQ(eid){ return GMQ[eid]||(GMQ[eid]=fetch('/advanced-korean/gm/q/'+eid+'.json?v=101').then(function(r){return r.json();}).catch(function(){return null;})); }
+function makeView(){
+  M.innerHTML='<p class="sub">기출을 불러오는 중…</p>';
+  gmLoad().then(function(){ if(MK.step===2) return mkForm(); mkList(); }).catch(function(){ M.innerHTML='<p class="msg">기출을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</p>'; });
+}
+function mkList(){
+  var F=GMFind, D2=window.GM_DATA, EX=F.EX;
+  var f={q:MK.q,a:new Set(Object.keys(MK.a)),g:MK.g?new Set([MK.g]):null,y:MK.y,e:MK.e};
+  var G=F.search(f), PER=30, pages=Math.max(1,Math.ceil(G.length/PER)); if(MK.page>pages) MK.page=pages;
+  var words=String(MK.q||'').trim().split(/\s+/).filter(Boolean).map(F.norm);
+  var years={}; D2.exams.forEach(function(e){ years[e.year]=1; });
+  var exs=D2.exams.filter(function(e){ return (!MK.g||e.grp===MK.g)&&(!MK.y||String(e.year)===MK.y); }).sort(function(a,b){ return b.year-a.year||a.id.localeCompare(b.id); });
+  var h='<p style="margin:0 0 6px"><button class="lnk" type="button" id="mkBack">← 과제 목록</button></p><h1>기출 골라 과제 만들기</h1><p class="sub">공무원 국어 9급 기출 1,840문항에서 낱말·제재로 찾거나 회차를 통째로 골라 과제로 냅니다.</p>'+
+    '<form class="mk-f" id="mkF"><input type="search" id="mkQ" placeholder="지문 속 낱말이나 제재 — 예: 훈민정음, 높임 표현" value="'+esc(MK.q)+'"><button class="btn pri" type="submit">찾기</button></form>'+
+    '<div class="chips">'+F.AREAS.concat(['영역 미정']).map(function(a){ return '<button type="button" class="chip'+(MK.a[a]?' on':'')+'" data-a="'+a+'">'+a+'</button>'; }).join('')+'</div>'+
+    '<div class="bar"><select id="mkG"><option value="">모든 시험</option>'+F.GRPS.map(function(g){ return '<option'+(g===MK.g?' selected':'')+'>'+g+'</option>'; }).join('')+'</select>'+
+    '<select id="mkY"><option value="">모든 연도</option>'+Object.keys(years).sort().reverse().map(function(y){ return '<option'+(y===MK.y?' selected':'')+'>'+y+'</option>'; }).join('')+'</select>'+
+    '<select id="mkE"><option value="">회차 하나 고르기</option>'+exs.map(function(e){ return '<option value="'+e.id+'"'+(e.id===MK.e?' selected':'')+'>'+esc(e.title)+'</option>'; }).join('')+'</select>'+
+    (MK.e?'<button class="btn sm" type="button" id="mkAllE">이 회차 '+EX[MK.e].n+'문항 모두 담기</button>':'')+'</div>'+
+    '<div class="mk-bk"><span>담은 문항 <b>'+MK.bk.length+'</b>개</span>'+(MK.bk.length?'<button class="btn pri sm" type="button" id="mkNext">다음: 과제 정보 →</button><button class="btn sm" type="button" id="mkClr">비우기</button>':'<span style="color:var(--sub);font-size:13px">줄 앞 네모를 눌러 담으세요. 줄을 누르면 문항 그림이 보여요.</span>')+'</div>'+
+    '<p class="sub" style="margin:4px 0">'+(MK.q?'‘'+esc(MK.q)+'’ — ':'')+G.reduce(function(x,g){return x+g.ids.length;},0).toLocaleString()+'문항'+(pages>1?' · '+MK.page+'/'+pages+'쪽':'')+'</p>';
+  h+=G.length?'<ul class="mk-l">'+G.slice((MK.page-1)*PER,MK.page*PER).map(function(g){ var id=g.ids[0], it=D2.items[id], e=EX[it.e], k=g.pk||id, inb=g.ids.every(function(x){return MK.bk.indexOf(x)>=0;});
+    var nos=g.ids.length>1?D2.items[g.ids[0]].n+'~'+D2.items[g.ids[g.ids.length-1]].n+'번':it.n+'번';
+    var tx=g.snip?('<span class="tg" style="margin-right:6px">'+g.where+'</span>'+g.snip):(it.q?esc(it.q):'<span style="color:var(--faint)">(문항 그림으로 보기)</span>');
+    return '<li><div class="mk-r" data-k="'+esc(k)+'" style="cursor:pointer"><input type="checkbox" data-bk="'+g.ids.join(',')+'"'+(inb?' checked':'')+' aria-label="담기"><span><b>'+esc(e.title.replace(/\s*국어\s*$/,''))+'</b></span><span class="hide">'+nos+'</span><span class="tg hide">'+esc(it.a||'영역 미정')+'</span><span class="tx">'+tx+'</span><span class="hide" style="color:var(--faint);font-size:12px">'+(e.mode==='pg'?'쪽 그림':'')+'</span></div>'+(MK.open===k?'<div class="mk-v" id="mkV">불러오는 중…</div>':'')+'</li>'; }).join('')+'</ul>':'<p class="empty">맞는 문항이 없어요.</p>';
+  if(pages>1){ h+='<div class="bar" style="justify-content:center">'; var s0=Math.max(1,MK.page-4), e2=Math.min(pages,s0+9); for(var n=s0;n<=e2;n++) h+='<button class="btn sm'+(n===MK.page?' pri':'')+'" type="button" data-p="'+n+'">'+n+'</button>'; h+='</div>'; }
+  M.innerHTML=h;
+  var again=function(){ var y=window.scrollY; mkList(); window.scrollTo(0,y); };
+  $('mkBack').onclick=function(){ VIEW='asg'; paint(); };
+  $('mkF').onsubmit=function(ev){ ev.preventDefault(); MK.q=$('mkQ').value.trim(); MK.page=1; MK.open=null; mkList(); };
+  M.querySelectorAll('[data-a]').forEach(function(b){ b.onclick=function(){ var a=b.dataset.a; if(MK.a[a]) delete MK.a[a]; else MK.a[a]=1; MK.page=1; again(); }; });
+  $('mkG').onchange=function(){ MK.g=this.value; MK.e=''; MK.page=1; again(); };
+  $('mkY').onchange=function(){ MK.y=this.value; MK.e=''; MK.page=1; again(); };
+  $('mkE').onchange=function(){ MK.e=this.value; MK.page=1; again(); };
+  if($('mkAllE')) $('mkAllE').onclick=function(){ Object.keys(D2.items).filter(function(id){ return D2.items[id].e===MK.e; }).forEach(function(id){ if(MK.bk.indexOf(id)<0) MK.bk.push(id); }); again(); };
+  if($('mkNext')) $('mkNext').onclick=function(){ MK.step=2; mkForm(); window.scrollTo(0,0); };
+  if($('mkClr')) $('mkClr').onclick=function(){ MK.bk=[]; again(); };
+  M.querySelectorAll('[data-p]').forEach(function(b){ b.onclick=function(){ MK.page=+b.dataset.p; MK.open=null; mkList(); window.scrollTo(0,0); }; });
+  M.querySelectorAll('[data-bk]').forEach(function(c){ c.onclick=function(ev){ ev.stopPropagation(); }; c.onchange=function(){ c.dataset.bk.split(',').forEach(function(x){ var i=MK.bk.indexOf(x); if(c.checked&&i<0) MK.bk.push(x); if(!c.checked&&i>=0) MK.bk.splice(i,1); }); again(); }; });
+  M.querySelectorAll('.mk-r').forEach(function(r){ r.onclick=function(){ MK.open=MK.open===r.dataset.k?null:r.dataset.k; again(); }; });
+  if(MK.open){ var g=G.filter(function(x){ return (x.pk||x.ids[0])===MK.open; })[0]; if(g) mkShow(g.ids); }
+}
+function mkShow(ids){
+  var D2=window.GM_DATA, it0=D2.items[ids[0]], e=GMFind.EX[it0.e];
+  gmQ(it0.e).then(function(d){ var el=$('mkV'); if(!el) return;
+    if(!d){ el.innerHTML='<p class="msg">그림을 불러오지 못했어요.</p>'; return; }
+    if(e.mode==='pg'){ el.innerHTML='<p class="sub">이 회차는 시험지 쪽 그림으로만 있어요. 학생 과제 화면에는 \'시험지에서 보기\' 링크로 나옵니다. <a href="/advanced-korean/gongmuwon.html#exam/'+e.id+'" target="_blank" rel="noopener">시험지 보기 ↗</a></p>'; return; }
+    var h='', seen={}; ids.forEach(function(id){ var n=+D2.items[id].n;
+      (d.p||[]).forEach(function(p,i){ if(p.rng[0]<=n&&n<=p.rng[1]&&!seen[i]){ seen[i]=1; h+='<img src="'+p.img+'" alt="지문">'; } });
+      (d.q||[]).forEach(function(q){ if(q.n===n) h+='<img src="'+q.img+'" alt="'+n+'번">'; });
+      h+='<p class="sub" style="margin:0 0 10px">'+n+'번 정답 '+('①②③④⑤'[(+D2.items[id].ans||1)-1]||'')+'</p>'; });
+    el.innerHTML=h; });
+}
+function mkForm(){
+  var D2=window.GM_DATA;
+  var cls=classes();
+  M.innerHTML='<p style="margin:0 0 6px"><button class="lnk" type="button" id="mkB2">← 문항 더 고르기</button></p><h1>과제 정보</h1><p class="sub">담은 '+MK.bk.length+'문항을 과제로 냅니다. 학생은 로그인하면 오른쪽 아래 단추에서 과제를 봅니다.</p>'+
+    '<div class="card" style="max-width:620px"><label class="sub" style="display:block;margin:0 0 4px">제목</label><input type="text" id="mkT" maxlength="60" style="width:100%" value="'+esc(new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric'})+' 공무원 국어 과제')+'">'+
+    '<label class="sub" style="display:block;margin:12px 0 4px">안내 말(선택)</label><textarea id="mkM" maxlength="400" style="min-height:70px"></textarea>'+
+    '<div class="grid2" style="margin-top:4px"><div><label class="sub" style="display:block;margin:8px 0 4px">마감일(선택)</label><input type="date" id="mkD" style="width:100%"></div><div><label class="sub" style="display:block;margin:8px 0 4px">반(비우면 모든 학생)</label><input type="text" id="mkC" maxlength="20" list="mkCL" style="width:100%" placeholder="예: 공무원반"><datalist id="mkCL">'+cls.map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist></div></div>'+
+    '<div class="msg" id="mkMsg"></div><button class="btn pri" type="button" id="mkSave">과제 내기</button></div>'+
+    '<h2>담은 문항</h2><ul class="mk-l">'+MK.bk.map(function(id){ var it=D2.items[id]; return '<li><div class="mk-r" style="grid-template-columns:1fr 60px"><span>'+esc(GMFind.EX[it.e].title)+' '+it.n+'번 <small>'+esc(it.a||'영역 미정')+'</small></span><button class="btn sm" type="button" data-rm="'+id+'">빼기</button></div></li>'; }).join('')+'</ul>';
+  $('mkB2').onclick=function(){ MK.step=1; mkList(); };
+  M.querySelectorAll('[data-rm]').forEach(function(b){ b.onclick=function(){ MK.bk.splice(MK.bk.indexOf(b.dataset.rm),1); if(!MK.bk.length){ MK.step=1; return mkList(); } mkForm(); }; });
+  $('mkSave').onclick=function(){ var b=this; b.disabled=true; $('mkMsg').textContent='';
+    var items=MK.bk.map(GMFind.asgItem), key={}; items.forEach(function(x){ if(x.ans) key[x.k]=x.ans; });
+    call('saveSiteAssign',[PW,{title:$('mkT').value,msg:$('mkM').value,due:$('mkD').value,cls:$('mkC').value,items:items,key:key}]).then(function(r){
+      b.disabled=false; if(!r.ok){ $('mkMsg').textContent=r.msg||'내지 못했어요.'; return; }
+      MK.bk=[]; MK.step=1; VIEW='asg'; load(); }); };
 }
 /* ---------- 선생님 관리(관리자만) ---------- */
 function admView(){
