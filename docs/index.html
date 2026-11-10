@@ -47,6 +47,8 @@ footer{border-top:1px solid var(--line);text-align:center;font-size:13px;color:v
 footer .old{color:var(--sub);font-size:14px;margin-right:8px}
 @media (max-width:1100px){.stages{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.stages{grid-template-columns:1fr}.top{flex-direction:column;align-items:flex-start;padding-block:10px}.top nav{margin-left:-12px;max-width:100%}.hero{padding-top:44px}}
+/* v97 첫 화면: 용비어천가 제2장 세로 판본(달항아리 대신) */
+.yb-pan{display:inline-flex;flex-direction:row-reverse;align-items:stretch;border:1px solid var(--line-strong);padding:16px 4px}.yb-pan span{display:flex;flex-direction:column;align-items:center;font-family:var(--title);font-size:20px;line-height:1.2;color:var(--sub);padding:0 14px;border-left:1px solid var(--line)}.yb-pan span:last-child{border-left:0}.yb-pan b{font-weight:400;display:block}.yb-pan .sp{display:block;height:10px}.yb-cap{display:block;font-size:12px;color:var(--faint);letter-spacing:.06em;margin-top:10px}.hero h1{margin-top:20px}
 </style>
 </head>
 <body>
@@ -58,7 +60,8 @@ footer .old{color:var(--sub);font-size:14px;margin-right:8px}
   </nav>
 </header>
 <section class="hero">
-  <span class="jar" aria-hidden="true"></span>
+  <div class="yb-pan" lang="okm" aria-label="용비어천가 제2장"><span><b>불</b><b>휘</b><i class="sp"></i><b>기</b><b>픈</b><i class="sp"></i><b>남</b><b>ᄀᆞᆫ</b><i class="sp"></i><b>ᄇᆞ</b><b>ᄅᆞ</b><b>매</b><i class="sp"></i><b>아</b><b>니</b><i class="sp"></i><b>뮐</b><b>ᄊᆡ</b></span><span><b>곶</b><i class="sp"></i><b>됴</b><b>코</b><i class="sp"></i><b>여</b><b>름</b><i class="sp"></i><b>하</b><b>ᄂᆞ</b><b>니</b></span><span><b>ᄉᆡ</b><b>미</b><i class="sp"></i><b>기</b><b>픈</b><i class="sp"></i><b>므</b><b>른</b><i class="sp"></i><b>ᄀᆞ</b><b>ᄆᆞ</b><b>래</b><i class="sp"></i><b>아</b><b>니</b><i class="sp"></i><b>그</b><b>츨</b><b>ᄊᆡ</b></span><span><b>내</b><b>히</b><i class="sp"></i><b>이</b><b>러</b><i class="sp"></i><b>바</b><b>ᄅᆞ</b><b>래</b><i class="sp"></i><b>가</b><b>ᄂᆞ</b><b>니</b></span></div>
+  <span class="yb-cap">「용비어천가」 제2장</span>
   <h1>국어의 모든 것</h1>
   <p>개념부터 기출까지</p>
 </section>
