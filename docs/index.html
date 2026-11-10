@@ -35,7 +35,7 @@ a{color:inherit;text-decoration:none}
 .stage{display:flex;flex-direction:column;height:100%;padding:24px 22px 22px;background:var(--surface);border:1px solid var(--line);border-radius:14px;transition:border-color .2s}
 a.stage:hover{border-color:var(--brand)}
 .st-num{font-size:12.5px;letter-spacing:.14em;color:var(--faint)}
-.st-old{font-family:var(--title);font-size:clamp(22px,1.9vw,28px);line-height:1.25;margin:18px 0 2px;word-break:keep-all}
+.st-old{font-family:var(--title);font-size:clamp(17px,1.5vw,24px);line-height:1.25;margin:18px 0 2px;word-break:keep-all;white-space:nowrap}
 .st-gloss{font-size:13px;color:var(--faint);letter-spacing:.03em}
 .st-rule{width:24px;height:1px;background:var(--line-strong);margin:16px 0 14px}
 .st-exam{font-size:16px;font-weight:600}
@@ -45,7 +45,7 @@ a.stage:hover{border-color:var(--brand)}
 .stage.soon .st-go{color:var(--faint)}
 footer{border-top:1px solid var(--line);text-align:center;font-size:13px;color:var(--faint);padding:26px 16px 40px}
 footer .old{color:var(--sub);font-size:14px;margin-right:8px}
-@media (max-width:1100px){.stages{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:1100px){.stages{grid-template-columns:repeat(2,minmax(0,1fr))}.st-old{font-size:22px}}
 @media (max-width:640px){.stages{grid-template-columns:1fr}.top{flex-direction:column;align-items:flex-start;padding-block:10px}.top nav{margin-left:-12px;max-width:100%}.hero{padding-top:44px}}
 /* v97 첫 화면: 용비어천가 제2장 세로 판본(달항아리 대신) */
 .yb-pan{display:inline-flex;flex-direction:row-reverse;align-items:stretch;border:1px solid var(--line-strong);padding:16px 4px}.yb-pan span{display:flex;flex-direction:column;align-items:center;font-family:var(--title);font-size:20px;line-height:1.2;color:var(--sub);padding:0 14px;border-left:1px solid var(--line)}.yb-pan span:last-child{border-left:0}.yb-pan b{font-weight:400;display:block}.yb-pan .sp{display:block;height:10px}.yb-cap{display:block;font-size:12px;color:var(--faint);letter-spacing:.06em;margin-top:10px}.hero h1{margin-top:20px}
@@ -55,7 +55,7 @@ footer .old{color:var(--sub);font-size:14px;margin-right:8px}
 <header class="top">
   <a class="brand old" href="./">국어의 모든 것</a>
   <nav aria-label="바로 가기">
-    <a href="/middle-korean/">개념 학습</a><a href="suneung.html">수능</a><a href="/nonsul-korean/">대학 논술</a><a href="/advanced-korean/">PSAT · LEET · 임용</a><a href="/seonsul-korean/">서·논술형</a>
+    <a href="/middle-korean/">개념 학습</a><a href="/seonsul-korean/">서·논술형</a><a href="suneung.html">수능</a><a href="/nonsul-korean/">대학 논술</a><a href="/advanced-korean/">PSAT · LEET · 임용</a>
     <a class="dim" href="https://docs.google.com/forms/d/e/1FAIpQLSdCkEn1SwTAvnc03M6mEtuhApm3kOqn1BMdI0A_H7iGOQREGg/viewform" target="_blank" rel="noopener">의견 보내기</a>
   </nav>
 </header>
@@ -68,39 +68,39 @@ footer .old{color:var(--sub);font-size:14px;margin-right:8px}
 <ol class="stages">
   <li><a class="stage" href="/middle-korean/">
     <span class="st-num">01</span>
-    <span class="st-old" lang="okm">내히 이러</span><span class="st-gloss">냇물을 이루어</span>
+    <span class="st-old" lang="okm">불휘 기픈 남ᄀᆞᆫ</span><span class="st-gloss">뿌리 깊은 나무는</span>
     <span class="st-rule"></span>
     <span class="st-exam">개념 학습</span>
     <span class="st-desc">중·고등학교 국어 성취기준과 학습 요소</span>
     <span class="st-go">들어가기 →</span></a></li>
-  <li><a class="stage" href="suneung.html">
+  <li><a class="stage soon" href="/seonsul-korean/">
     <span class="st-num">02</span>
-    <span class="st-old" lang="okm">불휘 기픈 남ᄀᆞᆫ</span><span class="st-gloss">뿌리 깊은 나무는</span>
+    <span class="st-old" lang="okm">곶 됴코 여름 하ᄂᆞ니</span><span class="st-gloss">꽃 좋고 열매 많으니</span>
+    <span class="st-rule"></span>
+    <span class="st-exam">서·논술형</span>
+    <span class="st-desc">준비 중</span>
+    <span class="st-go">미리 보기 →</span></a></li>
+  <li><a class="stage" href="suneung.html">
+    <span class="st-num">03</span>
+    <span class="st-old" lang="okm">ᄉᆡ미 기픈 므른</span><span class="st-gloss">샘이 깊은 물은</span>
     <span class="st-rule"></span>
     <span class="st-exam">수능 국어</span>
     <span class="st-desc">평가원 모의평가·수능 3,258문항</span>
     <span class="st-go">들어가기 →</span></a></li>
   <li><a class="stage" href="/nonsul-korean/">
-    <span class="st-num">03</span>
-    <span class="st-old" lang="okm">ᄉᆡ미 기픈 므른</span><span class="st-gloss">샘이 깊은 물은</span>
+    <span class="st-num">04</span>
+    <span class="st-old" lang="okm">내히 이러</span><span class="st-gloss">냇물을 이루어</span>
     <span class="st-rule"></span>
     <span class="st-exam">대학 논술</span>
     <span class="st-desc">인문·사회 논술과 약술형 471문항</span>
     <span class="st-go">들어가기 →</span></a></li>
   <li><a class="stage" href="/advanced-korean/">
-    <span class="st-num">04</span>
-    <span class="st-old" lang="okm">곶 됴코 여름 하ᄂᆞ니</span><span class="st-gloss">꽃 좋고 열매 많으니</span>
+    <span class="st-num">05</span>
+    <span class="st-old" lang="okm">바ᄅᆞ래 가ᄂᆞ니</span><span class="st-gloss">바다에 가느니</span>
     <span class="st-rule"></span>
     <span class="st-exam">PSAT · LEET · 임용</span>
     <span class="st-desc">언어논리·언어이해·추리논증·중등임용 국어</span>
     <span class="st-go">들어가기 →</span></a></li>
-  <li><a class="stage soon" href="/seonsul-korean/">
-    <span class="st-num">05</span>
-    <span class="st-old" lang="okm">바ᄅᆞ래 가ᄂᆞ니</span><span class="st-gloss">바다에 가느니</span>
-    <span class="st-rule"></span>
-    <span class="st-exam">서·논술형</span>
-    <span class="st-desc">준비 중</span>
-    <span class="st-go">미리 보기 →</span></a></li>
 </ol>
 <footer><span class="old" lang="okm">불휘 기픈 남ᄀᆞᆫ ᄇᆞᄅᆞ매 아니 뮐ᄊᆡ</span>「용비어천가」 제2장</footer>
 <link rel="stylesheet" href="/middle-korean/css/kme-tools.css?v=93">
