@@ -307,9 +307,23 @@
     return Promise.resolve(p).catch(function (e) { if (e && e.code === "relogin") return { ok: false, relogin: true }; return { ok: false, msg: errMsg(e) }; });
   }
   var S = ls(SKEY), SUM = null, ASG = null, NT = null;
+  /* v102: 선생님·관리자 구분 — 들어올 때 한 번 확인해 두고(kma.role), 화면마다 같은 모양으로 보인다 */
+  var RL = ls("kma.role"), ROLE = RL && S && RL.id === S.id ? RL.r : null;
+  function setRole(r) {
+    ROLE = r || ""; ls("kma.role", S ? { id: S.id, r: ROLE } : null);
+    if (ROLE) ss("kma.tpw", "fb"); else { try { sessionStorage.removeItem("kma.tpw"); } catch (e) {} }
+    try { document.dispatchEvent(new CustomEvent("kma:role", { detail: ROLE })); } catch (e) {}
+    if (typeof paintPill === "function" && pill) paintPill();
+  }
+  function checkRole() {
+    if (!FBCFG || !S) return Promise.resolve(ROLE);
+    return call("teacherPing", []).then(function (r) { setRole(r && r.ok ? (r.admin ? "admin" : "teacher") : ""); return ROLE; }).catch(function () { return ROLE; });
+  }
+  if (ROLE) ss("kma.tpw", "fb");
   window.KMA = {
     on: !!(FBCFG || KMA_URL), fb: !!FBCFG, url: KMA_URL, call: call, user: function () { return S && S.id; },
     teacher: function () { return ss("kma.tpw") || ""; },
+    role: function () { return ROLE || ""; },
     record: record, assign: assign, open: function () { openPanel(); }, G: G
   };
   if (!(FBCFG || KMA_URL) || NOUI) return;
@@ -356,6 +370,13 @@
     ".kma-run .res{font-size:14px;margin-top:8px}.kma-run .res.ok{color:var(--k-ok)}.kma-run .res.no{color:var(--k-no)}",
     ".kma-run .foot{position:fixed;left:0;right:0;bottom:0;background:var(--k-bg);border-top:1px solid var(--k-line);padding:12px 18px;display:flex;justify-content:center;gap:10px;align-items:center}",
     "@media (max-width:560px){.kma .bars div{grid-template-columns:96px 1fr 58px}.kma-box{padding:22px 18px}}",
+    ".kma-pill em{font-style:normal;font-size:12px;font-weight:700;color:var(--k-sub);border-right:1px solid var(--k-line);padding-right:8px}",
+    ".kma-pill.kma-t{border-color:var(--k-brand);color:var(--k-brand)}.kma-pill.kma-t em{color:#fff;background:var(--k-brand);border:0;border-radius:999px;padding:2px 8px;margin-left:-6px}",
+    ".kma .who{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--k-line);border-radius:12px;overflow:hidden;margin:0 0 16px}",
+    ".kma .who button{border:0;background:none;font:inherit;font-size:15px;padding:12px 8px;color:var(--k-sub);cursor:pointer;line-height:1.3}.kma .who button small{display:block;font-size:12px;color:var(--k-faint);font-weight:500;margin-top:2px}",
+    ".kma .who button.on{background:var(--k-ink);color:var(--k-bg);font-weight:700}.kma .who button.on small{color:inherit;opacity:.75}",
+    ".kma .who button+button{border-left:1px solid var(--k-line)}",
+    ".kma .tbox{border:1px solid var(--k-line);border-radius:14px;padding:16px;margin:4px 0 12px}.kma .tbox ul{margin:8px 0 0;padding-left:18px;font-size:13.5px;color:var(--k-sub);line-height:1.8}",
     "@media print{.kma-pill,.kma-dim{display:none!important}}"
   ].join("\n");
   document.head.appendChild(css);
@@ -373,21 +394,28 @@
   function closePanel() { dim.hidden = true; }
   function todo() { return (ASG || []).filter(function (a) { return !a.done; }).length; }
   function paintPill() {
-    if (S) { var n = todo(); pill.classList.remove("kma-off"); pill.innerHTML = esc(S.id) + (n ? ' · 과제 <i>' + n + "</i>" : ""); pill.setAttribute("aria-label", S.id + " — 내 기록과 과제 열기"); }
-    else { pill.classList.add("kma-off"); pill.textContent = "로그인"; pill.setAttribute("aria-label", "로그인"); }
+    pill.classList.toggle("kma-t", !!(S && ROLE));
+    if (S && ROLE) { pill.classList.remove("kma-off"); pill.innerHTML = '<em>' + (ROLE === "admin" ? "관리자" : "선생님") + "</em>" + esc(S.id); pill.setAttribute("aria-label", "선생님 " + S.id + " — 선생님 메뉴 열기"); }
+    else if (S) { var n = todo(); pill.classList.remove("kma-off"); pill.innerHTML = '<em>학생</em>' + esc(S.id) + (n ? ' · 과제 <i>' + n + "</i>" : ""); pill.setAttribute("aria-label", "학생 " + S.id + " — 내 기록과 과제 열기"); }
+    else { pill.classList.add("kma-off"); pill.textContent = "로그인"; pill.setAttribute("aria-label", "로그인 — 학생·선생님"); }
   }
 
   /* ---------- 들어가기 ---------- */
-  function loginView(mode) {
-    var up = mode === "up";
-    box().innerHTML = '<h2 id="kmaH">' + (up ? "처음 왔어요" : "들어가기") + '</h2><p class="s">' +
-      (up ? "아이디와 비밀번호를 정하면, 어느 컴퓨터에서 풀어도 기록이 이어지고 선생님이 낸 과제를 받을 수 있어요. 아이디는 이름 대신 번호나 별명으로 정해 주세요." : "아이디로 들어가면 다섯 갈래에서 푼 기록이 모이고, 선생님이 낸 과제를 풀 수 있어요.") + "</p>" +
-      '<form id="kmaF"><label class="f" for="kmaI">아이디</label><input type="text" id="kmaI" autocomplete="username" maxlength="12" placeholder="2~12자 한글·영문·숫자">' +
+  var WHO = "s";   /* 로그인 창: s 학생, t 선생님 */
+  function loginView(mode, who) {
+    if (who) WHO = who;
+    var up = mode === "up", T = WHO === "t";
+    var head = '<div class="who" role="tablist" aria-label="누구로 들어갈까요"><button type="button" role="tab" data-who="s" class="' + (T ? "" : "on") + '" aria-selected="' + !T + '">학생<small>문제 풀고 과제 제출</small></button><button type="button" role="tab" data-who="t" class="' + (T ? "on" : "") + '" aria-selected="' + T + '">선생님<small>과제 내고 학생 보기</small></button></div>';
+    var txt = T ? (up ? "선생님 아이디를 만듭니다. 만든 뒤 관리자에게 이 아이디를 '선생님으로 등록'해 달라고 하면 선생님 화면을 쓸 수 있어요." : "선생님 아이디로 들어가면 선생님 화면(학생 현황·과제·공지)으로 갑니다. 문제 화면에서는 '과제로 내기' 단추가 보여요.")
+      : (up ? "아이디와 비밀번호를 정하면, 어느 컴퓨터에서 풀어도 기록이 이어지고 선생님이 낸 과제를 받을 수 있어요. 아이디는 이름 대신 번호나 별명으로 정해 주세요." : "아이디로 들어가면 푼 기록이 모이고, 선생님이 낸 과제를 풀 수 있어요.");
+    box().innerHTML = head + '<h2 id="kmaH">' + (T ? (up ? "선생님 아이디 만들기" : "선생님으로 들어가기") : (up ? "학생 아이디 만들기" : "학생으로 들어가기")) + '</h2><p class="s">' + txt + "</p>" +
+      '<form id="kmaF"><label class="f" for="kmaI">' + (T ? "선생님 아이디" : "아이디") + '</label><input type="text" id="kmaI" autocomplete="username" maxlength="12" placeholder="2~12자 한글·영문·숫자">' +
       '<label class="f" for="kmaP">비밀번호</label><input type="password" id="kmaP" autocomplete="' + (up ? "new-password" : "current-password") + '" placeholder="' + (FBCFG ? "6" : "4") + '자 이상">' +
       (up ? '<label class="f" for="kmaP2">비밀번호 한 번 더</label><input type="password" id="kmaP2" autocomplete="new-password">' : "") +
       '<div class="msg" id="kmaM" role="alert"></div><div class="row"><button class="btn pri" type="submit">' + (up ? "만들고 들어가기" : "들어가기") + '</button>' +
-      '<button class="lnk" type="button" id="kmaSw">' + (up ? "이미 아이디가 있어요" : "처음 왔어요 · 아이디 만들기") + "</button></div>" +
-      '<p class="s" style="margin:14px 0 0">비밀번호를 잊으면 선생님께 말씀드리세요. 로그인하지 않아도 문제는 그대로 풀 수 있어요(기록은 이 컴퓨터에만).</p></form>';
+      '<button class="lnk" type="button" id="kmaSw">' + (up ? "이미 아이디가 있어요" : (T ? "선생님 아이디 만들기" : "처음 왔어요 · 아이디 만들기")) + "</button></div>" +
+      (T ? "" : '<p class="s" style="margin:14px 0 0">비밀번호를 잊으면 선생님께 말씀드리세요. 로그인하지 않아도 문제는 그대로 풀 수 있어요(기록은 이 컴퓨터에만).</p>') + "</form>";
+    box().querySelectorAll("[data-who]").forEach(function (b) { b.onclick = function () { loginView(mode, b.dataset.who); }; });
     document.getElementById("kmaSw").onclick = function () { loginView(up ? "in" : "up"); };
     document.getElementById("kmaF").onsubmit = function (e) {
       e.preventDefault();
@@ -395,21 +423,42 @@
       if (up && pw !== document.getElementById("kmaP2").value) { m.textContent = "비밀번호가 서로 달라요."; return; }
       var b = e.target.querySelector(".pri"); b.disabled = true; m.textContent = "";
       call(up ? "siteSignup" : "siteLogin", [id, pw]).then(function (r) {
-        b.disabled = false;
-        if (!r.ok) { m.textContent = r.msg || "들어가지 못했어요."; return; }
-        S = { id: id, token: r.token }; ls(SKEY, S); SUM = r.sum || null;
-        flush(); refresh(true);
+        if (!r.ok) { b.disabled = false; m.textContent = r.msg || "들어가지 못했어요."; return; }
+        S = { id: id, token: r.token }; ls(SKEY, S); SUM = r.sum || null; ROLE = null;
+        checkRole().then(function (role) {
+          b.disabled = false;
+          if (T && !role) { teacherWait(id, up); return; }
+          if (T && role && !NOUI) { location.href = "/suneung-korean/teacher.html"; return; }
+          flush(); refresh(true);
+        });
       });
     };
     setTimeout(function () { var i = document.getElementById("kmaI"); i && i.focus(); }, 30);
   }
+  /* 선생님 쪽으로 들어왔는데 아직 등록 전 */
+  function teacherWait(id, made) {
+    box().innerHTML = '<h2 id="kmaH">' + (made ? "선생님 아이디를 만들었어요" : "아직 선생님으로 등록되지 않았어요") + '</h2><p class="s">관리자(학교 담당 선생님)에게 아이디 <b>' + esc(id) + "</b>를 선생님 화면의 '선생님 관리'에서 등록해 달라고 하세요. 등록되면 다시 '선생님으로 들어가기'를 누르면 됩니다.</p>" +
+      '<div class="row"><button class="btn pri" type="button" id="kmaRe">등록됐는지 다시 확인</button><button class="btn" type="button" id="kmaOut2">나가기</button></div><div class="msg" id="kmaM"></div>';
+    document.getElementById("kmaRe").onclick = function () { checkRole().then(function (r) { if (r) location.href = "/suneung-korean/teacher.html"; else document.getElementById("kmaM").textContent = "아직 등록 전이에요."; }); };
+    document.getElementById("kmaOut2").onclick = function () { logout(); loginView("in", "t"); };
+  }
+  function logout() { if (S) call("siteLogout", [S.id, S.token]); S = null; ls(SKEY, null); SUM = ASG = NT = null; setRole(""); ls("kma.role", null); paintPill(); }
 
   /* ---------- 내 기록 · 과제 · 공지 ---------- */
-  var tab = "asg", ROLE = null, ROLEID = "";
+  var tab = "asg";
+  function teacherView() {
+    var adm = ROLE === "admin";
+    box().innerHTML = '<h2 id="kmaH">' + esc(S.id) + ' <span class="tag done">' + (adm ? "관리자" : "선생님") + "</span></h2>" +
+      '<div class="tbox"><a class="btn pri" href="/suneung-korean/teacher.html" style="display:inline-block;text-decoration:none">선생님 화면 열기</a>' +
+      "<ul><li>학생 현황 · 과제(기출 골라 만들기) · 공지" + (adm ? " · 선생님 관리" : "") + "는 선생님 화면에서 해요.</li><li>문제 화면에서는 회차·담은 문제 옆 '과제로 내기' 단추로 바로 낼 수 있어요.</li></ul></div>" +
+      '<div class="row" style="justify-content:space-between"><button class="lnk" type="button" id="kmaOut">나가기(로그아웃)</button><button class="btn" type="button" id="kmaX">닫기</button></div>';
+    document.getElementById("kmaX").onclick = closePanel;
+    document.getElementById("kmaOut").onclick = function () { logout(); loginView("in"); };
+  }
   function meView() {
+    if (ROLE) return teacherView();
     var s = SUM || { n: 0, f: 0, wk: 0, byG: {}, cls: "" };
-    if (FBCFG && ROLEID !== S.id) { ROLEID = S.id; ROLE = ""; call("teacherPing", []).then(function (r) { ROLE = r && r.ok ? (r.admin ? "admin" : "teacher") : ""; if (ROLE && S && document.getElementById("kmaB")) meView(); }).catch(function () {}); }
-    var role = ROLE === "admin" ? "관리자" : ROLE === "teacher" ? "선생님" : "";
+    var role = "";
     var h = '<h2 id="kmaH">' + esc(S.id) + (role ? ' <span class="tag done">' + role + "</span>" : "") + (s.cls ? ' <span class="tag">' + esc(s.cls) + "</span>" : "") + "</h2>" +
       (role ? '<p class="s">' + role + ' 아이디예요. 학생 현황·과제·공지' + (ROLE === "admin" ? "·선생님 관리" : "") + '는 선생님 화면에서 해요.</p><div class="row" style="margin:8px 0 4px"><a class="btn pri" href="/suneung-korean/teacher.html">선생님 화면 열기</a></div>' : "") +
       '<div class="stat"><div><b>' + s.n + '</b><small>푼 문제</small></div><div><b>' + pct(s.f, s.n) + '</b><small>첫 시도 정답률</small></div><div><b>' + s.wk + "</b><small>최근 7일</small></div></div>" +
@@ -418,7 +467,7 @@
     box().innerHTML = h;
     box().querySelectorAll("[data-t]").forEach(function (b) { b.onclick = function () { tab = b.dataset.t; meView(); }; });
     document.getElementById("kmaX").onclick = closePanel;
-    document.getElementById("kmaOut").onclick = function () { call("siteLogout", [S.id, S.token]); S = null; ls(SKEY, null); SUM = ASG = NT = null; ROLE = null; ROLEID = ""; paintPill(); loginView("in"); };
+    document.getElementById("kmaOut").onclick = function () { logout(); loginView("in"); };
     var B = document.getElementById("kmaB");
     if (tab === "rec") {
       var rows = GO.filter(function (g) { return s.byG[g]; }).map(function (g) { var v = s.byG[g]; return "<div><span>" + G[g] + '</span><em><i style="width:' + Math.round(v.c / v.t * 100) + '%"></i></em><small>' + pct(v.c, v.t) + " · " + v.t + "</small></div>"; }).join("");
@@ -592,5 +641,5 @@
   }
 
   /* 처음 열 때: 로그인되어 있으면 요약·과제 수 받아 오기 + 남은 기록 보내기 */
-  if (S) { call("siteResume", [S.id, S.token]).then(function (r) { if (!r.ok) { S = null; ls(SKEY, null); paintPill(); return; } SUM = r.sum; flush(); refresh(false); }); }
+  if (S) { call("siteResume", [S.id, S.token]).then(function (r) { if (!r.ok) { S = null; ls(SKEY, null); setRole(""); paintPill(); return; } SUM = r.sum; flush(); refresh(false); checkRole(); }); }
 })();
