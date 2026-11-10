@@ -106,6 +106,7 @@
       if (!/^(hak|seo|sn|non|adv):/.test(String(x.k || ""))) return null;
       return { k: String(x.k).slice(0, 90), a: st(x.a, 30), title: st(x.title, 120), topic: st(x.topic, 160), src: st(x.src, 200), nc: Math.max(0, Math.min(5, +x.nc || 0)),
         q: (x.q || []).slice(0, 6).map(pic).filter(Boolean), p: x.p && x.p.imgs ? { lab: st(x.p.lab, 60), imgs: x.p.imgs.slice(0, 6).map(pic).filter(Boolean) } : null,
+        gm: x.gm && /^[a-z]\w?\d?-20\d\d[a-z]?$/.test(String(x.gm.e || "")) ? { e: String(x.gm.e), n: +x.gm.n || 0 } : null,
         txt: x.txt ? { pas: st(x.txt.pas, 6000), ask: st(x.txt.ask, 600), body: st(x.txt.body, 4000), ch: (x.txt.ch || []).slice(0, 5).map(function (c) { return st(c, 600); }) } : null };
     }).filter(Boolean);
   }
@@ -404,17 +405,20 @@
   }
 
   /* ---------- 내 기록 · 과제 · 공지 ---------- */
-  var tab = "asg";
+  var tab = "asg", ROLE = null, ROLEID = "";
   function meView() {
     var s = SUM || { n: 0, f: 0, wk: 0, byG: {}, cls: "" };
-    var h = '<h2 id="kmaH">' + esc(S.id) + (s.cls ? ' <span class="tag">' + esc(s.cls) + "</span>" : "") + "</h2>" +
+    if (FBCFG && ROLEID !== S.id) { ROLEID = S.id; ROLE = ""; call("teacherPing", []).then(function (r) { ROLE = r && r.ok ? (r.admin ? "admin" : "teacher") : ""; if (ROLE && S && document.getElementById("kmaB")) meView(); }).catch(function () {}); }
+    var role = ROLE === "admin" ? "관리자" : ROLE === "teacher" ? "선생님" : "";
+    var h = '<h2 id="kmaH">' + esc(S.id) + (role ? ' <span class="tag done">' + role + "</span>" : "") + (s.cls ? ' <span class="tag">' + esc(s.cls) + "</span>" : "") + "</h2>" +
+      (role ? '<p class="s">' + role + ' 아이디예요. 학생 현황·과제·공지' + (ROLE === "admin" ? "·선생님 관리" : "") + '는 선생님 화면에서 해요.</p><div class="row" style="margin:8px 0 4px"><a class="btn pri" href="/suneung-korean/teacher.html">선생님 화면 열기</a></div>' : "") +
       '<div class="stat"><div><b>' + s.n + '</b><small>푼 문제</small></div><div><b>' + pct(s.f, s.n) + '</b><small>첫 시도 정답률</small></div><div><b>' + s.wk + "</b><small>최근 7일</small></div></div>" +
       '<div class="tabs" role="tablist"><button type="button" data-t="asg" class="' + (tab === "asg" ? "on" : "") + '">과제' + (todo() ? " " + todo() : "") + '</button><button type="button" data-t="rec" class="' + (tab === "rec" ? "on" : "") + '">내 기록</button><button type="button" data-t="nt" class="' + (tab === "nt" ? "on" : "") + '">공지' + ((NT || []).length ? " " + NT.length : "") + "</button></div><div id=\"kmaB\"></div>" +
       '<div class="row" style="justify-content:space-between"><button class="lnk" type="button" id="kmaOut">나가기(로그아웃)</button><button class="btn" type="button" id="kmaX">닫기</button></div>';
     box().innerHTML = h;
     box().querySelectorAll("[data-t]").forEach(function (b) { b.onclick = function () { tab = b.dataset.t; meView(); }; });
     document.getElementById("kmaX").onclick = closePanel;
-    document.getElementById("kmaOut").onclick = function () { call("siteLogout", [S.id, S.token]); S = null; ls(SKEY, null); SUM = ASG = NT = null; paintPill(); loginView("in"); };
+    document.getElementById("kmaOut").onclick = function () { call("siteLogout", [S.id, S.token]); S = null; ls(SKEY, null); SUM = ASG = NT = null; ROLE = null; ROLEID = ""; paintPill(); loginView("in"); };
     var B = document.getElementById("kmaB");
     if (tab === "rec") {
       var rows = GO.filter(function (g) { return s.byG[g]; }).map(function (g) { var v = s.byG[g]; return "<div><span>" + G[g] + '</span><em><i style="width:' + Math.round(v.c / v.t * 100) + '%"></i></em><small>' + pct(v.c, v.t) + " · " + v.t + "</small></div>"; }).join("");
@@ -471,6 +475,7 @@
         h += '<div class="ask">' + esc(it.txt.ask) + "</div>" + (it.txt.body ? '<div class="pas">' + esc(it.txt.body) + "</div>" : "");
       }
       h += (it.q || []).map(pic).join("");
+      if (it.gm) h += '<div data-gm="' + esc(it.gm.e) + '|' + it.gm.n + '"><span style="font-size:13px;color:var(--k-faint)">문항 그림을 불러오는 중…</span></div>';
       if (it.nc) {
         var txtCh = it.txt && it.txt.ch && it.txt.ch.length === it.nc && it.txt.ch.every(Boolean);
         h += '<div class="' + (txtCh ? "chs" : "nums") + '" role="group" aria-label="' + (n + 1) + '번 답">';
@@ -491,6 +496,7 @@
     h += '<div class="foot">' + (done ? '<span style="font-size:14px">제출했어요' + (a.done.n ? " · " + a.done.sc + "/" + a.done.n + "점" : "") + '</span><button class="btn" type="button" id="kmaRX2">닫기</button>'
       : '<span style="font-size:14px;color:var(--k-sub)">' + (left ? "안 푼 문제 " + left + "개" : "다 풀었어요") + '</span><button class="btn pri" type="button" id="kmaSub">제출하기</button>') + '<span class="msg" id="kmaRM" role="alert" style="margin:0"></span></div>';
     run.innerHTML = h;
+    fillGm();
     document.getElementById("kmaRX").onclick = closeRun;
     var x2 = document.getElementById("kmaRX2"); if (x2) x2.onclick = closeRun;
     run.querySelectorAll(".ch[data-k]").forEach(function (b) { b.onclick = function () { ANS[b.dataset.k] = +b.dataset.n; ls("kma.d." + a.id, ANS); var y = run.scrollTop; paintRun(); run.scrollTop = y; }; });
@@ -505,6 +511,21 @@
         a.done = r.done; a.key = r.key; ls("kma.d." + a.id, null); paintRun(); run.scrollTop = 0; refresh(false);
       });
     };
+  }
+  /* 공무원 문항: /advanced-korean/gm/q/<회차>.json 에서 그림을 가져와 채운다(같은 지문은 처음 한 번만) */
+  var GMC = {};
+  function fillGm() {
+    var shown = {};
+    run.querySelectorAll("[data-gm]").forEach(function (el) {
+      var p = el.dataset.gm.split("|"), e = p[0], n = +p[1];
+      GMC[e] = GMC[e] || fetch("/advanced-korean/gm/q/" + e + ".json?v=101").then(function (r) { return r.json(); }).catch(function () { return null; });
+      GMC[e].then(function (d) {
+        if (!d) { el.textContent = "문항 그림을 불러오지 못했어요."; return; }
+        var q = (d.q || []).filter(function (x) { return x.n === n; })[0], h = "";
+        (d.p || []).forEach(function (x, i) { if (x.rng[0] <= n && n <= x.rng[1] && !shown[e + i]) { shown[e + i] = 1; h += '<img src="' + x.img + '" alt="지문">'; } });
+        el.innerHTML = h + (q ? '<img src="' + q.img + '" alt="' + n + '번 문항">' : '<a href="/advanced-korean/gongmuwon.html#exam/' + e + '" target="_blank" rel="noopener">시험지에서 ' + n + '번 보기 ↗</a>');
+      });
+    });
   }
   /* 안 푼 문제가 있으면 한 번 더 누르게 한다(창 띄우지 않음) */
   function confirmLeft(b, left) {
