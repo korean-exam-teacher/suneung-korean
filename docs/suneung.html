@@ -2290,7 +2290,7 @@ function renderBasket(){
       <div><h2>담은 문제</h2><p>${total ? `${total}문항 · 지문 ${passN}개 · 배점 합 ${points}점 · 번호는 담은 순서대로 새로 매깁니다.` : '문항을 펼쳐 "문제 담기"를 누르면 여기에 모입니다.'}</p></div>
       ${total ? `<div class="bk-bar">
         <button type="button" class="btn-fill" id="bkSolve">모아 풀기</button>
-        ${window.KMA&&KMA.on ? '<button type="button" class="btn-plain" id="bkAsgBtn">과제로 내기</button>' : ''}
+        ${window.KMA&&KMA.on&&KMA.teacher&&KMA.teacher() ? '<button type="button" class="btn-plain" id="bkAsgBtn">과제로 내기</button>' : ''}
         <button type="button" class="btn-plain" id="bkSortArea" title="독서 → 문학 → 화법과 작문 → 언어와 매체 순으로 묶음을 다시 늘어놓습니다.">영역 순으로 정리</button>
         ${bkConfirm ? `<span class="bk-confirm">모두 비울까요?</span><button type="button" class="btn-plain" id="bkClearYes" style="color:var(--bad);border-color:var(--bad)">비우기</button><button type="button" class="btn-plain" id="bkClearNo">취소</button>` : `<button type="button" class="btn-plain" id="bkClear">모두 비우기</button>`}
       </div>` : ''}
