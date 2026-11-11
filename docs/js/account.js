@@ -6,7 +6,8 @@
  * 앱스 스크립트(Site.gs)를 배포한 뒤 나온 웹 앱 주소(…/exec)를 아래에 넣으면 켜집니다.
  *
  * 각 갈래에서 쓰는 법
- *   KMA.record('adv:psat:PS2024a-12', true, 'PSAT')   // 학생이 채점한 순간 한 번 부르면 됨(로그인 안 했으면 무시)
+ *   KMA.record('adv:psat:PS2024a-12', true, 'PSAT', 3)   // 학생이 채점한 순간 한 번 부르면 됨(로그인 안 했으면 무시). 끝의 3은 고른 번호(없으면 생략)
+ * v110(2026-11-11): 혼자 푼 문제도 고른 번호를 남긴다 — KMA.record(열쇠, 맞았나, 영역, 고른 번호). ev 기록 [첫, 마지막, 횟수, 시각, 영역, 첫 번호, 마지막 번호]
  * v108(2026-11-11): 학생 한 명이 여러 학급에 — users/{uid}.cls 에 학급 이름을 줄바꿈(\n)으로 이어 적는다(하나뿐이면 전과 같음)
  * v107(2026-11-11): 과제 인쇄(js/asgprint.js), 학생 화면 위쪽 '과제' 탭, 새 공지 알림 창, 학급(선생님이 만들고 학생을 넣음 — asgKey/_cls)
  * v106(2026-11-11): 모의고사(제한 시간·자동 제출), 선택지별 응답 수(선생님만), 지운 과제의 응답 보관(asgKey/_stat)
@@ -118,9 +119,9 @@
     var ch = {}, now = Date.now();
     batch.forEach(function (b) {
       var k = String(b.k || ""); if (!/^(hak|seo|sn|non|adv):.{1,85}$/.test(k)) return;
-      var g = k.split(":")[0], m = EV[g] || (EV[g] = {}), e = m[k], ok = b.ok ? 1 : 0, t = Math.min(now, +b.t || now);
-      if (e) { e[1] = ok; e[2] = (e[2] || 1) + 1; e[3] = t; if (b.a) e[4] = String(b.a).slice(0, 30); }
-      else m[k] = [ok, ok, 1, t, String(b.a || "").slice(0, 30)];
+      var g = k.split(":")[0], m = EV[g] || (EV[g] = {}), e = m[k], ok = b.ok ? 1 : 0, t = Math.min(now, +b.t || now), c = +b.c; c = c >= 1 && c <= 5 ? c : 0;
+      if (e) { e[1] = ok; e[2] = (e[2] || 1) + 1; e[3] = t; if (b.a) e[4] = String(b.a).slice(0, 30); if (c) { if (e[4] == null) e[4] = ""; if (e[5] == null) e[5] = 0; e[6] = c; } }
+      else m[k] = c ? [ok, ok, 1, t, String(b.a || "").slice(0, 30), c, c] : [ok, ok, 1, t, String(b.a || "").slice(0, 30)];
       (ch[g] = ch[g] || {})[k] = m[k];
       var d = day(t); ME.days[d] = (ME.days[d] || 0) + 1; if (t > (ME.last || 0)) ME.last = t;
     });
@@ -272,10 +273,24 @@
       var r = (TROWS || []).filter(function (x) { return x.id === id; })[0];
       if (!r) return Promise.resolve({ ok: false, msg: "없는 학생이에요." });
       return uref(r.uid).collection("ev").get().then(function (q) {
-        var ev = []; q.forEach(function (d) { var m = (d.data() || {}).m || {}; Object.keys(m).forEach(function (k) { var e = m[k]; ev.push({ k: k, f: e[0], o: e[1], c: e[2], t: e[3], a: e[4] || "" }); }); });
+        var ev = []; q.forEach(function (d) { var m = (d.data() || {}).m || {}; Object.keys(m).forEach(function (k) { var e = m[k]; ev.push({ k: k, f: e[0], o: e[1], c: e[2], t: e[3], a: e[4] || "", p1: e[5] || 0, p: e[6] || e[5] || 0 }); }); });
         ev.sort(function (a, b) { return b.t - a.t; });
         return { ok: true, id: id, sum: r.sum, ev: ev.slice(0, 300), sub: r.sub };
       });
+    },
+    /* v110: 혼자 푼 문제의 첫 응답 — 학생들(ids)의 기록에서 문항·선택지별로 센다. {문항키: {c:[0,①..⑤], ok(첫 풀이에 맞힌 수), ans(맞힌 학생이 고른 번호), a(영역)}} */
+    teacherChoices: function (pw, ids) {
+      var want = {}; (ids || []).forEach(function (x) { want[x] = 1; });
+      var rows = (TROWS || []).filter(function (r) { return !ids || want[r.id]; }).slice(0, 400), m = {};
+      return Promise.all(rows.map(function (r) {
+        return uref(r.uid).collection("ev").get().then(function (q) {
+          q.forEach(function (d) { var mm = (d.data() || {}).m || {}; Object.keys(mm).forEach(function (k) {
+            var e = mm[k], c = +e[5]; if (!(c >= 1 && c <= 5)) return;
+            var o = m[k] || (m[k] = { c: [0, 0, 0, 0, 0, 0], ok: 0, ans: 0, a: e[4] || "" });
+            o.c[c]++; if (e[0]) { o.ok++; o.ans = c; }
+          }); });
+        }).catch(function () { return null; });
+      })).then(function () { return { ok: true, m: m, n: rows.length }; });
     },
     saveSiteAssign: function (pw, a) {
       a = a || {}; var items = cleanItems(a.items);
@@ -828,9 +843,9 @@
 
   /* ---------- 푼 기록 보내기 ---------- */
   var timer = null;
-  function record(k, ok, a) {
+  function record(k, ok, a, c) {
     if (!S || !k) return;
-    var q = ls(QKEY) || []; q.push({ k: String(k), ok: !!ok, a: a || "", t: Date.now() }); ls(QKEY, q.slice(-1000));
+    var q = ls(QKEY) || []; q.push({ k: String(k), ok: !!ok, a: a || "", t: Date.now(), c: +c || 0 }); ls(QKEY, q.slice(-1000));
     clearTimeout(timer); timer = setTimeout(flush, 3000);
   }
   function flush() {
