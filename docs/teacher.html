@@ -2,9 +2,10 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<script src="/suneung-korean/js/gate.js?v=104"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>선생님 화면 — 국어의 모든 것</title>
+<title>학생 현황 · 과제 · 공지 — 국어의 모든 것</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 @font-face{font-family:"YongbiTitle";font-weight:400 800;font-display:swap;src:url(fonts/oh-nanum.woff) format("woff")}
@@ -17,7 +18,7 @@ body{font-family:var(--sans);color:var(--text);background:var(--bg);line-height:
 a{color:inherit}
 .top{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:58px;padding:0 clamp(16px,3.2vw,56px);background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .brand{font-family:var(--title);font-size:21px;text-decoration:none}
-.top nav{display:flex;gap:2px}.top nav button{border:0;background:none;font:inherit;font-size:15px;color:var(--sub);padding:8px 12px;cursor:pointer;border-radius:8px}.top nav button.on{color:var(--text);font-weight:700}
+.top nav{display:flex;gap:2px}.top nav button{border:0;background:none;font:inherit;font-size:15px;color:var(--sub);padding:8px 12px;cursor:pointer;border-radius:8px}.top nav button.on{color:var(--text);font-weight:700}.top nav a.home{font-size:15px;color:var(--faint);text-decoration:none;padding:8px 12px}.top nav{align-items:center;flex-wrap:wrap}input.nm{width:96px;padding:5px 8px;font-size:13.5px}
 .wrap{max-width:1180px;margin:0 auto;padding:28px clamp(16px,3.2vw,40px) 80px}
 h1{font-size:26px;letter-spacing:-.03em;margin:0 0 4px}h2{font-size:19px;margin:28px 0 10px}
 .sub{color:var(--sub);font-size:14px;margin:0 0 18px}
@@ -66,9 +67,9 @@ mark{background:rgba(242,214,92,.55);color:inherit;border-radius:2px}
 </style>
 </head>
 <body>
-<header class="top"><a class="brand" href="/suneung-korean/">국어의 모든 것</a><nav id="nav" hidden><button type="button" data-v="st" class="on">학생 현황</button><button type="button" data-v="asg">과제</button><button type="button" data-v="nt">공지</button><button type="button" data-v="adm" id="admTab" hidden>선생님 관리</button><button type="button" id="out">나가기</button></nav></header>
+<header class="top"><a class="brand" href="/suneung-korean/">국어의 모든 것</a><nav id="nav" hidden><a class="home" href="/suneung-korean/">처음 화면</a><button type="button" data-v="st" class="on">학생 현황</button><button type="button" data-v="asg">과제</button><button type="button" data-v="nt">공지</button><button type="button" data-v="adm" id="admTab" hidden>선생님 관리</button><button type="button" id="out">로그아웃</button></nav></header>
 <main class="wrap" id="main"></main>
-<script src="js/account.js?v=102" data-noui></script>
+<script src="js/account.js?v=104" data-noui></script>
 <script>
 (function(){
 /* account.js 와 같은 서버 주소를 쓴다 */
@@ -85,22 +86,11 @@ function stt(e){ return e.f&&e.o?'<span class="ok">맞힘</span>':e.f?'<span cla
 var ADM=false, PW=sessionStorage.getItem('kma.tpw')||'', D=null, VIEW=(location.hash||'#st').slice(1), CLS='', OPEN=null;
 function call(fn,args){ return KMA.call(fn,args); }
 
-if(!ON){ M.innerHTML='<h1>선생님 화면</h1><p class="sub">아직 서버 주소가 없어요. 앱스 스크립트(Site.gs)를 배포한 뒤 나온 주소를 /suneung-korean/js/account.js 의 KMA_URL 과 이 파일에 넣어 주세요.</p>'; return; }
+if(!ON){ M.innerHTML='<h1>학생 현황</h1><p class="sub">아직 서버 주소가 없어요. 앱스 스크립트(Site.gs)를 배포한 뒤 나온 주소를 /suneung-korean/js/account.js 의 KMA_URL 과 이 파일에 넣어 주세요.</p>'; return; }
 function loginView(msg){
   $('nav').hidden=true;
-  if(FBM){
-    M.innerHTML='<div class="card" style="max-width:440px;margin:40px auto"><h1>선생님 화면 <span class="who">선생님 전용</span></h1><p class="sub">선생님 아이디로 들어갑니다.<br>· 학생은 이 화면이 아니라 문제 화면 오른쪽 아래 <b>로그인 → 학생</b>으로 들어가요.<br>· 선생님 아이디가 없으면 문제 화면 오른쪽 아래 <b>로그인 → 선생님 → 선생님 아이디 만들기</b> 뒤, 관리자에게 등록을 부탁하세요.</p>'+
-      '<form id="f"><input type="text" id="tid" autocomplete="username" placeholder="선생님 아이디" style="width:100%"><input type="password" id="pw" autocomplete="current-password" placeholder="비밀번호" style="width:100%;margin-top:8px"><div class="msg" id="m" role="alert">'+esc(msg||'')+'</div><button class="btn pri" type="submit" style="margin-top:6px">들어가기</button></form></div>';
-    $('f').onsubmit=function(e){ e.preventDefault(); $('m').textContent='';
-      call('siteLogin',[$('tid').value.trim(),$('pw').value]).then(function(r){ if(!r.ok){ $('m').textContent=r.msg||'들어가지 못했어요.'; return; }
-        try{ localStorage.setItem('kma.s',JSON.stringify({id:r.id,token:'fb'})); }catch(x){}
-        call('teacherPing',[]).then(function(t){ if(!t.ok){ $('m').textContent='이 아이디는 아직 선생님으로 등록되지 않았어요. 관리자에게 아이디 \''+$('tid').value.trim()+'\'를 선생님으로 등록해 달라고 하세요.'; return; } ADM=!!t.admin; PW='fb'; sessionStorage.setItem('kma.tpw','fb'); load(); }); }); };
-    setTimeout(function(){ $('tid')&&$('tid').focus(); },30); return;
-  }
-  M.innerHTML='<div class="card" style="max-width:420px;margin:40px auto"><h1>선생님 화면</h1><p class="sub">학생 기록 시트의 \'설정\' 탭 B1 칸에 적은 선생님 비밀번호로 들어갑니다. 공무원 기출 연습장의 선생님 비밀번호와 같아요.</p>'+
-    '<form id="f"><input type="password" id="pw" autocomplete="current-password" placeholder="선생님 비밀번호" style="width:100%"><div class="msg" id="m" role="alert">'+esc(msg||'')+'</div><button class="btn pri" type="submit" style="margin-top:6px">들어가기</button></form></div>';
-  $('f').onsubmit=function(e){ e.preventDefault(); var v=$('pw').value; call('teacherPing',[v]).then(function(r){ if(!r.ok){ $('m').textContent=r.msg||'들어가지 못했어요.'; return; } PW=v; sessionStorage.setItem('kma.tpw',v); load(); }); };
-  setTimeout(function(){ $('pw')&&$('pw').focus(); },30);
+  M.innerHTML='<div class="card" style="max-width:460px;margin:40px auto"><h1>선생님만 볼 수 있어요</h1><p class="sub">학생 현황·과제·공지는 선생님으로 등록된 아이디로 로그인해야 열려요. '+esc(msg||'')+'</p><div class="bar" style="margin:0"><a class="btn pri" href="/suneung-korean/" style="text-decoration:none">처음 화면으로</a><button class="btn" type="button" id="lo">로그아웃</button></div></div>';
+  $('lo').onclick=function(){ KMA.logout(); };
 }
 function load(){
   M.innerHTML='<p class="sub">불러오는 중…</p>';
@@ -110,7 +100,8 @@ function load(){
   });
 }
 document.querySelectorAll('#nav [data-v]').forEach(function(b){ b.onclick=function(){ VIEW=b.dataset.v; OPEN=null; history.replaceState(null,'','#'+VIEW); paint(); }; });
-$('out').onclick=function(){ sessionStorage.removeItem('kma.tpw'); PW=''; if(FBM){ call('siteLogout',[]); try{ localStorage.removeItem('kma.s'); }catch(x){} } loginView(''); };
+$('out').onclick=function(){ PW=''; KMA.logout(); };
+window.addEventListener('hashchange',function(){ var v=(location.hash||'#st').slice(1); if(D&&v!==VIEW&&/^(st|asg|nt|adm)$/.test(v)){ VIEW=v; OPEN=null; paint(); } });
 function paint(){
   document.querySelectorAll('#nav [data-v]').forEach(function(b){ b.classList.toggle('on',b.dataset.v===(VIEW==='make'?'asg':VIEW)); });
   if(VIEW==='make') return makeView(); if(VIEW==='asg') return asgView(); if(VIEW==='nt') return ntView(); if(VIEW==='adm'&&ADM) return admView(); stView();
@@ -122,14 +113,14 @@ function stView(){
   var rows=D.rows.filter(function(r){ return !CLS||r.sum.cls===CLS; }).sort(function(a,b){ return (b.sum.last||0)-(a.sum.last||0); });
   var wk=rows.filter(function(r){ return r.sum.wk; }).length, tot=rows.reduce(function(a,r){return a+r.sum.n;},0), f=rows.reduce(function(a,r){return a+r.sum.f;},0);
   var dd=[]; for(var i=13;i>=0;i--){ var d=new Date(Date.now()-i*86400000+9*3600000).toISOString().slice(0,10); dd.push(d); }
-  var h='<h1>학생 현황</h1><p class="sub">'+new Date(D.at).toLocaleString('ko-KR')+' 기준 · 학생 줄을 누르면 자세히 볼 수 있어요. <button class="lnk" type="button" id="rl">새로 고침</button></p>'+
+  var h='<h1>학생 현황</h1><p class="sub">'+new Date(D.at).toLocaleString('ko-KR')+' 기준 · 아이디를 만든 학생이 모두 나와요. 줄을 누르면 자세히 볼 수 있고, 이름·반은 여기서 고칠 수 있어요. <button class="lnk" type="button" id="rl">새로 고침</button></p>'+
     '<div class="kp"><div><b>'+rows.length+'</b><small>학생</small></div><div><b>'+wk+'</b><small>최근 7일 공부한 학생</small></div><div><b>'+tot.toLocaleString()+'</b><small>푼 문제(모두)</small></div><div><b>'+(tot?Math.round(f/tot*100)+'%':'–')+'</b><small>첫 시도 정답률</small></div></div>'+
     '<div class="bar"><label>반 <select id="cf"><option value="">모두</option>'+classes().map(function(c){return '<option'+(c===CLS?' selected':'')+'>'+esc(c)+'</option>';}).join('')+'</select></label></div>';
-  if(!rows.length){ M.innerHTML=h+'<div class="tw"><p class="empty">아직 학생이 없어요. 학생들이 사이트 오른쪽 아래 \'로그인\'에서 아이디를 만들면 여기에 나타나요.</p></div>'; bindTop(); return; }
-  h+='<div class="tw"><table><thead><tr><th>아이디</th><th>반</th><th>마지막 공부</th><th>최근 14일</th><th class="num">7일</th><th class="num">푼 문제</th><th class="num">정답률</th><th class="num">남은 오답</th>'+
+  if(!rows.length){ M.innerHTML=h+'<div class="tw"><p class="empty">아직 학생이 없어요. 학생들이 로그인 창에서 아이디를 만들면 여기에 나타나요.</p></div>'; bindTop(); return; }
+  h+='<div class="tw"><table><thead><tr><th>이름</th><th>아이디</th><th>반</th><th>마지막 공부</th><th>최근 14일</th><th class="num">7일</th><th class="num">푼 문제</th><th class="num">정답률</th><th class="num">남은 오답</th>'+
     GO.map(function(g){return '<th class="num" title="'+G[g]+'">'+GS[g]+'</th>';}).join('')+'<th class="num">과제</th>'+(FBM?'':'<th class="num">공무원 앱</th>')+'</tr></thead><tbody>'+
     rows.map(function(r){ var s=r.sum, A=asgFor(r), sd=A.filter(function(a){return r.sub[a.id];}).length;
-      return '<tr data-id="'+esc(r.id)+'"><td><b>'+esc(r.id)+'</b></td><td><input class="cls" data-c="'+esc(r.id)+'" value="'+esc(s.cls)+'" placeholder="반" aria-label="'+esc(r.id)+' 반"></td><td>'+ago(s.last)+'</td>'+
+      return '<tr data-id="'+esc(r.id)+'"><td><input class="nm" data-n="'+esc(r.id)+'" value="'+esc(r.name||'')+'" placeholder="이름" aria-label="'+esc(r.id)+' 이름"></td><td>'+esc(r.id)+'</td><td><input class="cls" data-c="'+esc(r.id)+'" value="'+esc(s.cls)+'" placeholder="반" aria-label="'+esc(r.id)+' 반"></td><td>'+ago(s.last)+'</td>'+
         '<td><span class="dots">'+dd.map(function(d){return '<i class="'+(s.days.indexOf(d)>=0?'on':'')+'" title="'+d+'"></i>';}).join('')+'</span></td>'+
         '<td class="num">'+s.wk+'</td><td class="num">'+s.n+'</td><td class="num">'+pct(s.f,s.n)+'</td><td class="num">'+s.wrong+'</td>'+
         GO.map(function(g){ var v=s.byG[g]; return '<td class="num">'+(v?pct(v.c,v.t)+'<span class="cnt">'+v.t+'</span>':'<span class="cnt">–</span>')+'</td>'; }).join('')+
@@ -137,8 +128,10 @@ function stView(){
   M.innerHTML=h; bindTop();
   M.querySelectorAll('tbody tr').forEach(function(tr){ tr.onclick=function(e){ if(e.target.closest('input')) return; detail(tr.dataset.id); }; });
   M.querySelectorAll('input.cls').forEach(function(i){ i.onchange=function(){ var v=i.value.trim(); call('setClass',[PW,i.dataset.c,v]).then(function(r){ if(r.ok){ D.rows.forEach(function(x){ if(x.id===i.dataset.c) x.sum.cls=v; }); } }); }; });
+  M.querySelectorAll('input.nm').forEach(function(i){ i.onchange=function(){ var v=i.value.trim(); call('setName',[PW,i.dataset.n,v]).then(function(r){ if(r.ok){ D.rows.forEach(function(x){ if(x.id===i.dataset.n) x.name=v; }); } }); }; });
   if(OPEN) detail(OPEN);
 }
+function who(id){ var r=(D.rows||[]).filter(function(x){return x.id===id;})[0]; return r&&r.name?r.name+' ('+id+')':id; }
 function bindTop(){ var cf=$('cf'); if(cf) cf.onchange=function(){ CLS=cf.value; paint(); }; var rl=$('rl'); if(rl) rl.onclick=load; }
 function detail(id){
   OPEN=id; var el=$('det'); el.innerHTML='<p class="sub" style="margin-top:18px">'+esc(id)+' 불러오는 중…</p>';
@@ -148,7 +141,7 @@ function detail(id){
     var subs=D.asg.filter(function(a){return r.sub[a.id];}).map(function(a){ var d=r.sub[a.id];
       var w=a.items.filter(function(it){return !it.nc;}).map(function(it){ return '<div style="font-size:13px;color:var(--sub);margin-top:8px">'+esc(it.title||nice(it.k))+'</div><div class="wans">'+esc(d.ans[it.k]||'(빈칸)')+'</div>'; }).join('');
       return '<li><span>'+esc(a.title)+'</span><span>'+(d.n?d.sc+'/'+d.n+'점':'제출')+' · '+day(d.at)+(d.tries>1?' · '+d.tries+'번째':'')+'</span></li>'+(w?'<li style="display:block">'+w+'</li>':''); }).join('');
-    el.innerHTML='<div class="card det"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">'+esc(id)+(s.cls?' <span class="tag">'+esc(s.cls)+'</span>':'')+'</h2><button class="btn sm" type="button" id="dx">닫기</button></div>'+
+    el.innerHTML='<div class="card det"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">'+esc(who(id))+(s.cls?' <span class="tag">'+esc(s.cls)+'</span>':'')+'</h2><button class="btn sm" type="button" id="dx">닫기</button></div>'+
       '<div class="grid2"><div><h2>영역별 첫 시도 정답률</h2><div class="bars">'+(A||'<p class="sub">기록 없음</p>')+'</div>'+
       '<h2>과제 제출</h2><ul class="ev">'+(subs||'<li>제출한 과제 없음</li>')+'</ul>'+
       (FBM?'<h2>기록 옮기기</h2><p class="sub" style="margin:0 0 8px">비밀번호를 잊은 학생은 새 아이디를 만들게 한 뒤, 이 학생의 기록을 새 아이디로 옮겨 주세요.</p><div class="bar"><input type="text" id="mvTo" placeholder="새 아이디" style="width:160px"><button class="btn sm" type="button" id="mvGo">이 기록을 옮기기</button><span class="msg" id="mvM" style="margin:0"></span></div>':'')+'</div>'+
@@ -170,8 +163,8 @@ function asgView(){
     var avg=done.length&&done[0].sub[a.id].n?Math.round(done.reduce(function(x,r){return x+r.sub[a.id].sc/r.sub[a.id].n;},0)/done.length*100)+'%':'–';
     return '<div class="asg"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h3>'+esc(a.title)+'</h3><div class="meta">'+a.items.length+'문항 · '+(a.cls?esc(a.cls):'모든 학생')+(a.due?' · 마감 '+esc(a.due):'')+' · 낸 날 '+day(a.created)+'</div></div>'+
       '<button class="btn sm" type="button" data-del="'+esc(a.id)+'">지우기</button></div>'+
-      '<div class="meta" style="margin-top:8px">제출 <b>'+done.length+'/'+who.length+'</b> · 평균 '+avg+(who.length>done.length?' · 아직: '+who.filter(function(r){return !r.sub[a.id];}).map(function(r){return esc(r.id);}).join(', '):'')+'</div>'+
-      (done.length?'<div class="tw" style="margin-top:10px"><table><thead><tr><th>아이디</th><th class="num">점수</th><th>제출</th><th class="num">횟수</th></tr></thead><tbody>'+done.map(function(r){ var d=r.sub[a.id]; return '<tr data-id="'+esc(r.id)+'"><td>'+esc(r.id)+'</td><td class="num">'+(d.n?d.sc+'/'+d.n:'서술형')+'</td><td>'+day(d.at)+'</td><td class="num">'+(d.tries||1)+'</td></tr>'; }).join('')+'</tbody></table></div>':'')+'</div>';
+      '<div class="meta" style="margin-top:8px">제출 <b>'+done.length+'/'+who.length+'</b> · 평균 '+avg+(who.length>done.length?' · 아직: '+who.filter(function(r){return !r.sub[a.id];}).map(function(r){return esc(r.name||r.id);}).join(', '):'')+'</div>'+
+      (done.length?'<div class="tw" style="margin-top:10px"><table><thead><tr><th>이름(아이디)</th><th class="num">점수</th><th>제출</th><th class="num">횟수</th></tr></thead><tbody>'+done.map(function(r){ var d=r.sub[a.id]; return '<tr data-id="'+esc(r.id)+'"><td>'+esc(who(r.id))+'</td><td class="num">'+(d.n?d.sc+'/'+d.n:'서술형')+'</td><td>'+day(d.at)+'</td><td class="num">'+(d.tries||1)+'</td></tr>'; }).join('')+'</tbody></table></div>':'')+'</div>';
   }).join('')+'</div>';
   M.innerHTML=h;
   $('mkGo').onclick=function(){ VIEW='make'; paint(); };
@@ -313,10 +306,10 @@ function mkForm(){
 }
 /* ---------- 선생님 관리(관리자만) ---------- */
 function admView(){
-  M.innerHTML='<h1>선생님 관리</h1><p class="sub">관리자만 보는 화면입니다. 다른 선생님이 사이트에서 아이디를 만든 뒤, 그 아이디를 여기에 넣으면 선생님 화면을 쓸 수 있어요.</p>'+
+  M.innerHTML='<h1>선생님 관리</h1><p class="sub">관리자만 보는 화면입니다. 다른 선생님이 사이트에서 아이디를 만든 뒤, 그 아이디를 여기에 넣으면 학생 현황·과제·공지를 쓸 수 있어요.</p>'+
     '<div class="card"><div class="bar" style="margin:0"><input type="text" id="taId" placeholder="선생님 아이디" style="width:200px"><button class="btn pri" type="button" id="taGo">선생님으로 등록</button></div><div class="msg" id="taM"></div></div><div id="taL" style="margin-top:16px"><p class="sub">불러오는 중…</p></div>';
   function list(r){ if(!r.ok){ $('taL').innerHTML='<p class="msg">'+esc(r.msg||'불러오지 못했어요.')+'</p>'; return; }
-    $('taL').innerHTML=r.list.length?'<div class="tw"><table><thead><tr><th>선생님 아이디</th><th>등록한 날</th><th></th></tr></thead><tbody>'+r.list.map(function(t){ return '<tr><td><b>'+esc(t.id)+'</b></td><td>'+day(t.at)+'</td><td class="num"><button class="btn sm" type="button" data-rm="'+esc(t.uid)+'">선생님에서 빼기</button></td></tr>'; }).join('')+'</tbody></table></div>':'<p class="empty">등록한 선생님이 없어요. 관리자는 따로 등록하지 않아도 선생님 화면을 씁니다.</p>';
+    $('taL').innerHTML=r.list.length?'<div class="tw"><table><thead><tr><th>선생님 아이디</th><th>등록한 날</th><th></th></tr></thead><tbody>'+r.list.map(function(t){ return '<tr><td><b>'+esc(t.id)+'</b></td><td>'+day(t.at)+'</td><td class="num"><button class="btn sm" type="button" data-rm="'+esc(t.uid)+'">선생님에서 빼기</button></td></tr>'; }).join('')+'</tbody></table></div>':'<p class="empty">등록한 선생님이 없어요. 관리자는 따로 등록하지 않아도 됩니다.</p>';
     $('taL').querySelectorAll('[data-rm]').forEach(function(b){ b.onclick=function(){ if(!b.dataset.sure){ b.dataset.sure=1; b.textContent='정말 빼기'; return; } call('teacherRemove',[PW,b.dataset.rm]).then(list); }; }); }
   call('teacherList',[]).then(list);
   $('taGo').onclick=function(){ var v=$('taId').value.trim(); if(!v) return; $('taM').textContent=''; call('teacherAdd',[PW,v]).then(function(r){ if(!r.ok){ $('taM').textContent=r.msg; return; } $('taId').value=''; list(r); }); };
