@@ -439,21 +439,22 @@
   var WHO = "s";   /* 로그인 창: s 학생, t 선생님 */
   function loginView(mode, who) {
     if (who) WHO = who;
+    if (WHO === "t" && mode === "up") mode = "in";      /* v105: 선생님 아이디는 로그인 창에서 만들 수 없다(관리자가 등록) */
     var up = mode === "up", T = WHO === "t";
     var brand = LOCKED ? '<div class="brand"><b>국어의 모든 것</b><small>로그인하면 들어갈 수 있어요</small></div>' : "";
     var head = '<div class="who" role="tablist" aria-label="누구로 들어갈까요"><button type="button" role="tab" data-who="s" class="' + (T ? "" : "on") + '" aria-selected="' + !T + '">학생<small>문제 풀고 과제 제출</small></button><button type="button" role="tab" data-who="t" class="' + (T ? "on" : "") + '" aria-selected="' + T + '">선생님<small>과제 내고 학생 보기</small></button></div>';
-    var txt = T ? (up ? "선생님 아이디를 만듭니다. 만든 뒤 관리자에게 이 아이디를 '선생님으로 등록'해 달라고 하면 학생 현황·과제·공지를 쓸 수 있어요." : "선생님 아이디로 들어가면 첫 화면 위쪽에 학생 현황·과제·공지가 나타나요.")
+    var txt = T ? "관리자가 선생님으로 등록한 아이디로 로그인하면 첫 화면 위쪽에 학생 현황·과제·공지가 나타나요."
       : (up ? "이름과 아이디, 비밀번호를 정해 주세요. 이름은 선생님만 볼 수 있어요." : "아이디로 들어가면 푼 기록이 모이고, 선생님이 낸 과제를 풀 수 있어요.");
-    box().innerHTML = brand + head + '<h2 id="kmaH">' + (T ? (up ? "선생님 아이디 만들기" : "선생님 로그인") : (up ? "학생 아이디 만들기" : "학생 로그인")) + '</h2><p class="s">' + txt + "</p>" +
+    box().innerHTML = brand + head + '<h2 id="kmaH">' + (T ? "선생님 로그인" : (up ? "아이디 만들기" : "학생 로그인")) + '</h2><p class="s">' + txt + "</p>" +
       '<form id="kmaF">' + (up ? '<label class="f" for="kmaN">이름</label><input type="text" id="kmaN" autocomplete="name" maxlength="20" placeholder="예: 홍길동">' : "") +
       '<label class="f" for="kmaI">' + (T ? "선생님 아이디" : "아이디") + '</label><input type="text" id="kmaI" autocomplete="username" maxlength="12" placeholder="2~12자 한글·영문·숫자">' +
       '<label class="f" for="kmaP">비밀번호</label><input type="password" id="kmaP" autocomplete="' + (up ? "new-password" : "current-password") + '" placeholder="' + (FBCFG ? "6" : "4") + '자 이상">' +
       (up ? '<label class="f" for="kmaP2">비밀번호 한 번 더</label><input type="password" id="kmaP2" autocomplete="new-password">' : "") +
       '<div class="msg" id="kmaM" role="alert"></div><div class="row"><button class="btn pri" type="submit">' + (up ? "만들고 로그인" : "로그인") + '</button>' +
-      '<button class="lnk" type="button" id="kmaSw">' + (up ? "이미 아이디가 있어요" : (T ? "선생님 아이디 만들기" : "처음 왔어요 · 아이디 만들기")) + "</button></div>" +
-      (T ? "" : '<p class="s" style="margin:14px 0 0">비밀번호를 잊으면 선생님께 말씀드리세요.</p>') + "</form>";
+      (T ? "" : '<button class="lnk" type="button" id="kmaSw">' + (up ? "이미 아이디가 있어요" : "처음 왔어요 · 아이디 만들기") + "</button>") + "</div>" +
+      (T ? '<p class="s" style="margin:14px 0 0">선생님 아이디는 여기서 만들 수 없어요. 관리자에게 선생님 등록을 부탁해 주세요.</p>' : '<p class="s" style="margin:14px 0 0">비밀번호를 잊으면 선생님께 말씀드리세요.</p>') + "</form>";
     box().querySelectorAll("[data-who]").forEach(function (b) { b.onclick = function () { loginView(mode, b.dataset.who); }; });
-    document.getElementById("kmaSw").onclick = function () { loginView(up ? "in" : "up"); };
+    var sw = document.getElementById("kmaSw"); if (sw) sw.onclick = function () { loginView(up ? "in" : "up"); };
     document.getElementById("kmaF").onsubmit = function (e) {
       e.preventDefault();
       var id = document.getElementById("kmaI").value.trim(), pw = document.getElementById("kmaP").value, m = document.getElementById("kmaM");
@@ -475,7 +476,7 @@
   }
   /* 선생님 쪽으로 들어왔는데 아직 등록 전 */
   function teacherWait(id, made) {
-    box().innerHTML = (LOCKED ? '<div class="brand"><b>국어의 모든 것</b></div>' : "") + '<h2 id="kmaH">' + (made ? "선생님 아이디를 만들었어요" : "아직 선생님으로 등록되지 않았어요") + '</h2><p class="s">관리자(학교 담당 선생님)에게 아이디 <b>' + esc(id) + "</b>를 '선생님 관리'에서 등록해 달라고 하세요. 등록되면 첫 화면 위쪽에 학생 현황·과제·공지가 나타나요. 등록 전에도 사이트는 둘러볼 수 있어요.</p>" +
+    box().innerHTML = (LOCKED ? '<div class="brand"><b>국어의 모든 것</b></div>' : "") + '<h2 id="kmaH">' + "아직 선생님으로 등록되지 않았어요" + '</h2><p class="s">이 아이디는 선생님으로 등록되어 있지 않아요. 선생님이라면 관리자에게 아이디 <b>' + esc(id) + "</b>를 '선생님 관리'에서 등록해 달라고 하세요. 등록되면 첫 화면 위쪽에 학생 현황·과제·공지가 나타나요. 등록 전에도 사이트는 둘러볼 수 있어요.</p>" +
       '<div class="row"><button class="btn pri" type="button" id="kmaRe">등록됐는지 다시 확인</button><button class="btn" type="button" id="kmaGoIn">사이트 둘러보기</button><button class="lnk" type="button" id="kmaOut2">로그아웃</button></div><div class="msg" id="kmaM"></div>';
     document.getElementById("kmaRe").onclick = function () { checkRole().then(function (r) { if (r) enter(); else document.getElementById("kmaM").textContent = "아직 등록 전이에요."; }); };
     document.getElementById("kmaGoIn").onclick = enter;
