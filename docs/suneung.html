@@ -538,6 +538,7 @@ li.wrong .ch{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
 .nb-sec h3{font-size:16px;margin:0 0 6px}
 
 /* ---------- 문제 담기 ---------- */
+.bk-solve-item .solve-bar .do-grade,.bk-solve-item .solve-bar .do-reveal,.bk-solve-item .solve-bar .do-retry,.bk-solve-item .solve-bar .last-note{display:none!important}
 .gnb-count.bk{background:var(--brand)}
 :root[data-theme="dark"] .gnb-count.bk{color:#13171E}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .gnb-count.bk{color:#13171E}}
@@ -2362,7 +2363,7 @@ function renderBasketSolve(){
   basketSec.innerHTML = `
     <div class="crumb"><span>내 공부</span><span>담은 문제</span><span>모아 풀기</span></div>
     <div class="exam-title">
-      <div><h2>모아 풀기 · ${total}문항</h2><p>답을 모두 고른 뒤 맨 아래 "한꺼번에 채점하기"를 누르세요. 문항마다 따로 채점해도 됩니다. 풀이 시간 <span class="bk-timer" id="bkTimer">0:00</span></p></div>
+      <div><h2>모아 풀기 · ${total}문항</h2><p>모든 문항의 답을 고른 뒤 맨 아래 "채점하기"를 누르세요. 다 풀어야 채점됩니다. 풀이 시간 <span class="bk-timer" id="bkTimer">0:00</span></p></div>
       <button type="button" class="btn-plain" id="bkBack">← 담은 문제 목록</button>
     </div>
     <div class="tools" style="margin-top:12px">
@@ -2380,7 +2381,7 @@ function renderBasketSolve(){
         ${g.items.map(it=>`<div class="detail bk-solve-item" data-key="${escapeHtml(itemKey(it))}" data-num="${num.get(itemKey(it))}">${detailHtml(it, false, num.get(itemKey(it)))}</div>`).join('')}
       </article>`).join('')}
     <div class="bk-grade">
-      <div class="bk-bar"><button type="button" class="btn-fill" id="bkGradeAll">한꺼번에 채점하기</button><span style="font-size:13px;color:var(--text-sub)">고른 답이 있는 문항만 채점되고, 결과는 오답 노트에도 기록됩니다.</span></div>
+      <div class="bk-bar"><button type="button" class="btn-fill" id="bkGradeAll">채점하기</button><button type="button" class="btn-plain" id="bkSolveAgain" hidden>처음부터 다시 풀기</button><span style="font-size:13px;color:var(--text-sub)" id="bkGradeNote">모든 문항의 답을 골라야 채점됩니다. 결과는 오답 노트에도 기록됩니다.</span></div>
       <div class="bk-result" id="bkResult"></div>
     </div>`;
   bkSolveStart = Date.now();
@@ -2410,6 +2411,17 @@ function snAssignItems(){
 function bkGradeAll(){
   let ok = 0, graded = 0, score = 0, total = 0, noKey = 0;
   const wrong = [], blank = [];
+  /* v111: 모아 풀기는 모든 문항의 답을 골라야 채점된다 */
+  const miss = [];
+  basketSec.querySelectorAll('.bk-solve-item').forEach(d=>{
+    const it = itemByKey(d.dataset.key); if(!it || !it.정답) return;
+    const list = d.querySelector('.choices.solve');
+    if(list && !list.querySelector('.ch.picked')) miss.push(Number(d.dataset.num));
+  });
+  if(miss.length){
+    document.getElementById('bkResult').innerHTML = `<div>아직 답을 고르지 않은 문항이 <b>${miss.length}</b>개 있어요. 모두 골라야 채점됩니다 — 누르면 그 문항으로 갑니다</div><div class="jumps" style="--bad:var(--text-sub)">${miss.map(n=>`<button type="button" class="bk-jump" data-num="${n}">${n}번</button>`).join('')}</div>`;
+    return;
+  }
   basketSec.querySelectorAll('.bk-solve-item').forEach(d=>{
     const it = itemByKey(d.dataset.key); const n = Number(d.dataset.num);
     if(!it) return;
@@ -2430,6 +2442,8 @@ function bkGradeAll(){
     ${blank.length ? `<div>답을 고르지 않은 문항 ${blank.length}개 (점수에는 0점으로 들어갑니다)</div><div class="jumps" style="--bad:var(--text-sub)">${jumps(blank)}</div>` : ''}
     ${wrong.length ? `<div style="margin-top:6px">틀린 문항 ${wrong.length}개 — 누르면 그 문항으로 갑니다</div><div class="jumps">${jumps(wrong)}</div>` : (graded ? '<div style="color:var(--good);font-weight:700">채점한 문항을 모두 맞혔어요!</div>' : '')}
     ${noKey ? `<div style="font-size:13px;color:var(--text-faint)">정답이 반영되지 않은 ${noKey}문항은 채점에서 뺐습니다.</div>` : ''}`;
+  const gb = document.getElementById('bkGradeAll'), ag = document.getElementById('bkSolveAgain'), nt = document.getElementById('bkGradeNote');
+  if(gb) gb.hidden = true; if(ag) ag.hidden = false; if(nt) nt.textContent = '채점이 끝났어요. 각 문항에서 정답과 해설을 확인하세요.';
 }
 
 /* ---------- 시험지 쪽 나누기 ---------- */
@@ -3012,6 +3026,7 @@ basketSec.addEventListener('click', e=>{
   if(t.closest('#bkSolve')){ bkView = 'solve'; renderBasket(); basketSec.scrollIntoView({behavior:'smooth', block:'start'}); return; }
   if(t.closest('#bkBack')){ bkView = 'list'; renderBasket(); basketSec.scrollIntoView({behavior:'smooth', block:'start'}); return; }
   if(t.closest('#bkGradeAll')){ bkGradeAll(); return; }
+  if(t.closest('#bkSolveAgain')){ renderBasket(); basketSec.scrollIntoView({behavior:'smooth', block:'start'}); return; }
   const j = t.closest('.bk-jump');
   if(j){ const d = basketSec.querySelector(`.bk-solve-item[data-num="${j.dataset.num}"]`); if(d) d.scrollIntoView({behavior:'smooth', block:'center'}); return; }
   if(t.closest('#bkClear')){ bkConfirm = true; renderBasket(); return; }
@@ -3397,8 +3412,19 @@ footer .guide details{border-color:var(--line)!important;background:none!importa
 <link rel="stylesheet" href="/middle-korean/css/kme-tools.css?v=93">
 <script>window.KME_TOOLS={root:"body",keyPath:true,classBtn:true};</script>
 <script src="/middle-korean/js/config.js?v=93"></script>
-<script src="/middle-korean/js/ink.js?v=102"></script>
+<script src="/middle-korean/js/ink.js?v=111"></script>
 <script src="/middle-korean/js/live.js?v=93"></script>
-<script src="js/account.js?v=110"></script>
+<script src="js/account.js?v=111"></script>
+<style id="v111-full">
+/* v111: 화면 가득 — 100%에서 상하좌우 여백을 거의 남기지 않는다 */
+.inner{padding-inline:12px!important}
+.hero-inner,.hero-in{padding:12px 0 8px!important}
+.jar91{width:76px!important;height:72px!important;margin:0 auto 8px!important}
+.jar91::before{width:30px!important;height:6px!important;top:-3px!important}
+.g91,.hero .h-gloss{margin:2px 0 8px!important}
+.hero .sub,.hero .h-lead{margin-bottom:8px!important}
+.quick{margin-top:10px!important}
+img.fig{max-width:min(100%,900px)!important}.pfig img.fig{max-width:min(100%,1000px)!important}
+</style>
 </body>
 </html>

@@ -78,7 +78,7 @@ select.cadd{width:92px;padding:4px 6px;font-size:13px;color:var(--sub)}
 <body>
 <header class="top"><a class="brand" href="/suneung-korean/">국어의 모든 것</a><nav id="nav" hidden><a class="home" href="/suneung-korean/">처음 화면</a><button type="button" data-v="st" class="on">학생 현황</button><button type="button" data-v="asg">과제</button><button type="button" data-v="rs">응답률</button><button type="button" data-v="nt">공지</button><button type="button" data-v="adm" id="admTab" hidden>선생님 관리</button><button type="button" id="out">로그아웃</button></nav></header>
 <main class="wrap" id="main"></main>
-<script src="js/account.js?v=110" data-noui></script>
+<script src="js/account.js?v=111" data-noui></script>
 <script>
 (function(){
 /* account.js 와 같은 서버 주소를 쓴다 */
@@ -559,5 +559,9 @@ function ntView(){
 if(FBM){ M.innerHTML='<p class="sub">확인하는 중…</p>'; call('teacherPing',[]).then(function(t){ if(t.ok){ ADM=!!t.admin; PW='fb'; sessionStorage.setItem('kma.tpw','fb'); load(); } else loginView(''); }); } else if(PW) load(); else loginView('');
 })();
 </script>
+<style id="v111-full">
+/* v111: 화면 가득 — 100%에서 상하좌우 여백을 거의 남기지 않는다 */
+.wrap{max-width:none!important;padding:12px 12px 60px!important}
+</style>
 </body>
 </html>
