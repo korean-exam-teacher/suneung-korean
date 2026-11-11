@@ -151,6 +151,12 @@
   function clsDoc() { return DB.collection("asgKey").doc("_cls"); }
   function clsGet() { return clsDoc().get().then(function (d) { return (d.data() || {}).c || {}; }).catch(function () { return {}; }); }
   function myId() { return idOf(AU.currentUser && AU.currentUser.email) || ""; }
+  /* v113: 선생님 기능 켜고 끄기 — asgKey/_perm { p: { 선생님 uid: { asg, nt, cls, rs, live, mv: 0|1 } } }. 적혀 있지 않으면 쓸 수 있다. 관리자는 늘 모두 */
+  var MYPERM = {};
+  function permDoc() { return DB.collection("asgKey").doc("_perm"); }
+  function permGet() { return permDoc().get().then(function (d) { return (d.data() || {}).p || {}; }).catch(function () { return {}; }); }
+  function off(f) { return !ISADM && MYPERM && MYPERM[f] === 0; }
+  var NOPERM = { ok: false, msg: "관리자가 이 기능을 꺼 두었어요." };
   function teacherRows() {
     return DB.collection("users").get().then(function (q) {
       var rows = []; q.forEach(function (d) { var x = d.data() || {}; if (x.moved || d.id === uid()) return; rows.push({ uid: d.id, id: x.id || "?", name: x.name || "", created: x.created || 0, sum: sumOf(x), sub: {}, mysub: x.sub || {}, ex: x.ex || {}, tch: x.tch ? 1 : 0 }); });
@@ -234,18 +240,18 @@
         var no = { ok: false, msg: "선생님으로 등록되지 않은 아이디예요. 관리자에게 선생님 등록을 부탁해 주세요." };
         return DB.collection("admins").doc(uid()).get().catch(function () { return null; }).then(function (a) {
           if (a && a.exists) { ISADM = true; return { ok: true, admin: true }; }
-          return DB.collection("teachers").doc(uid()).get().then(function (d) { return d.exists ? { ok: true, admin: false } : no; }).catch(function () { return no; });
+          return DB.collection("teachers").doc(uid()).get().then(function (d) { if (!d.exists) return no; return permGet().then(function (p) { MYPERM = p[uid()] || {}; return { ok: true, admin: false, perm: MYPERM }; }); }).catch(function () { return no; });
         });
       });
     },
     teacherSite: function () {
-      var rows, asg = [], CL = {};
+      var rows, asg = [], CL = {}, PM = {};
       return fbInit().then(teacherRows).then(function (r) {
         rows = r; if (!ISADM) return null;
         return DB.collection("teachers").get().then(function (q) { var t = {}; q.forEach(function (d) { t[d.id] = 1; });
           rows.forEach(function (x) { if (t[x.uid] && !x.tch) uref(x.uid).update({ tch: 1 }).catch(function () {}); });
           rows = rows.filter(function (x) { return !t[x.uid]; }); });
-      }).then(clsGet).then(function (c) {
+      }).then(permGet).then(function (p) { PM = p; MYPERM = ISADM ? {} : (p[uid()] || {}); }).then(clsGet).then(function (c) {
         CL = c;
         if (!ISADM) return null;
         uref().update({ tch: 1 }).catch(function () {});
@@ -265,7 +271,7 @@
       }).then(function () { return DB.collection("notices").orderBy("created").get(); }).then(function (q) {
         var nt = []; q.forEach(function (d) { var x = d.data(); x.id = d.id; nt.push(x); });
         return statDoc().get().then(function (d) { return (d.data() || {}).it || {}; }).catch(function () { return {}; }).then(function (stat) {
-          TROWS = rows; return { ok: true, at: Date.now(), rows: rows, asg: asg, nt: nt, g: G, stat: stat, cls: CL, me: { uid: uid(), id: myId(), admin: ISADM } };
+          TROWS = rows; return { ok: true, at: Date.now(), rows: rows, asg: asg, nt: nt, g: G, stat: stat, cls: CL, perm: PM, me: { uid: uid(), id: myId(), admin: ISADM, perm: MYPERM } };
         });
       });
     },
@@ -293,6 +299,7 @@
       })).then(function () { return { ok: true, m: m, n: rows.length }; });
     },
     saveSiteAssign: function (pw, a) {
+      if (off("asg")) return Promise.resolve(NOPERM);
       a = a || {}; var items = cleanItems(a.items);
       if (!items.length) return Promise.resolve({ ok: false, msg: "문제를 한 개 이상 넣어 주세요." });
       var key = {}; items.forEach(function (it) { var v = +((a.key || {})[it.k]); if (it.nc && v >= 1 && v <= it.nc) key[it.k] = v; });
@@ -340,6 +347,7 @@
     },
     /* v107: 학급 만들기·지우기, 내 학급 목록 */
     classSave: function (pw, name) {
+      if (off("cls")) return Promise.resolve(NOPERM);
       name = String(name || "").replace(/\s+/g, " ").trim().slice(0, 20); if (!name) return Promise.resolve({ ok: false, msg: "학급 이름을 적어 주세요." });
       return need().then(clsGet).then(function (c) {
         if (Object.keys(c).some(function (k) { return c[k].name === name; })) return { ok: false, msg: "이미 있는 학급 이름이에요." };
@@ -364,6 +372,7 @@
       });
     },
     saveNotice: function (pw, n) {
+      if (off("nt")) return Promise.resolve(NOPERM);
       n = n || {}; var t = String(n.title || "").trim().slice(0, 60); if (!t) return Promise.resolve({ ok: false, msg: "제목을 적어 주세요." });
       return DB.collection("notices").doc("n" + Date.now()).set({ title: t, body: String(n.body || "").trim().slice(0, 1000), created: Date.now(), cls: String(n.cls || "").trim().slice(0, 20), by: uid(), byId: myId() })
         .then(function () { return FBA.siteNoticesT(); });
@@ -371,6 +380,20 @@
     deleteNotice: function (pw, nid) { return DB.collection("notices").doc(nid).delete().then(function () { return FBA.siteNoticesT(); }); },
     siteNoticesT: function () { return DB.collection("notices").orderBy("created").get().then(function (q) { var l = []; q.forEach(function (d) { var x = d.data(); x.id = d.id; l.push(x); }); return { ok: true, list: l }; }); },
     /* 관리자: 선생님 목록·등록·해제 */
+    setPerm: function (pw, tuid, perm) {
+      if (!ISADM) return Promise.resolve({ ok: false, msg: "관리자만 바꿀 수 있어요." });
+      var v = {}; ["asg", "nt", "cls", "rs", "live", "mv"].forEach(function (f) { v[f] = perm && perm[f] === 0 ? 0 : 1; });
+      var part = {}; part[String(tuid)] = v;
+      return permDoc().set({ p: part }, { merge: true }).then(function () { return { ok: true, perm: v }; });
+    },
+    /* v113: 선생님이 볼 과제(관리자: 모두, 선생님: 내가 냈거나 내 학급 것) + 정답 */
+    teacherAssignments: function () {
+      return FBA.teacherPing().then(function (pg) { if (!pg.ok) throw { code: "noteacher" }; return need(); }).then(function () { return Promise.all([DB.collection("asg").orderBy("created").get(), clsGet()]); }).then(function (r) {
+        var mine = {}, me = uid(), list = []; Object.keys(r[1]).forEach(function (k) { if (r[1][k].own === me) mine[r[1][k].name] = 1; });
+        r[0].forEach(function (d) { var a = d.data(); a.id = d.id; if (ISADM || a.by === me || (a.cls && mine[a.cls]) || (!a.by && !a.cls)) list.push(a); });
+        return Promise.all(list.map(function (a) { a.t = 1; a.done = null; return DB.collection("asgKey").doc(a.id).get().then(function (k) { a.key = (k.data() || {}).key || {}; return a; }).catch(function () { a.key = {}; return a; }); }));
+      }).then(function (list) { return { ok: true, list: list }; }).catch(function (e) { if (e && e.code === "noteacher") return { ok: true, list: [] }; throw e; });
+    },
     teacherList: function () {
       return DB.collection("teachers").get().then(function (q) { var l = []; q.forEach(function (d) { var x = d.data() || {}; l.push({ uid: d.id, id: x.id || "?", at: x.at || 0 }); }); return { ok: true, list: l }; });
     },
@@ -388,6 +411,7 @@
     },
     /* 비밀번호를 잊은 학생: 새 아이디를 만들게 한 뒤, 옛 아이디의 기록을 새 아이디로 옮긴다 */
     moveStudent: function (pw, fromId, toId) {
+      if (off("mv")) return Promise.resolve(NOPERM);
       var a = (TROWS || []).filter(function (x) { return x.id === fromId; })[0], b = (TROWS || []).filter(function (x) { return x.id === toId; })[0];
       if (!a || !b || a === b) return Promise.resolve({ ok: false, msg: "두 아이디를 확인해 주세요(새 아이디로 먼저 들어와 있어야 해요)." });
       var ua, ub, ea = {}, eb = {};
@@ -419,16 +443,17 @@
   }
   var S = ls(SKEY), SUM = null, ASG = null, NT = null;
   /* v102: 선생님·관리자 구분 — 들어올 때 한 번 확인해 두고(kma.role), 화면마다 같은 모양으로 보인다 */
-  var RL = ls("kma.role"), ROLE = RL && S && RL.id === S.id ? RL.r : null;
-  function setRole(r) {
-    ROLE = r || ""; ls("kma.role", S ? { id: S.id, r: ROLE } : null);
+  var RL = ls("kma.role"), ROLE = RL && S && RL.id === S.id ? RL.r : null, PERM = (RL && RL.p) || {};
+  function can(f) { return ROLE === "admin" || (!!ROLE && !(PERM && PERM[f] === 0)); }
+  function setRole(r, perm) {
+    ROLE = r || ""; PERM = (ROLE === "teacher" && perm) || {}; ls("kma.role", S ? { id: S.id, r: ROLE, p: PERM } : null);
     if (ROLE) ss("kma.tpw", "fb"); else { try { sessionStorage.removeItem("kma.tpw"); } catch (e) {} }
     try { document.dispatchEvent(new CustomEvent("kma:role", { detail: ROLE })); } catch (e) {}
     if (typeof paintPill === "function" && pill) { paintPill(); paintTnav(); paintTab(); }
   }
   function checkRole() {
     if (!FBCFG || !S) return Promise.resolve(ROLE);
-    return call("teacherPing", []).then(function (r) { setRole(r && r.ok ? (r.admin ? "admin" : "teacher") : ""); return ROLE; }).catch(function () { return ROLE; });
+    return call("teacherPing", []).then(function (r) { setRole(r && r.ok ? (r.admin ? "admin" : "teacher") : "", r && r.perm); return ROLE; }).catch(function () { return ROLE; });
   }
   if (ROLE) ss("kma.tpw", "fb");
   /* v104: 문지기 — gate.js 가 html.kma-locked 를 붙여 두면 로그인 창만 보인다 */
@@ -440,6 +465,9 @@
     on: !!(FBCFG || KMA_URL), fb: !!FBCFG, url: KMA_URL, call: call, user: function () { return S && S.id; },
     teacher: function () { return ss("kma.tpw") || ""; },
     role: function () { return ROLE || ""; },
+    can: can,
+    fbApp: FBCFG ? function () { return fbInit().then(function () { return firebase.apps.filter(function (a) { return a.name === "kma"; })[0] || null; }); } : null,
+    liveAsg: function (aid, ratio) { liveAsg(aid, ratio); },
     name: function () { return (SUM && SUM.name) || ""; },
     record: record, assign: assign, open: function () { openPanel(); }, G: G, gate: false, logout: function () { logout(); }
   };
@@ -476,6 +504,7 @@
     ".kma .nt{background:var(--k-soft);border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:14px;line-height:1.65}.kma .nt b{display:block;margin-bottom:2px}",
     /* 과제 풀기 */
     ".kma-run{position:fixed;inset:0;z-index:95;background:var(--k-bg);overflow:auto}.kma-run[hidden]{display:none}",
+    "body.kma-running .live-panel{z-index:99;bottom:78px}body.kma-running .live-menu{z-index:100}body.kma-running .kt-toast{z-index:101;bottom:96px}",
     ".kma-run .in{max-width:860px;margin:0 auto;padding:14px 14px 120px}",
     ".kma-run .top{position:sticky;top:0;background:var(--k-bg);display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--k-line);z-index:2}",
     ".kma-run .q{border-bottom:1px solid var(--k-line);padding:22px 0}.kma-run .qh{font-size:13px;color:var(--k-sub);margin-bottom:10px}.kma-run .qh b{color:var(--k-ink);font-size:15px;margin-right:6px}",
@@ -515,6 +544,8 @@
   var dim = document.createElement("div"); dim.className = "kma kma-dim"; dim.hidden = true;
   dim.innerHTML = '<div class="kma-box" role="dialog" aria-modal="true" aria-labelledby="kmaH"></div>';
   var run = document.createElement("div"); run.className = "kma kma-run"; run.hidden = true;
+  var rsT = null;
+  run.addEventListener("scroll", function () { if (!(ROLE && window.Live && Live.asgScroll)) return; clearTimeout(rsT); rsT = setTimeout(function () { var h = run.scrollHeight - run.clientHeight; Live.asgScroll(h > 0 ? Math.round(run.scrollTop / h * 1000) / 1000 : 0); }, 250); }, { passive: true });
   function mount() {
     document.body.appendChild(pill); document.body.appendChild(dim); document.body.appendChild(run); paintPill(); paintTnav(); paintTab();
     window.KMA.gate = true;
@@ -631,9 +662,13 @@
     box().innerHTML = '<h2 id="kmaH">' + esc((SUM && SUM.name) || S.id) + ' <span class="tag done">' + (adm ? "관리자" : "선생님") + "</span></h2>" +
       '<p class="s">첫 화면 위쪽 메뉴에서도 열 수 있어요. 문제 화면에서는 담은 문제 옆 \'과제로 내기\' 단추로 바로 낼 수 있어요.</p>' +
       '<div class="tl"><a href="' + T + '#st">학생 현황</a><a href="' + T + '#asg">과제</a><a href="' + T + '#rs">응답률</a><a href="' + T + '#nt">공지</a>' + (adm ? '<a href="' + T + '#adm">선생님 관리</a>' : "") + "</div>" +
+      '<h3 style="margin:16px 0 0;font-size:15px">과제 함께 풀기</h3><p class="s" style="margin:2px 0 0">학생이 보는 과제 화면을 그대로 열어요. 수업을 열어 두면 학생 화면에도 같이 떠요.</p>' +
+      (!ASG ? '<p class="s" style="margin-top:8px">불러오는 중…</p>' : ASG.length ? '<ul class="al" style="margin-top:8px;max-height:38vh;overflow:auto">' + ASG.slice().reverse().map(function (a) {
+        return '<li><span><b>' + esc(a.title) + "</b><small>" + a.items.length + "문항 · " + esc(a.cls || "모든 학생") + (isExam(a) ? " · 모의고사 " + a.min + "분" : "") + '</small></span><button class="btn" type="button" data-a="' + esc(a.id) + '">함께 풀기</button></li>'; }).join("") + "</ul>" : '<p class="s" style="margin-top:8px">아직 낸 과제가 없어요.</p>') +
       '<div class="row" style="justify-content:space-between"><button class="lnk" type="button" id="kmaOut">로그아웃</button><button class="btn" type="button" id="kmaX">닫기</button></div>';
     document.getElementById("kmaX").onclick = closePanel;
     document.getElementById("kmaOut").onclick = logout;
+    box().querySelectorAll("[data-a]").forEach(function (b) { b.onclick = function () { openRun(b.dataset.a); }; });
   }
   function meView() {
     if (ROLE) return teacherView();
@@ -671,12 +706,16 @@
   }
   function refresh(show) {
     if (!S) return;
-    Promise.all([call("siteMe", [S.id, S.token]), call("siteAssignments", [S.id, S.token]), call("siteNotices", [S.id, S.token])]).then(function (r) {
+    Promise.all([call("siteMe", [S.id, S.token]), ROLE && FBCFG ? call("teacherAssignments", []) : call("siteAssignments", [S.id, S.token]), call("siteNotices", [S.id, S.token])]).then(function (r) {
       if (r[0].relogin || r[1].relogin) { lockOut(); return; }
       if (r[0].ok) SUM = r[0].sum; if (r[1].ok) ASG = r[1].list; if (r[2].ok) NT = r[2].list;
       if (CUR && ASG) { var cur = ASG.filter(function (a) { return a.id === CUR.id; })[0]; if (cur) { if (CUR.st && !cur.st) cur.st = CUR.st; if (CUR.done && !cur.done) { cur.done = CUR.done; cur.key = CUR.key; } cur._auto = CUR._auto; cur._busy = CUR._busy; CUR = cur; } }
-      (ASG || []).forEach(function (a) { if (isExam(a) && !a.done && examSt(a) && examLeft(a) <= 0 && a !== CUR) lateSubmit(a); });
+      (ASG || []).forEach(function (a) { if (!a.t && isExam(a) && !a.done && examSt(a) && examLeft(a) <= 0 && a !== CUR) lateSubmit(a); });
       paintPill(); paintTab();
+      /* v113: 주소 끝의 #asg=<과제> — 선생님 화면의 '함께 풀기'에서 넘어온 것. 수업을 따라온 학생에게는 선생님이 연 과제를 띄운다 */
+      var hm = /^#asg=([\w.-]+)$/.exec(location.hash || "");
+      if (hm && ASG && run.hidden) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} dim.hidden = true; openRun(hm[1]); }
+      if (LIVEWANT) { var lw = LIVEWANT; LIVEWANT = null; liveAsg(lw[0], lw[1], true); }
       if (show) dim.hidden = false;
       if (!dim.hidden && S && !ntOpen) meView();
       noticePop();
@@ -722,14 +761,29 @@
       a.done = r.done; a.key = r.key; a._auto = true; ls("kma.d." + a.id, null); ls("kma.x." + a.id, null); paintPill(); paintTab(); if (!dim.hidden && S && !LOCKED) meView();
     });
   }
-  function openRun(aid) {
-    CUR = (ASG || []).filter(function (a) { return a.id === aid; })[0]; if (!CUR) return;
-    ANS = (CUR.done && CUR.done.ans) ? JSON.parse(JSON.stringify(CUR.done.ans)) : (ls("kma.d." + aid) || {});
-    dim.hidden = true; run.hidden = false; document.documentElement.style.overflow = "hidden";
-    run.setAttribute("data-ink-host", "asg:" + aid); run.setAttribute("data-ink-bottom", "78");   /* v111: 과제 화면 위에도 필기(js/ink.js) */
-    if (isExam(CUR) && !CUR.done && !examSt(CUR)) return paintStart();
-    paintRun();
-    if (isExam(CUR) && !CUR.done) { if (examLeft(CUR) <= 0) doSubmit(true); else startTick(); }
+  var TSHOW = false, LIVEOPEN = "", LIVEWANT = null, LIVER = -1;
+  function liveTell() { try { if (window.Live && Live.asg) Live.asg(run.hidden ? "" : ((CUR && CUR.id) || "")); } catch (e) {} }
+  function openRun(aid, byLive) {
+    CUR = (ASG || []).filter(function (a) { return a.id === aid; })[0]; if (!CUR) return false;
+    ANS = CUR.t ? {} : (CUR.done && CUR.done.ans) ? JSON.parse(JSON.stringify(CUR.done.ans)) : (ls("kma.d." + aid) || {});
+    TSHOW = false; LIVEOPEN = byLive ? aid : "";
+    dim.hidden = true; run.hidden = false; document.documentElement.style.overflow = "hidden"; document.body.classList.add("kma-running");
+    run.setAttribute("data-ink-host", "asg:" + aid); run.setAttribute("data-ink-bottom", "78"); run.setAttribute("data-ink-ref", ".in");   /* 과제 화면 위에도 필기(js/ink.js) — 좌표는 가운데 문제 칸 기준 */
+    if (!CUR.t && isExam(CUR) && !CUR.done && !examSt(CUR)) { paintStart(); liveTell(); return true; }
+    paintRun(); run.scrollTop = 0;
+    if (!CUR.t && isExam(CUR) && !CUR.done) { if (examLeft(CUR) <= 0) doSubmit(true); else startTick(); }
+    liveTell(); return true;
+  }
+  /* v113: 수업(화면 같이 보기) — 선생님이 과제 화면을 열면 따라온 학생 화면에도 그 과제가 뜨고, 선생님이 내린 만큼 함께 내려간다 */
+  function liveAsg(aid, ratio, again) {
+    if (ROLE || !S || LOCKED) return;
+    if (!aid) { if (LIVEOPEN && !run.hidden) closeRun(true); LIVEOPEN = ""; LIVER = -1; return; }
+    if (run.hidden || !CUR || CUR.id !== aid) {
+      if (!run.hidden && CUR && CUR.id !== aid && !LIVEOPEN) return;          /* 학생이 스스로 다른 과제를 푸는 중이면 건드리지 않는다 */
+      if (!ASG || !ASG.some(function (a) { return a.id === aid; })) { if (!again) { LIVEWANT = [aid, ratio]; refresh(false); } return; }
+      if (!openRun(aid, true)) return; LIVER = -1;
+    }
+    if (ratio != null && ratio !== LIVER) { LIVER = ratio; setTimeout(function () { var h = run.scrollHeight - run.clientHeight; if (h > 0) run.scrollTo({ top: Math.round(ratio * h), behavior: "smooth" }); }, 250); }
   }
   /* v107: 인쇄(미리 보기) — /suneung-korean/js/asgprint.js 를 그때 불러온다 */
   var printP = null;
@@ -738,7 +792,7 @@
     printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=107"));
     printP.then(function () { window.KMAPrint.open(a, {}); }).catch(function () { printP = null; var m = document.getElementById("kmaRM"); if (m) m.textContent = "인쇄 화면을 불러오지 못했어요."; });
   }
-  function closeRun() { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; CUR = null; openPanel(); }
+  function closeRun(quiet) { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; document.body.classList.remove("kma-running"); CUR = null; LIVEOPEN = ""; liveTell(); if (quiet !== true) openPanel(); }
   function paintStart() {
     var a = CUR;
     run.innerHTML = '<div class="in"><div class="top"><div><b style="font-size:18px">' + esc(a.title) + '</b></div><button class="btn" type="button" id="kmaRX">닫기</button></div>' +
@@ -759,7 +813,7 @@
     };
   }
   function doSubmit(auto) {
-    var a = CUR; if (!a || a.done || a._busy) return; a._busy = true;
+    var a = CUR; if (!a || a.t || a.done || a._busy) return; a._busy = true;
     var sb = document.getElementById("kmaSub"); if (sb) sb.disabled = true;
     call("siteSubmit", [S.id, S.token, a.id, ANS]).then(function (r) {
       a._busy = false; var same = CUR && CUR.id === a.id; if (same) CUR._busy = false;
@@ -772,10 +826,11 @@
   }
   function pic(p) { return '<img src="' + esc(p.s) + '" width="' + p.w + '" height="' + p.h + '" loading="lazy" alt="">'; }
   function paintRun() {
-    var a = CUR, done = !!a.done, key = a.key || {}, exam = isExam(a), over = exam && !done && examLeft(a) <= 0;
+    var a = CUR, tv = !!a.t, done = !!a.done, key = a.key || {}, exam = isExam(a), over = !tv && exam && !done && examLeft(a) <= 0, show = done || (tv && TSHOW);
+    var lc = tv && window.Live && Live.code ? Live.code() : "";
     var h = '<div class="in"><div class="top"><div><b style="font-size:18px">' + esc(a.title) + '</b><div style="font-size:13px;color:var(--k-sub)">' + a.items.length + "문항" + (exam ? " · 모의고사 " + a.min + "분" : "") + (a.due ? " · 마감 " + esc(a.due) : "") +
-      (done ? " · 제출함" + (a.done.n ? " " + a.done.sc + "/" + a.done.n : "") + (a._auto ? " · 시간이 끝나 자동으로 제출했어요" : "") : (exam ? " · 닫아도 시간은 계속 흘러요" : "")) + '</div></div>' +
-      '<div style="display:flex;gap:8px;align-items:center">' + (exam && !done ? '<span class="tm' + (examLeft(a) <= 60000 ? " low" : "") + '" id="kmaTm" role="timer">남은 시간 ' + mmss(examLeft(a)) + "</span>" : "") + '<button class="btn" type="button" id="kmaPr" title="종이에 풀 수 있게 인쇄(미리 보기)">인쇄</button><button class="btn" type="button" id="kmaRX">닫기</button></div></div>' +
+      (tv ? " · " + esc(a.cls || "모든 학생") + " · 선생님 보기(제출되지 않아요)" : done ? " · 제출함" + (a.done.n ? " " + a.done.sc + "/" + a.done.n : "") + (a._auto ? " · 시간이 끝나 자동으로 제출했어요" : "") : (exam ? " · 닫아도 시간은 계속 흘러요" : "")) + '</div></div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' + (tv ? '<button class="btn" type="button" id="kmaTK">' + (TSHOW ? "정답 숨기기" : "정답 보기") + "</button>" : "") + (!tv && exam && !done ? '<span class="tm' + (examLeft(a) <= 60000 ? " low" : "") + '" id="kmaTm" role="timer">남은 시간 ' + mmss(examLeft(a)) + "</span>" : "") + '<button class="btn" type="button" id="kmaPr" title="종이에 풀 수 있게 인쇄(미리 보기)">인쇄</button><button class="btn" type="button" id="kmaRX">닫기</button></div></div>' +
       (a.msg ? '<p class="s" style="margin:14px 0 0;white-space:pre-wrap">' + esc(a.msg) + "</p>" : "");
     var lastP = "";
     a.items.forEach(function (it, n) {
@@ -792,11 +847,11 @@
         var txtCh = it.txt && it.txt.ch && it.txt.ch.length === it.nc && it.txt.ch.every(Boolean);
         h += '<div class="' + (txtCh ? "chs" : "nums") + '" role="group" aria-label="' + (n + 1) + '번 답">';
         for (var c = 1; c <= it.nc; c++) {
-          var cls = done && ans ? (c === ans ? " ok" : c === v ? " no" : "") : (c === v ? " sel" : "");
+          var cls = show && ans ? (c === ans ? " ok" : c === v ? " no" : "") : (c === v ? " sel" : "");
           h += '<button type="button" class="ch' + cls + '" data-k="' + esc(it.k) + '" data-n="' + c + '"' + (done || over ? " disabled" : "") + ">" + CIR[c - 1] + (txtCh ? " " + esc(it.txt.ch[c - 1]) : "") + "</button>";
         }
         h += "</div>";
-        if (done && ans) h += v === ans ? '<div class="res ok">맞았어요</div>' : '<div class="res no">' + (v ? "아쉬워요 · " : "") + "정답 " + CIR[ans - 1] + "</div>";
+        if (show && ans) h += v === ans ? '<div class="res ok">맞았어요</div>' : '<div class="res no">' + (v ? "아쉬워요 · " : "") + "정답 " + CIR[ans - 1] + "</div>";
       } else {
         h += '<textarea data-w="' + esc(it.k) + '" placeholder="답을 적어 주세요"' + (done || over ? " readonly" : "") + ">" + esc(v || "") + "</textarea>";
       }
@@ -805,15 +860,17 @@
     });
     h += "</div>";
     var left = a.items.filter(function (it) { return it.nc ? !ANS[it.k] : !String(ANS[it.k] || "").trim(); }).length;
-    h += '<div class="foot">' + (done ? '<span style="font-size:14px">제출했어요' + (a.done.n ? " · " + a.done.sc + "/" + a.done.n + "점" : "") + '</span><button class="btn" type="button" id="kmaRX2">닫기</button>'
+    h += '<div class="foot">' + (tv ? '<span style="font-size:14px;color:var(--k-sub)">' + (lc ? "수업 <b style=\"letter-spacing:2px;color:var(--k-ink)\">" + esc(lc) + "</b> · 학생 화면에도 이 과제가 떠 있어요" : "학생과 함께 보려면") + "</span>" + (lc ? "" : (can("live") && window.Live && Live.open ? '<button class="btn pri" type="button" id="kmaLv">학생 화면에 띄우기(수업 열기)</button>' : "")) + '<button class="btn" type="button" id="kmaRX2">닫기</button>' : done ? '<span style="font-size:14px">제출했어요' + (a.done.n ? " · " + a.done.sc + "/" + a.done.n + "점" : "") + '</span><button class="btn" type="button" id="kmaRX2">닫기</button>'
       : '<span style="font-size:14px;color:var(--k-sub)">' + (left ? "안 푼 문제 " + left + "개" : "다 풀었어요") + '</span><button class="btn pri" type="button" id="kmaSub">제출하기</button>') + '<span class="msg" id="kmaRM" role="alert" style="margin:0"></span></div>';
     run.innerHTML = h;
     fillGm();
     document.getElementById("kmaRX").onclick = closeRun;
     document.getElementById("kmaPr").onclick = printRun;
     var x2 = document.getElementById("kmaRX2"); if (x2) x2.onclick = closeRun;
-    run.querySelectorAll(".ch[data-k]").forEach(function (b) { b.onclick = function () { ANS[b.dataset.k] = +b.dataset.n; ls("kma.d." + a.id, ANS); var y = run.scrollTop; paintRun(); run.scrollTop = y; }; });
-    run.querySelectorAll("textarea[data-w]").forEach(function (t) { t.oninput = function () { ANS[t.dataset.w] = t.value; ls("kma.d." + a.id, ANS); }; });
+    var tk = document.getElementById("kmaTK"); if (tk) tk.onclick = function () { TSHOW = !TSHOW; var y = run.scrollTop; paintRun(); run.scrollTop = y; };
+    var lv = document.getElementById("kmaLv"); if (lv) lv.onclick = function () { lv.disabled = true; Live.open(); var n = 0, iv = setInterval(function () { if ((Live.code && Live.code()) || ++n > 20) { clearInterval(iv); if (!run.hidden && CUR && CUR.t) { var y = run.scrollTop; paintRun(); run.scrollTop = y; liveTell(); } } }, 400); };
+    run.querySelectorAll(".ch[data-k]").forEach(function (b) { b.onclick = function () { ANS[b.dataset.k] = +b.dataset.n; if (!tv) ls("kma.d." + a.id, ANS); var y = run.scrollTop; paintRun(); run.scrollTop = y; }; });
+    run.querySelectorAll("textarea[data-w]").forEach(function (t) { t.oninput = function () { ANS[t.dataset.w] = t.value; if (!tv) ls("kma.d." + a.id, ANS); }; });
     var sb = document.getElementById("kmaSub");
     if (sb) sb.onclick = function () {
       if (left && !over && !confirmLeft(sb, left)) return;
@@ -866,6 +923,7 @@
 
   /* ---------- 선생님: 과제로 내기 ---------- */
   function assign(items) {
+    if (ROLE && !can("asg")) { dim.hidden = false; box().innerHTML = '<h2 id="kmaH">과제로 내기</h2><p class="s">관리자가 이 기능을 꺼 두었어요.</p><div class="row"><button class="btn" type="button" id="kmaX">닫기</button></div>'; document.getElementById("kmaX").onclick = closePanel; return; }
     if (FBCFG && !ss("kma.tpw")) {
       dim.hidden = false; box().innerHTML = '<h2 id="kmaH">과제로 내기</h2><p class="s">선생님인지 확인하는 중…</p>';
       call("teacherPing", []).then(function (r) { if (r.ok) ss("kma.tpw", "fb"); assign2(items); });
@@ -912,5 +970,6 @@
 
   /* 처음 열 때: 로그인되어 있으면 요약·과제 수 받아 오기 + 남은 기록 보내기 */
   /* 서버가 '로그인 안 됨'이라고 답하면(msg 없음) 잠그고, 연결이 안 된 것뿐이면(msg 있음) 그대로 둔다 */
-  if (S) { call("siteResume", [S.id, S.token]).then(function (r) { if (!r.ok) { if (!r.msg) lockOut(); return; } SUM = r.sum; flush(); refresh(false); checkRole(); }); }
+  if (S) { call("siteResume", [S.id, S.token]).then(function (r) { if (!r.ok) { if (!r.msg) lockOut(); return; } SUM = r.sum; flush(); checkRole().then(function () { refresh(false); }); }); }
+  window.addEventListener("hashchange", function () { if (S && !NOUI && /^#asg=/.test(location.hash || "")) refresh(false); });
 })();
