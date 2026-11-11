@@ -45,6 +45,7 @@ td.num{text-align:right}th.num{text-align:right}
 .det{margin-top:18px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .bars div{display:grid;grid-template-columns:180px 1fr 90px;gap:10px;align-items:center;font-size:13.5px;margin:6px 0}.bars em{display:block;height:7px;border-radius:4px;background:var(--soft);overflow:hidden}.bars em i{display:block;height:100%;background:var(--brand);opacity:.75}.bars small{color:var(--sub);text-align:right}
+ul.ev li[data-ek]{cursor:pointer}ul.ev li[data-ek]:hover{background:var(--soft)}ul.ev li.evx{display:block;background:var(--soft);border-radius:10px;padding:12px 14px;margin:4px 0;cursor:default}.evx img{display:block;max-width:min(100%,720px);height:auto;margin:6px 0;border-radius:4px}.evx .wans{background:var(--surface)}
 ul.ev{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto}ul.ev li{display:flex;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
 .ok{color:var(--ok)}.no{color:var(--no)}
 .asg{border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px;background:var(--surface)}
@@ -195,12 +196,51 @@ function detail(id){
       '<div class="grid2"><div><h2>영역별 첫 시도 정답률</h2><div class="bars">'+(A||'<p class="sub">기록 없음</p>')+'</div>'+
       '<h2>과제 제출</h2><ul class="ev">'+(subs||'<li>제출한 과제 없음</li>')+'</ul>'+
       (FBM?'<h2>기록 옮기기</h2><p class="sub" style="margin:0 0 8px">비밀번호를 잊은 학생은 새 아이디를 만들게 한 뒤, 이 학생의 기록을 새 아이디로 옮겨 주세요.</p><div class="bar"><input type="text" id="mvTo" placeholder="새 아이디" style="width:160px"><button class="btn sm" type="button" id="mvGo">이 기록을 옮기기</button><span class="msg" id="mvM" style="margin:0"></span></div>':'')+'</div>'+
-      '<div><h2>최근 푼 문제</h2><ul class="ev">'+(r.ev.length?r.ev.slice(0,120).map(function(e){ return '<li><span>'+esc(nice(e.k))+(e.a?' <span class="cnt">'+esc(e.a)+'</span>':'')+'</span><span>'+stt(e)+(e.c>1?' · '+e.c+'번':'')+' · '+day(e.t)+'</span></li>'; }).join(''):'<li>기록 없음</li>')+'</ul></div></div></div>';
+      '<div><h2>최근 푼 문제 <span style="font-size:13px;font-weight:400;color:var(--sub)">줄을 누르면 그 문항이 보여요</span></h2><ul class="ev" id="evL">'+(r.ev.length?r.ev.slice(0,120).map(function(e){ return '<li data-ek="'+esc(e.k)+'"><span>'+esc(nice(e.k))+(e.a?' <span class="cnt">'+esc(e.a)+'</span>':'')+'</span><span>'+stt(e)+(e.c>1?' · '+e.c+'번':'')+' · '+day(e.t)+'</span></li>'; }).join(''):'<li>기록 없음</li>')+'</ul></div></div></div>';
     $('dx').onclick=function(){ OPEN=null; el.innerHTML=''; };
+    el.querySelectorAll('li[data-ek]').forEach(function(li){ li.onclick=function(){ evToggle(li); }; });
     var mg=$('mvGo'); if(mg) mg.onclick=function(){ var to=$('mvTo').value.trim(); if(!to) return; if(!mg.dataset.sure){ mg.dataset.sure=1; mg.textContent=to+'(으)로 정말 옮기기'; return; }
       mg.disabled=true; call('moveStudent',[PW,id,to]).then(function(r){ mg.disabled=false; if(!r.ok){ $('mvM').textContent=r.msg; return; } OPEN=null; load(); }); };
     el.scrollIntoView({behavior:'smooth',block:'start'});
   });
+}
+/* v109: 학생이 푼 문항 보기 — '최근 푼 문제'의 줄을 누르면 그 문항(지문·발문·선택지·정답)을 찾아 보여 준다 */
+var SIDX={}, HPD=null, HPT={}, BSC=null;
+window.HP_TEXT_LOADED=function(eid,t){ HPT[eid]=t; };
+function pl(v){ return String(v==null?'':v).replace(/[\uFDD0-\uFDD3]/g,''); }
+function srcIndex(name,file){ return SIDX[name]||(SIDX[name]=script(file).then(function(){ var m={}; (name==='adv'?['psat','leet','im']:[name]).forEach(function(n){ var S=window.ASG_SRC&&ASG_SRC[n]; if(S) S.items.forEach(function(x){ m[x.it.k]=x; }); }); return m; })); }
+function fromSrc(name,file,k){ return srcIndex(name,file).then(function(M){ var x=M[k]; if(!x) return null; var it=JSON.parse(JSON.stringify(x.it)); if(x.pk) it._pk=x.pk; return {it:it,ans:x.it.ans||0}; }); }
+function hpItem(key){ var eid=key.split('||')[0];
+  HPD=HPD||script('/middle-korean/data/hakpyeong/index.js?v=95').then(function(){ return window.HP_DATA; });
+  return HPD.then(function(D){ var q=D&&D.items[key]; if(!q) return null;
+    return script('/middle-korean/data/hakpyeong/t/'+eid.replace('고','g')+'.js?v=95').catch(function(){}).then(function(){
+      var T=HPT[eid]||{}, t=(T.items||{})[key]||{}, p=q.p?((T.passages||{})[q.p]||{}):{}, e=D.exams.filter(function(x){ return x.id===eid; })[0]||{};
+      var fig=t.bogiFig||t.stFig||t.chFig||p.fig||p.pua;
+      return {it:{k:'hak:'+key,title:e.y+'년 '+e.m+'월 고'+e.g+' 학력평가 '+q.n+'번',nc:(t.ch||[]).length||5,txt:{pas:p.pua?'':pl(p.text),ask:pl(t.st||q.st),body:pl(t.bogi),ch:(t.ch||[]).map(pl)}},ans:+q.ans||0,
+        note:fig?'그림·표·옛 글자가 있는 부분은 여기서 보이지 않아요. 학습소(개념 학습)에서 확인하세요.':''}; }); }); }
+function basicItem(key){ BSC=BSC||script('/middle-korean/data/basic.js?v=97').then(function(){ return window.BASIC; });
+  return BSC.then(function(B){ var x=B&&B.items[key]; if(!x) return null; var p=key.split(':'), a=(B.areas||[]).filter(function(z){ return z.id===p[1]; })[0]||{}, ps=x.p&&B.passages?B.passages[x.p]:null;
+    return {it:{k:'hak:'+key,title:'기초학력 '+(a.name||'')+' '+p[2]+'단계 '+p[3]+'번',nc:(x.ch||[]).length,txt:{pas:ps?pl((ps.title?ps.title+'\n':'')+ps.text):'',ask:pl(x.st),body:pl(x.bogi),ch:(x.ch||[]).map(pl)}},ans:+x.a||0}; }); }
+function evItem(k){ var m=/^adv:gm:(.+)-(\d+)$/.exec(k);
+  if(m) return script('/advanced-korean/gm/index.js?v=102').then(function(){ var G=window.GM_DATA, q=G.items[m[1]+'-'+m[2]]||{}, e=G.exams.filter(function(x){ return x.id===m[1]; })[0]||{};
+    return {it:{k:k,title:(e.title||m[1])+' '+(+m[2])+'번',gm:{e:m[1],n:+m[2]},nc:e.nc||4},ans:+q.ans||0}; });
+  if(/^adv:(psat|leet|im):/.test(k)) return fromSrc('adv','/advanced-korean/asg_adv.js?v=103',k);
+  if(/^non:/.test(k)) return fromSrc('non','/nonsul-korean/asg_non.js?v=103',k);
+  var key=k.replace(/^(sn|hak):/,'');
+  if(/^basic:/.test(key)) return basicItem(key);
+  if(/^\d{4}-\d{2}-고\d\|\|/.test(key)) return hpItem(key);
+  if(/^(sn|hak):/.test(k)) return fromSrc('sn','/suneung-korean/asg_sn.js?v=103','sn:'+key);
+  return Promise.resolve(null);
+}
+function evToggle(li){
+  var nx=li.nextElementSibling; if(nx&&nx.classList.contains('evx')){ nx.remove(); return; }
+  var ul=li.parentNode; ul.querySelectorAll('li.evx').forEach(function(x){ x.remove(); }); ul.style.maxHeight='none';
+  var box=document.createElement('li'); box.className='evx'; box.innerHTML='<span class="sub" style="margin:0">문항을 불러오는 중…</span>'; li.after(box);
+  evItem(li.dataset.ek).then(function(r){ if(!box.parentNode) return;
+    if(!r){ box.innerHTML='<span class="sub" style="margin:0">이 문항은 여기서 보여 줄 수 없어요(자료에 없는 문항).</span>'; return; }
+    box.innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>'+esc(r.it.title||nice(li.dataset.ek))+'</b><span class="sub" style="margin:0;white-space:nowrap">'+(r.it.nc?(r.ans?'정답 '+CIRC[r.ans-1]:'정답 없음'):'서술형')+'</span></div>'+(r.note?'<p class="sub" style="margin:6px 0 0;font-size:13px">'+esc(r.note)+'</p>':'')+'<div data-ev></div>';
+    showItem(r.it,box.querySelector('[data-ev]'));
+  }).catch(function(){ if(box.parentNode) box.innerHTML='<span class="msg" style="margin:0">문항을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</span>'; });
 }
 /* ---------- 과제 ---------- */
 function asgView(){
