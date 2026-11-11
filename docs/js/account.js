@@ -7,6 +7,7 @@
  *
  * 각 갈래에서 쓰는 법
  *   KMA.record('adv:psat:PS2024a-12', true, 'PSAT')   // 학생이 채점한 순간 한 번 부르면 됨(로그인 안 했으면 무시)
+ * v108(2026-11-11): 학생 한 명이 여러 학급에 — users/{uid}.cls 에 학급 이름을 줄바꿈(\n)으로 이어 적는다(하나뿐이면 전과 같음)
  * v107(2026-11-11): 과제 인쇄(js/asgprint.js), 학생 화면 위쪽 '과제' 탭, 새 공지 알림 창, 학급(선생님이 만들고 학생을 넣음 — asgKey/_cls)
  * v106(2026-11-11): 모의고사(제한 시간·자동 제출), 선택지별 응답 수(선생님만), 지운 과제의 응답 보관(asgKey/_stat)
  *   KMA.assign([{k, title, topic, src, nc, q:[{s,w,h}], p:{lab, imgs:[…]}, txt:{pas, ask, body, ch}, ans}])  // 선생님: 과제로 내기
@@ -143,6 +144,9 @@
   }
   function statDoc() { return DB.collection("asgKey").doc("_stat"); }
   /* v107: 학급 — asgKey/_cls { c: { 학급id: {name, own(담임 uid), ownId, ownName, at} } }. 선생님만 읽고 쓴다. 학생의 반은 users/{uid}.cls(학급 이름) */
+  /* v108: 학급 여러 개 — cls 글자열을 줄바꿈으로 나눠 본다 */
+  function clsOf(v) { return String(v || "").split("\n").map(function (x) { return x.trim(); }).filter(Boolean); }
+  function inCls(v, name) { return clsOf(v).indexOf(name) >= 0; }
   function clsDoc() { return DB.collection("asgKey").doc("_cls"); }
   function clsGet() { return clsDoc().get().then(function (d) { return (d.data() || {}).c || {}; }).catch(function () { return {}; }); }
   function myId() { return idOf(AU.currentUser && AU.currentUser.email) || ""; }
@@ -181,7 +185,7 @@
     },
     siteAssignments: function () {
       return need().then(function () { return DB.collection("asg").orderBy("created").get(); }).then(function (q) {
-        var list = []; q.forEach(function (d) { var a = d.data(); a.id = d.id; if (!a.cls || a.cls === (ME.cls || "")) list.push(a); });
+        var list = []; q.forEach(function (d) { var a = d.data(); a.id = d.id; if (!a.cls || inCls(ME.cls, a.cls)) list.push(a); });
         return Promise.all(list.map(function (a) {
           var s = ME.sub[a.id]; a.done = s ? { at: s.at, sc: s.sc, n: s.n, ans: s.ans || {} } : null; a.st = (ME.ex || {})[a.id] || 0;
           if (!s) return a;
@@ -221,7 +225,7 @@
       });
     },
     siteNotices: function () {
-      return need().then(function () { return DB.collection("notices").orderBy("created").get(); }).then(function (q) { var l = [], mine = ME.cls || ""; q.forEach(function (d) { var x = d.data(); x.id = d.id; if (!x.cls || x.cls === mine) l.push(x); }); return { ok: true, list: l }; });
+      return need().then(function () { return DB.collection("notices").orderBy("created").get(); }).then(function (q) { var l = [], mine = ME.cls || ""; q.forEach(function (d) { var x = d.data(); x.id = d.id; if (!x.cls || inCls(mine, x.cls)) l.push(x); }); return { ok: true, list: l }; });
     },
     teacherPing: function () {
       return fbInit().then(function () {
@@ -246,7 +250,7 @@
         uref().update({ tch: 1 }).catch(function () {});
         /* 관리자: 학급 목록에 없는 옛 반 이름은 관리자 학급으로 넣어 둔다 */
         var have = {}, add = false; Object.keys(CL).forEach(function (k) { have[CL[k].name] = 1; });
-        rows.forEach(function (r) { var n = r.sum.cls; if (n && !have[n]) { have[n] = 1; add = true; CL["c" + Date.now() + Object.keys(CL).length] = { name: n, own: uid(), ownId: myId(), ownName: "", at: Date.now() }; } });
+        rows.forEach(function (r) { clsOf(r.sum.cls).forEach(function (n) { if (!have[n]) { have[n] = 1; add = true; CL["c" + Date.now() + Object.keys(CL).length] = { name: n, own: uid(), ownId: myId(), ownName: "", at: Date.now() }; } }); });
         return add ? clsDoc().set({ c: CL }).catch(function () { return null; }) : null;
       }).then(function () { return DB.collection("asg").orderBy("created").get(); }).then(function (q) {
         q.forEach(function (d) { var a = d.data(); a.id = d.id; asg.push(a); });
@@ -315,7 +319,9 @@
     },
     setClass: function (pw, id, cls) {
       var r = (TROWS || []).filter(function (x) { return x.id === id; })[0]; if (!r) return Promise.resolve({ ok: false, msg: "없는 학생이에요." });
-      return uref(r.uid).update({ cls: String(cls || "").trim().slice(0, 20) }).then(function () { return { ok: true }; });
+      /* 학급 이름 하나 또는 여러 개(배열·줄바꿈). 같은 이름은 한 번만, 여덟 개까지 */
+      var seen = {}, list = (Array.isArray(cls) ? cls : clsOf(cls)).map(function (x) { return String(x || "").replace(/\s+/g, " ").trim().slice(0, 20); }).filter(function (x) { if (!x || seen[x]) return false; seen[x] = 1; return true; }).slice(0, 8), v = list.join("\n");
+      return uref(r.uid).update({ cls: v }).then(function () { r.sum.cls = v; return { ok: true, cls: v }; });
     },
     /* v107: 학급 만들기·지우기, 내 학급 목록 */
     classSave: function (pw, name) {
@@ -331,7 +337,7 @@
         var x = c[cid]; if (!x) return { ok: false, msg: "없는 학급이에요." };
         if (x.own !== uid() && !ISADM) return { ok: false, msg: "담임 선생님이나 관리자만 지울 수 있어요." };
         delete c[cid];
-        var wb = DB.batch(); (TROWS || []).filter(function (r) { return r.sum.cls === x.name; }).slice(0, 400).forEach(function (r) { wb.update(uref(r.uid), { cls: "" }); });
+        var wb = DB.batch(); (TROWS || []).filter(function (r) { return inCls(r.sum.cls, x.name); }).slice(0, 400).forEach(function (r) { var v = clsOf(r.sum.cls).filter(function (n) { return n !== x.name; }).join("\n"); r.sum.cls = v; wb.update(uref(r.uid), { cls: v }); });
         wb.set(clsDoc(), { c: c });
         return wb.commit().then(function () { return { ok: true, cls: c }; });
       });
@@ -617,7 +623,7 @@
   function meView() {
     if (ROLE) return teacherView();
     var s = SUM || { n: 0, f: 0, wk: 0, byG: {}, cls: "" };
-    var h = '<h2 id="kmaH">' + esc(s.name || S.id) + (s.name ? ' <small style="font-size:14px;font-weight:500;color:var(--k-sub)">' + esc(S.id) + "</small>" : "") + (s.cls ? ' <span class="tag">' + esc(s.cls) + "</span>" : "") + "</h2>" +
+    var h = '<h2 id="kmaH">' + esc(s.name || S.id) + (s.name ? ' <small style="font-size:14px;font-weight:500;color:var(--k-sub)">' + esc(S.id) + "</small>" : "") + clsOf(s.cls).map(function (c) { return ' <span class="tag">' + esc(c) + "</span>"; }).join("") + "</h2>" +
       (SUM && !s.name ? '<form class="nm" id="kmaNF"><span>이름을 적어 주세요</span><input type="text" id="kmaNM" maxlength="20" placeholder="예: 홍길동" aria-label="이름"><button class="btn pri" type="submit" style="padding:8px 14px">저장</button></form>' : "") +
       '<div class="stat"><div><b>' + s.n + '</b><small>푼 문제</small></div><div><b>' + pct(s.f, s.n) + '</b><small>첫 시도 정답률</small></div><div><b>' + s.wk + "</b><small>최근 7일</small></div></div>" +
       '<div class="tabs" role="tablist"><button type="button" data-t="asg" class="' + (tab === "asg" ? "on" : "") + '">과제' + (todo() ? " " + todo() : "") + '</button><button type="button" data-t="rec" class="' + (tab === "rec" ? "on" : "") + '">내 기록</button><button type="button" data-t="nt" class="' + (tab === "nt" ? "on" : "") + '">공지' + ((NT || []).length ? " " + NT.length : "") + "</button></div><div id=\"kmaB\"></div>" +
