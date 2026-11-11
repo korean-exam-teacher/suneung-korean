@@ -7,6 +7,7 @@
  *
  * 각 갈래에서 쓰는 법
  *   KMA.record('adv:psat:PS2024a-12', true, 'PSAT')   // 학생이 채점한 순간 한 번 부르면 됨(로그인 안 했으면 무시)
+ * v106(2026-11-11): 모의고사(제한 시간·자동 제출), 선택지별 응답 수(선생님만), 지운 과제의 응답 보관(asgKey/_stat)
  *   KMA.assign([{k, title, topic, src, nc, q:[{s,w,h}], p:{lab, imgs:[…]}, txt:{pas, ask, body, ch}, ans}])  // 선생님: 과제로 내기
  */
 (function () {
@@ -132,9 +133,17 @@
     wb.update(uref(u), up);
     return wb.commit();
   }
+  /* v106: 선택지별 응답 수 — {문항키: [무응답, ①, ②, ③, ④, ⑤]} */
+  function respOf(items, subs) {
+    var m = {};
+    (items || []).forEach(function (it) { if (it.nc) m[it.k] = [0, 0, 0, 0, 0, 0]; });
+    Object.keys(subs || {}).forEach(function (u) { var an = (subs[u] || {}).ans || {}; Object.keys(m).forEach(function (k) { var v = +an[k]; m[k][v >= 1 && v <= 5 ? v : 0]++; }); });
+    return m;
+  }
+  function statDoc() { return DB.collection("asgKey").doc("_stat"); }
   function teacherRows() {
     return DB.collection("users").get().then(function (q) {
-      var rows = []; q.forEach(function (d) { var x = d.data() || {}; if (x.moved || d.id === uid()) return; rows.push({ uid: d.id, id: x.id || "?", name: x.name || "", created: x.created || 0, sum: sumOf(x), sub: {}, mysub: x.sub || {} }); });
+      var rows = []; q.forEach(function (d) { var x = d.data() || {}; if (x.moved || d.id === uid()) return; rows.push({ uid: d.id, id: x.id || "?", name: x.name || "", created: x.created || 0, sum: sumOf(x), sub: {}, mysub: x.sub || {}, ex: x.ex || {} }); });
       return rows;
     });
   }
@@ -169,7 +178,7 @@
       return need().then(function () { return DB.collection("asg").orderBy("created").get(); }).then(function (q) {
         var list = []; q.forEach(function (d) { var a = d.data(); a.id = d.id; if (!a.cls || a.cls === (ME.cls || "")) list.push(a); });
         return Promise.all(list.map(function (a) {
-          var s = ME.sub[a.id]; a.done = s ? { at: s.at, sc: s.sc, n: s.n, ans: s.ans || {} } : null;
+          var s = ME.sub[a.id]; a.done = s ? { at: s.at, sc: s.sc, n: s.n, ans: s.ans || {} } : null; a.st = (ME.ex || {})[a.id] || 0;
           if (!s) return a;
           return DB.collection("asgKey").doc(a.id).get().then(function (k) { a.key = (k.data() || {}).key || {}; return a; }).catch(function () { return a; });
         }));
@@ -196,6 +205,16 @@
         throw e;
       });
     },
+    /* v106: 모의고사 시작 — 시작 시각을 내 문서에 적는다(다른 기기에서 이어 풀어도 같은 시각). 이미 시작했으면 그 시각을 돌려준다 */
+    siteExamStart: function (id, t, aid) {
+      aid = String(aid || ""); if (!/^s\d{6,}$/.test(aid)) return Promise.resolve({ ok: false, msg: "없는 모의고사예요." });
+      return need().then(function () { return uref().get(); }).then(function (d) {
+        var ex = (d.data() || {}).ex || {}; ME.ex = ex;
+        if (ex[aid]) return { ok: true, st: ex[aid] };
+        var now = Date.now(), up = {}; up["ex." + aid] = now; ex[aid] = now;
+        return uref().update(up).then(function () { return { ok: true, st: now }; });
+      });
+    },
     siteNotices: function () {
       return need().then(function () { return DB.collection("notices").orderBy("created").get(); }).then(function (q) { var l = []; q.forEach(function (d) { var x = d.data(); x.id = d.id; l.push(x); }); return { ok: true, list: l }; });
     },
@@ -219,12 +238,15 @@
         return Promise.all(asg.map(function (a) {
           return Promise.all([DB.collection("asgKey").doc(a.id).get(), DB.collection("subs").doc(a.id).get()]).then(function (x) {
             a.key = (x[0].data() || {}).key || {}; var subs = x[1].data() || {};
-            rows.forEach(function (r) { var s = subs[r.uid]; if (s) { var sc = score(a.items, a.key, s.ans || {}); r.sub[a.id] = { at: s.at, sc: sc.sc, n: sc.n, ans: s.ans || {}, tries: 1 }; } });
+            a.resp = respOf(a.items, subs); a.nsub = Object.keys(subs).length;
+            rows.forEach(function (r) { var s = subs[r.uid]; if (s) { var sc = score(a.items, a.key, s.ans || {}); r.sub[a.id] = { at: s.at, sc: sc.sc, n: sc.n, ans: s.ans || {}, tries: 1, dur: r.ex[a.id] && s.at > r.ex[a.id] ? s.at - r.ex[a.id] : 0 }; } });
           });
         }));
       }).then(function () { return DB.collection("notices").orderBy("created").get(); }).then(function (q) {
         var nt = []; q.forEach(function (d) { var x = d.data(); x.id = d.id; nt.push(x); });
-        TROWS = rows; return { ok: true, at: Date.now(), rows: rows, asg: asg, nt: nt, g: G };
+        return statDoc().get().then(function (d) { return (d.data() || {}).it || {}; }).catch(function () { return {}; }).then(function (stat) {
+          TROWS = rows; return { ok: true, at: Date.now(), rows: rows, asg: asg, nt: nt, g: G, stat: stat };
+        });
       });
     },
     teacherStudent: function (pw, id) {
@@ -241,14 +263,30 @@
       if (!items.length) return Promise.resolve({ ok: false, msg: "문제를 한 개 이상 넣어 주세요." });
       var key = {}; items.forEach(function (it) { var v = +((a.key || {})[it.k]); if (it.nc && v >= 1 && v <= it.nc) key[it.k] = v; });
       var id = /^s\d{6,}$/.test(String(a.id || "")) ? a.id : "s" + Date.now(), wb = DB.batch();
-      wb.set(DB.collection("asg").doc(id), { title: String(a.title || "").trim().slice(0, 60) || "선생님이 낸 과제", msg: String(a.msg || "").trim().slice(0, 400),
-        due: /^\d{4}-\d{2}-\d{2}$/.test(String(a.due || "")) ? a.due : "", cls: String(a.cls || "").trim().slice(0, 20), items: items, created: Date.now() });
+      var doc = { title: String(a.title || "").trim().slice(0, 60) || "선생님이 낸 과제", msg: String(a.msg || "").trim().slice(0, 400),
+        due: /^\d{4}-\d{2}-\d{2}$/.test(String(a.due || "")) ? a.due : "", cls: String(a.cls || "").trim().slice(0, 20), items: items, created: Date.now() };
+      var mn = Math.round(+a.min || 0);
+      if (a.mode === "exam") { if (!(mn >= 1)) return Promise.resolve({ ok: false, msg: "모의고사는 제한 시간(분)을 넣어 주세요." }); doc.mode = "exam"; doc.min = Math.min(300, mn); }
+      wb.set(DB.collection("asg").doc(id), doc);
       wb.set(DB.collection("asgKey").doc(id), { key: key });
       return wb.commit().then(function () { return { ok: true, id: id }; });
     },
     deleteSiteAssign: function (pw, aid) {
-      var wb = DB.batch(); ["asg", "asgKey", "subs"].forEach(function (c) { wb.delete(DB.collection(c).doc(aid)); });
-      return wb.commit().then(function () { return FBA.teacherSite(); }).then(function (r) { return { ok: true, list: r.asg }; });
+      aid = String(aid || ""); if (!/^s\d{6,}$/.test(aid)) return Promise.resolve({ ok: false, msg: "없는 과제예요." });
+      /* v106: 지우기 전에 선택지별 응답 수와 '낸 적 있는 문항'을 보관함(asgKey/_stat, 선생님만 읽음)에 더해 둔다 */
+      var keep = Promise.all([DB.collection("asg").doc(aid).get(), DB.collection("asgKey").doc(aid).get(), DB.collection("subs").doc(aid).get(), statDoc().get()]).then(function (x) {
+        var a = x[0].data() || {}, key = (x[1].data() || {}).key || {}, old = (x[3].data() || {}).it || {}, resp = respOf(a.items, x[2].data() || {}), it = {};
+        (a.items || []).forEach(function (q) {
+          var o = old[q.k] || {}, c = (o.c || [0, 0, 0, 0, 0, 0]).slice(0, 6), r = resp[q.k];
+          if (r) for (var i = 0; i < 6; i++) c[i] = (+c[i] || 0) + r[i];
+          it[q.k] = { t: String(q.title || "").slice(0, 80), a: String(q.a || "").slice(0, 30), nc: q.nc || 0, ans: key[q.k] || o.ans || 0, c: c, u: (o.u || 0) + 1, at: a.created || Date.now() };
+        });
+        return Object.keys(it).length ? statDoc().set({ it: it }, { merge: true }) : null;
+      }).catch(function () { return null; });
+      return keep.then(function () {
+        var wb = DB.batch(); ["asg", "asgKey", "subs"].forEach(function (c) { wb.delete(DB.collection(c).doc(aid)); });
+        return wb.commit();
+      }).then(function () { return FBA.teacherSite(); }).then(function (r) { return { ok: true, list: r.asg, stat: r.stat }; });
     },
     /* v104: 이름 — 학생이 스스로(siteSetName), 선생님이 학생 것을(setName) */
     siteSetName: function (name) {
@@ -387,6 +425,9 @@
     ".kma-run .nums{display:flex;gap:8px;margin-top:10px}.kma-run .nums .ch{width:46px;height:46px;justify-content:center;align-items:center;padding:0;font-size:18px;border-radius:50%}",
     ".kma-run .ch.sel{border-color:var(--k-brand);box-shadow:inset 0 0 0 1px var(--k-brand)}.kma-run .ch.ok{border-color:var(--k-ok);background:rgba(31,122,77,.08)}.kma-run .ch.no{border-color:var(--k-no);background:rgba(179,58,43,.07)}",
     ".kma-run .res{font-size:14px;margin-top:8px}.kma-run .res.ok{color:var(--k-ok)}.kma-run .res.no{color:var(--k-no)}",
+    ".kma-run .tm{font-variant-numeric:tabular-nums;font-weight:700;font-size:16px;border:1px solid var(--k-line);border-radius:999px;padding:7px 14px;white-space:nowrap}.kma-run .tm.low{color:var(--k-no);border-color:var(--k-no)}",
+    ".kma-run .xs{max-width:520px;margin:9vh auto 0;text-align:center}.kma-run .xs h2{font-size:26px;margin:0 0 6px}.kma-run .xs .big{font-size:17px;margin:0 0 18px}.kma-run .xs ul{text-align:left;margin:0 auto 22px;padding:16px 18px 16px 34px;background:var(--k-soft);border-radius:14px;font-size:14.5px;line-height:1.8;color:var(--k-sub)}",
+    ".kma select{width:100%;box-sizing:border-box;border:1px solid var(--k-line);border-radius:10px;padding:11px 12px;font:inherit;font-size:15px;background:var(--k-bg);color:inherit}.kma input:disabled{opacity:.45}",
     ".kma-run .foot{position:fixed;left:0;right:0;bottom:0;background:var(--k-bg);border-top:1px solid var(--k-line);padding:12px 18px;display:flex;justify-content:center;gap:10px;align-items:center}",
     "@media (max-width:560px){.kma .bars div{grid-template-columns:96px 1fr 58px}.kma-box{padding:22px 18px}}",
     ".kma-pill em{font-style:normal;font-size:12px;font-weight:700;color:var(--k-sub);border-right:1px solid var(--k-line);padding-right:8px}",
@@ -491,7 +532,7 @@
     var adm = ROLE === "admin", T = "/suneung-korean/teacher.html";
     box().innerHTML = '<h2 id="kmaH">' + esc((SUM && SUM.name) || S.id) + ' <span class="tag done">' + (adm ? "관리자" : "선생님") + "</span></h2>" +
       '<p class="s">첫 화면 위쪽 메뉴에서도 열 수 있어요. 문제 화면에서는 담은 문제 옆 \'과제로 내기\' 단추로 바로 낼 수 있어요.</p>' +
-      '<div class="tl"><a href="' + T + '#st">학생 현황</a><a href="' + T + '#asg">과제</a><a href="' + T + '#nt">공지</a>' + (adm ? '<a href="' + T + '#adm">선생님 관리</a>' : "") + "</div>" +
+      '<div class="tl"><a href="' + T + '#st">학생 현황</a><a href="' + T + '#asg">과제</a><a href="' + T + '#rs">응답률</a><a href="' + T + '#nt">공지</a>' + (adm ? '<a href="' + T + '#adm">선생님 관리</a>' : "") + "</div>" +
       '<div class="row" style="justify-content:space-between"><button class="lnk" type="button" id="kmaOut">로그아웃</button><button class="btn" type="button" id="kmaX">닫기</button></div>';
     document.getElementById("kmaX").onclick = closePanel;
     document.getElementById("kmaOut").onclick = logout;
@@ -519,8 +560,8 @@
     } else {
       if (!ASG) { B.innerHTML = '<p class="s" style="margin-top:14px">불러오는 중…</p>'; return; }
       B.innerHTML = ASG.length ? '<ul class="al" style="margin-top:12px">' + ASG.slice().reverse().map(function (a) {
-        var d = a.done, st = d ? '<span class="tag done">제출 ' + (d.n ? d.sc + "/" + d.n : "") + "</span>" : (a.due ? '<span class="tag">마감 ' + a.due.slice(5).replace("-", ".") + "</span>" : "");
-        return '<li><span><b>' + esc(a.title) + "</b><small>" + a.items.length + "문항" + (a.msg ? " · " + esc(a.msg.slice(0, 40)) : "") + '</small></span><button class="btn" type="button" data-a="' + esc(a.id) + '">' + (d ? "다시 보기" : "풀기") + "</button>" + st + "</li>";
+        var d = a.done, x = isExam(a), st = d ? '<span class="tag done">제출 ' + (d.n ? d.sc + "/" + d.n : "") + "</span>" : (a.due ? '<span class="tag">마감 ' + a.due.slice(5).replace("-", ".") + "</span>" : "");
+        return '<li><span><b>' + esc(a.title) + "</b><small>" + a.items.length + "문항" + (x ? " · 모의고사 " + a.min + "분" : "") + (a.msg ? " · " + esc(a.msg.slice(0, 40)) : "") + '</small></span><button class="btn" type="button" data-a="' + esc(a.id) + '">' + (d ? "다시 보기" : x ? (examSt(a) ? "이어 풀기" : "시작") : "풀기") + "</button>" + st + "</li>";
       }).join("") + "</ul>" : '<p class="s" style="margin-top:14px">선생님이 낸 과제가 없어요.</p>';
       B.querySelectorAll("[data-a]").forEach(function (b) { b.onclick = function () { openRun(b.dataset.a); }; });
     }
@@ -535,6 +576,8 @@
     Promise.all([call("siteMe", [S.id, S.token]), call("siteAssignments", [S.id, S.token]), call("siteNotices", [S.id, S.token])]).then(function (r) {
       if (r[0].relogin || r[1].relogin) { lockOut(); return; }
       if (r[0].ok) SUM = r[0].sum; if (r[1].ok) ASG = r[1].list; if (r[2].ok) NT = r[2].list;
+      if (CUR && ASG) { var cur = ASG.filter(function (a) { return a.id === CUR.id; })[0]; if (cur) { if (CUR.st && !cur.st) cur.st = CUR.st; if (CUR.done && !cur.done) { cur.done = CUR.done; cur.key = CUR.key; } cur._auto = CUR._auto; cur._busy = CUR._busy; CUR = cur; } }
+      (ASG || []).forEach(function (a) { if (isExam(a) && !a.done && examSt(a) && examLeft(a) <= 0 && a !== CUR) lateSubmit(a); });
       paintPill();
       if (show) dim.hidden = false;
       if (!dim.hidden && S) meView();
@@ -542,18 +585,75 @@
   }
 
   /* ---------- 과제 풀기 ---------- */
-  var CUR = null, ANS = {};
+  var CUR = null, ANS = {}, TICK = null;
+  /* v106: 모의고사 — 시작한 때부터 제한 시간이 흐르고, 끝나면 그때까지 고른 답을 제출한다 */
+  function isExam(a) { return !!(a && a.mode === "exam" && a.min > 0); }
+  function examSt(a) { return a.st || +ls("kma.x." + a.id) || 0; }
+  function examLeft(a) { return examSt(a) + a.min * 60000 - Date.now(); }
+  function mmss(ms) { var s = Math.max(0, Math.ceil(ms / 1000)), m = Math.floor(s / 60); s = s % 60; return m + ":" + (s < 10 ? "0" : "") + s; }
+  function stopTick() { if (TICK) { clearInterval(TICK); TICK = null; } }
+  function startTick() {
+    stopTick();
+    TICK = setInterval(function () {
+      var a = CUR; if (!a || a.done || !isExam(a) || run.hidden) { stopTick(); return; }
+      var left = examLeft(a), el = document.getElementById("kmaTm");
+      if (el) { el.textContent = "남은 시간 " + mmss(left); el.classList.toggle("low", left <= 60000); }
+      if (left <= 0) { stopTick(); paintRun(); doSubmit(true); }
+    }, 500);
+  }
+  function lateSubmit(a) {
+    if (a._busy) return; a._busy = true;
+    call("siteSubmit", [S.id, S.token, a.id, ls("kma.d." + a.id) || {}]).then(function (r) {
+      a._busy = false; if (!r.ok) return;
+      a.done = r.done; a.key = r.key; a._auto = true; ls("kma.d." + a.id, null); ls("kma.x." + a.id, null); paintPill(); if (!dim.hidden && S && !LOCKED) meView();
+    });
+  }
   function openRun(aid) {
     CUR = (ASG || []).filter(function (a) { return a.id === aid; })[0]; if (!CUR) return;
     ANS = (CUR.done && CUR.done.ans) ? JSON.parse(JSON.stringify(CUR.done.ans)) : (ls("kma.d." + aid) || {});
-    dim.hidden = true; run.hidden = false; document.documentElement.style.overflow = "hidden"; paintRun();
+    dim.hidden = true; run.hidden = false; document.documentElement.style.overflow = "hidden";
+    if (isExam(CUR) && !CUR.done && !examSt(CUR)) return paintStart();
+    paintRun();
+    if (isExam(CUR) && !CUR.done) { if (examLeft(CUR) <= 0) doSubmit(true); else startTick(); }
   }
-  function closeRun() { run.hidden = true; document.documentElement.style.overflow = ""; CUR = null; openPanel(); }
+  function closeRun() { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; CUR = null; openPanel(); }
+  function paintStart() {
+    var a = CUR;
+    run.innerHTML = '<div class="in"><div class="top"><div><b style="font-size:18px">' + esc(a.title) + '</b></div><button class="btn" type="button" id="kmaRX">닫기</button></div>' +
+      '<div class="xs"><h2>모의고사</h2><p class="big">' + a.items.length + "문항 · 제한 시간 <b>" + a.min + "분</b></p>" +
+      (a.msg ? '<p class="s" style="white-space:pre-wrap">' + esc(a.msg) + "</p>" : "") +
+      "<ul><li>‘시작하기’를 누르면 그때부터 시간이 흘러요.</li><li>중간에 닫거나 다른 화면으로 가도 시간은 멈추지 않아요.</li><li>시간이 끝나면 그때까지 고른 답이 자동으로 제출돼요.</li><li>다 풀었으면 시간이 남아도 ‘제출하기’를 눌러 끝낼 수 있어요.</li></ul>" +
+      '<button class="btn pri" type="button" id="kmaXS" style="font-size:16px;padding:13px 30px">시작하기</button><div class="msg" id="kmaRM" role="alert"></div></div></div>';
+    document.getElementById("kmaRX").onclick = closeRun;
+    document.getElementById("kmaXS").onclick = function () {
+      var b = this; b.disabled = true;
+      call("siteExamStart", [S.id, S.token, a.id]).then(function (r) {
+        if (!r.ok || !r.st) { b.disabled = false; document.getElementById("kmaRM").textContent = r.msg || "시작하지 못했어요. 인터넷 연결을 확인해 주세요."; return; }
+        a.st = r.st; ls("kma.x." + a.id, r.st);
+        if (!CUR || CUR.id !== a.id) return;
+        CUR.st = r.st; paintRun(); run.scrollTop = 0;
+        if (examLeft(CUR) <= 0) doSubmit(true); else startTick();
+      });
+    };
+  }
+  function doSubmit(auto) {
+    var a = CUR; if (!a || a.done || a._busy) return; a._busy = true;
+    var sb = document.getElementById("kmaSub"); if (sb) sb.disabled = true;
+    call("siteSubmit", [S.id, S.token, a.id, ANS]).then(function (r) {
+      a._busy = false; var same = CUR && CUR.id === a.id; if (same) CUR._busy = false;
+      var sb2 = document.getElementById("kmaSub"); if (sb2) sb2.disabled = false;
+      if (!r.ok) { var m = document.getElementById("kmaRM"); if (m && same) m.textContent = (auto ? "시간이 끝났어요. " : "") + (r.msg || "제출하지 못했어요.") + (auto ? " ‘제출하기’를 다시 눌러 주세요." : ""); return; }
+      a.done = r.done; a.key = r.key; a._auto = !!auto; ls("kma.d." + a.id, null); ls("kma.x." + a.id, null); stopTick();
+      if (same) { CUR.done = r.done; CUR.key = r.key; CUR._auto = !!auto; paintRun(); run.scrollTop = 0; }
+      refresh(false);
+    });
+  }
   function pic(p) { return '<img src="' + esc(p.s) + '" width="' + p.w + '" height="' + p.h + '" loading="lazy" alt="">'; }
   function paintRun() {
-    var a = CUR, done = !!a.done, key = a.key || {};
-    var h = '<div class="in"><div class="top"><div><b style="font-size:18px">' + esc(a.title) + '</b><div style="font-size:13px;color:var(--k-sub)">' + a.items.length + "문항" + (a.due ? " · 마감 " + esc(a.due) : "") +
-      (done ? " · 제출함" + (a.done.n ? " " + a.done.sc + "/" + a.done.n : "") : "") + '</div></div><button class="btn" type="button" id="kmaRX">닫기</button></div>' +
+    var a = CUR, done = !!a.done, key = a.key || {}, exam = isExam(a), over = exam && !done && examLeft(a) <= 0;
+    var h = '<div class="in"><div class="top"><div><b style="font-size:18px">' + esc(a.title) + '</b><div style="font-size:13px;color:var(--k-sub)">' + a.items.length + "문항" + (exam ? " · 모의고사 " + a.min + "분" : "") + (a.due ? " · 마감 " + esc(a.due) : "") +
+      (done ? " · 제출함" + (a.done.n ? " " + a.done.sc + "/" + a.done.n : "") + (a._auto ? " · 시간이 끝나 자동으로 제출했어요" : "") : (exam ? " · 닫아도 시간은 계속 흘러요" : "")) + '</div></div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' + (exam && !done ? '<span class="tm' + (examLeft(a) <= 60000 ? " low" : "") + '" id="kmaTm" role="timer">남은 시간 ' + mmss(examLeft(a)) + "</span>" : "") + '<button class="btn" type="button" id="kmaRX">닫기</button></div></div>' +
       (a.msg ? '<p class="s" style="margin:14px 0 0;white-space:pre-wrap">' + esc(a.msg) + "</p>" : "");
     var lastP = "";
     a.items.forEach(function (it, n) {
@@ -571,12 +671,12 @@
         h += '<div class="' + (txtCh ? "chs" : "nums") + '" role="group" aria-label="' + (n + 1) + '번 답">';
         for (var c = 1; c <= it.nc; c++) {
           var cls = done && ans ? (c === ans ? " ok" : c === v ? " no" : "") : (c === v ? " sel" : "");
-          h += '<button type="button" class="ch' + cls + '" data-k="' + esc(it.k) + '" data-n="' + c + '"' + (done ? " disabled" : "") + ">" + CIR[c - 1] + (txtCh ? " " + esc(it.txt.ch[c - 1]) : "") + "</button>";
+          h += '<button type="button" class="ch' + cls + '" data-k="' + esc(it.k) + '" data-n="' + c + '"' + (done || over ? " disabled" : "") + ">" + CIR[c - 1] + (txtCh ? " " + esc(it.txt.ch[c - 1]) : "") + "</button>";
         }
         h += "</div>";
         if (done && ans) h += v === ans ? '<div class="res ok">맞았어요</div>' : '<div class="res no">' + (v ? "아쉬워요 · " : "") + "정답 " + CIR[ans - 1] + "</div>";
       } else {
-        h += '<textarea data-w="' + esc(it.k) + '" placeholder="답을 적어 주세요"' + (done ? " readonly" : "") + ">" + esc(v || "") + "</textarea>";
+        h += '<textarea data-w="' + esc(it.k) + '" placeholder="답을 적어 주세요"' + (done || over ? " readonly" : "") + ">" + esc(v || "") + "</textarea>";
       }
       if (it.src) h += '<div style="font-size:12px;color:var(--k-faint);margin-top:8px">' + esc(it.src) + "</div>";
       h += "</div>";
@@ -593,13 +693,8 @@
     run.querySelectorAll("textarea[data-w]").forEach(function (t) { t.oninput = function () { ANS[t.dataset.w] = t.value; ls("kma.d." + a.id, ANS); }; });
     var sb = document.getElementById("kmaSub");
     if (sb) sb.onclick = function () {
-      if (left && !confirmLeft(sb, left)) return;
-      sb.disabled = true;
-      call("siteSubmit", [S.id, S.token, a.id, ANS]).then(function (r) {
-        sb.disabled = false;
-        if (!r.ok) { document.getElementById("kmaRM").textContent = r.msg || "제출하지 못했어요."; return; }
-        a.done = r.done; a.key = r.key; ls("kma.d." + a.id, null); paintRun(); run.scrollTop = 0; refresh(false);
-      });
+      if (left && !over && !confirmLeft(sb, left)) return;
+      doSubmit(false);
     };
   }
   /* 공무원 문항: /advanced-korean/gm/q/<회차>.json 에서 그림을 가져와 채운다(같은 지문은 처음 한 번만) */
@@ -608,7 +703,7 @@
     var shown = {};
     run.querySelectorAll("[data-gm]").forEach(function (el) {
       var p = el.dataset.gm.split("|"), e = p[0], n = +p[1];
-      GMC[e] = GMC[e] || fetch("/advanced-korean/gm/q/" + e + ".json?v=101").then(function (r) { return r.json(); }).catch(function () { return null; });
+      GMC[e] = GMC[e] || fetch("/advanced-korean/gm/q/" + e + ".json?v=106").then(function (r) { return r.json(); }).catch(function () { return null; });
       GMC[e].then(function (d) {
         if (!d) { el.textContent = "문항 그림을 불러오지 못했어요."; return; }
         var q = (d.q || []).filter(function (x) { return x.n === n; })[0], h = "";
@@ -667,15 +762,20 @@
       '<label class="f" for="kmaT">제목</label><input type="text" id="kmaT" maxlength="60" value="' + esc(new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" }) + " 과제") + '">' +
       '<label class="f" for="kmaG">안내 말(선택)</label><textarea id="kmaG" maxlength="400" style="min-height:70px"></textarea>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="f" for="kmaD">마감일(선택)</label><input type="date" id="kmaD"></div><div><label class="f" for="kmaC">반(비우면 모두)</label><input type="text" id="kmaC" maxlength="20" placeholder="예: 공무원반"></div></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="f" for="kmaK">종류</label><select id="kmaK"><option value="">과제 · 시간 제한 없음</option><option value="exam">모의고사 · 시간 제한</option></select></div><div><label class="f" for="kmaMin">제한 시간(분)</label><input type="text" inputmode="numeric" id="kmaMin" maxlength="3" value="' + Math.max(5, Math.round(items.length * 1.5)) + '" disabled></div></div>' +
       '<div class="msg" id="kmaM" role="alert"></div><div class="row"><button class="btn pri" type="button" id="kmaGo">과제 내기</button><button class="btn" type="button" id="kmaX">닫기</button></div>';
     document.getElementById("kmaX").onclick = closePanel;
+    document.getElementById("kmaK").onchange = function () {
+      var x = this.value === "exam", t = document.getElementById("kmaT"); document.getElementById("kmaMin").disabled = !x; document.getElementById("kmaGo").textContent = x ? "모의고사 내기" : "과제 내기";
+      t.value = x ? t.value.replace(/과제$/, "모의고사") : t.value.replace(/모의고사$/, "과제");
+    };
     document.getElementById("kmaGo").onclick = function () {
       var b = this, key = {}; b.disabled = true;
       items.forEach(function (x) { if (x.ans) key[x.k] = x.ans; });
-      call("saveSiteAssign", [pw, { title: document.getElementById("kmaT").value, msg: document.getElementById("kmaG").value, due: document.getElementById("kmaD").value, cls: document.getElementById("kmaC").value, items: items, key: key }]).then(function (r) {
+      call("saveSiteAssign", [pw, { title: document.getElementById("kmaT").value, msg: document.getElementById("kmaG").value, due: document.getElementById("kmaD").value, cls: document.getElementById("kmaC").value, items: items, key: key, mode: document.getElementById("kmaK").value, min: document.getElementById("kmaMin").value }]).then(function (r) {
         b.disabled = false;
         if (!r.ok) { document.getElementById("kmaM").textContent = r.msg || "내지 못했어요."; return; }
-        box().innerHTML = '<h2 id="kmaH">과제를 냈어요</h2><p class="s">학생들이 로그인하면 오른쪽 아래 단추에 과제가 보여요. 제출 현황은 첫 화면 위쪽 ‘과제’에서 볼 수 있어요.</p><div class="row"><a class="btn pri" href="/suneung-korean/teacher.html#asg">제출 현황 보기</a><button class="btn" type="button" id="kmaX">닫기</button></div>';
+        box().innerHTML = '<h2 id="kmaH">냈어요</h2><p class="s">학생들이 로그인하면 오른쪽 아래 단추에 과제가 보여요. 제출 현황은 첫 화면 위쪽 ‘과제’에서 볼 수 있어요.</p><div class="row"><a class="btn pri" href="/suneung-korean/teacher.html#asg">제출 현황 보기</a><button class="btn" type="button" id="kmaX">닫기</button></div>';
         document.getElementById("kmaX").onclick = closePanel;
       });
     };
