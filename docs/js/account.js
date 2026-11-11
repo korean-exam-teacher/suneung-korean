@@ -7,6 +7,7 @@
  *
  * 각 갈래에서 쓰는 법
  *   KMA.record('adv:psat:PS2024a-12', true, 'PSAT')   // 학생이 채점한 순간 한 번 부르면 됨(로그인 안 했으면 무시)
+ * v107(2026-11-11): 과제 인쇄(js/asgprint.js), 학생 화면 위쪽 '과제' 탭, 새 공지 알림 창, 학급(선생님이 만들고 학생을 넣음 — asgKey/_cls)
  * v106(2026-11-11): 모의고사(제한 시간·자동 제출), 선택지별 응답 수(선생님만), 지운 과제의 응답 보관(asgKey/_stat)
  *   KMA.assign([{k, title, topic, src, nc, q:[{s,w,h}], p:{lab, imgs:[…]}, txt:{pas, ask, body, ch}, ans}])  // 선생님: 과제로 내기
  */
@@ -108,7 +109,7 @@
       return { k: String(x.k).slice(0, 90), a: st(x.a, 30), title: st(x.title, 120), topic: st(x.topic, 160), src: st(x.src, 200), nc: Math.max(0, Math.min(5, +x.nc || 0)),
         q: (x.q || []).slice(0, 6).map(pic).filter(Boolean), p: x.p && x.p.imgs ? { lab: st(x.p.lab, 60), imgs: x.p.imgs.slice(0, 6).map(pic).filter(Boolean) } : null,
         gm: x.gm && /^[a-z]\w?\d?-20\d\d[a-z]?$/.test(String(x.gm.e || "")) ? { e: String(x.gm.e), n: +x.gm.n || 0 } : null,
-        txt: x.txt ? { pas: st(x.txt.pas, 6000), ask: st(x.txt.ask, 600), body: st(x.txt.body, 4000), ch: (x.txt.ch || []).slice(0, 5).map(function (c) { return st(c, 600); }) } : null };
+        txt: x.txt ? { pk: st(x.txt.pk, 80), pas: st(x.txt.pas, 6000), ask: st(x.txt.ask, 600), body: st(x.txt.body, 4000), ch: (x.txt.ch || []).slice(0, 5).map(function (c) { return st(c, 600); }) } : null };
     }).filter(Boolean);
   }
   function score(items, key, ans) { var sc = 0, n = 0; (items || []).forEach(function (it) { if (it.nc && key[it.k]) { n++; if (+ans[it.k] === key[it.k]) sc++; } }); return { sc: sc, n: n }; }
@@ -141,9 +142,13 @@
     return m;
   }
   function statDoc() { return DB.collection("asgKey").doc("_stat"); }
+  /* v107: 학급 — asgKey/_cls { c: { 학급id: {name, own(담임 uid), ownId, ownName, at} } }. 선생님만 읽고 쓴다. 학생의 반은 users/{uid}.cls(학급 이름) */
+  function clsDoc() { return DB.collection("asgKey").doc("_cls"); }
+  function clsGet() { return clsDoc().get().then(function (d) { return (d.data() || {}).c || {}; }).catch(function () { return {}; }); }
+  function myId() { return idOf(AU.currentUser && AU.currentUser.email) || ""; }
   function teacherRows() {
     return DB.collection("users").get().then(function (q) {
-      var rows = []; q.forEach(function (d) { var x = d.data() || {}; if (x.moved || d.id === uid()) return; rows.push({ uid: d.id, id: x.id || "?", name: x.name || "", created: x.created || 0, sum: sumOf(x), sub: {}, mysub: x.sub || {}, ex: x.ex || {} }); });
+      var rows = []; q.forEach(function (d) { var x = d.data() || {}; if (x.moved || d.id === uid()) return; rows.push({ uid: d.id, id: x.id || "?", name: x.name || "", created: x.created || 0, sum: sumOf(x), sub: {}, mysub: x.sub || {}, ex: x.ex || {}, tch: x.tch ? 1 : 0 }); });
       return rows;
     });
   }
@@ -216,7 +221,7 @@
       });
     },
     siteNotices: function () {
-      return need().then(function () { return DB.collection("notices").orderBy("created").get(); }).then(function (q) { var l = []; q.forEach(function (d) { var x = d.data(); x.id = d.id; l.push(x); }); return { ok: true, list: l }; });
+      return need().then(function () { return DB.collection("notices").orderBy("created").get(); }).then(function (q) { var l = [], mine = ME.cls || ""; q.forEach(function (d) { var x = d.data(); x.id = d.id; if (!x.cls || x.cls === mine) l.push(x); }); return { ok: true, list: l }; });
     },
     teacherPing: function () {
       return fbInit().then(function () {
@@ -229,10 +234,20 @@
       });
     },
     teacherSite: function () {
-      var rows, asg = [];
+      var rows, asg = [], CL = {};
       return fbInit().then(teacherRows).then(function (r) {
         rows = r; if (!ISADM) return null;
-        return DB.collection("teachers").get().then(function (q) { var t = {}; q.forEach(function (d) { t[d.id] = 1; }); rows = rows.filter(function (x) { return !t[x.uid]; }); });
+        return DB.collection("teachers").get().then(function (q) { var t = {}; q.forEach(function (d) { t[d.id] = 1; });
+          rows.forEach(function (x) { if (t[x.uid] && !x.tch) uref(x.uid).update({ tch: 1 }).catch(function () {}); });
+          rows = rows.filter(function (x) { return !t[x.uid]; }); });
+      }).then(clsGet).then(function (c) {
+        CL = c;
+        if (!ISADM) return null;
+        uref().update({ tch: 1 }).catch(function () {});
+        /* 관리자: 학급 목록에 없는 옛 반 이름은 관리자 학급으로 넣어 둔다 */
+        var have = {}, add = false; Object.keys(CL).forEach(function (k) { have[CL[k].name] = 1; });
+        rows.forEach(function (r) { var n = r.sum.cls; if (n && !have[n]) { have[n] = 1; add = true; CL["c" + Date.now() + Object.keys(CL).length] = { name: n, own: uid(), ownId: myId(), ownName: "", at: Date.now() }; } });
+        return add ? clsDoc().set({ c: CL }).catch(function () { return null; }) : null;
       }).then(function () { return DB.collection("asg").orderBy("created").get(); }).then(function (q) {
         q.forEach(function (d) { var a = d.data(); a.id = d.id; asg.push(a); });
         return Promise.all(asg.map(function (a) {
@@ -245,7 +260,7 @@
       }).then(function () { return DB.collection("notices").orderBy("created").get(); }).then(function (q) {
         var nt = []; q.forEach(function (d) { var x = d.data(); x.id = d.id; nt.push(x); });
         return statDoc().get().then(function (d) { return (d.data() || {}).it || {}; }).catch(function () { return {}; }).then(function (stat) {
-          TROWS = rows; return { ok: true, at: Date.now(), rows: rows, asg: asg, nt: nt, g: G, stat: stat };
+          TROWS = rows; return { ok: true, at: Date.now(), rows: rows, asg: asg, nt: nt, g: G, stat: stat, cls: CL, me: { uid: uid(), id: myId(), admin: ISADM } };
         });
       });
     },
@@ -264,7 +279,7 @@
       var key = {}; items.forEach(function (it) { var v = +((a.key || {})[it.k]); if (it.nc && v >= 1 && v <= it.nc) key[it.k] = v; });
       var id = /^s\d{6,}$/.test(String(a.id || "")) ? a.id : "s" + Date.now(), wb = DB.batch();
       var doc = { title: String(a.title || "").trim().slice(0, 60) || "선생님이 낸 과제", msg: String(a.msg || "").trim().slice(0, 400),
-        due: /^\d{4}-\d{2}-\d{2}$/.test(String(a.due || "")) ? a.due : "", cls: String(a.cls || "").trim().slice(0, 20), items: items, created: Date.now() };
+        due: /^\d{4}-\d{2}-\d{2}$/.test(String(a.due || "")) ? a.due : "", cls: String(a.cls || "").trim().slice(0, 20), items: items, created: Date.now(), by: uid(), byId: myId() };
       var mn = Math.round(+a.min || 0);
       if (a.mode === "exam") { if (!(mn >= 1)) return Promise.resolve({ ok: false, msg: "모의고사는 제한 시간(분)을 넣어 주세요." }); doc.mode = "exam"; doc.min = Math.min(300, mn); }
       wb.set(DB.collection("asg").doc(id), doc);
@@ -302,9 +317,34 @@
       var r = (TROWS || []).filter(function (x) { return x.id === id; })[0]; if (!r) return Promise.resolve({ ok: false, msg: "없는 학생이에요." });
       return uref(r.uid).update({ cls: String(cls || "").trim().slice(0, 20) }).then(function () { return { ok: true }; });
     },
+    /* v107: 학급 만들기·지우기, 내 학급 목록 */
+    classSave: function (pw, name) {
+      name = String(name || "").replace(/\s+/g, " ").trim().slice(0, 20); if (!name) return Promise.resolve({ ok: false, msg: "학급 이름을 적어 주세요." });
+      return need().then(clsGet).then(function (c) {
+        if (Object.keys(c).some(function (k) { return c[k].name === name; })) return { ok: false, msg: "이미 있는 학급 이름이에요." };
+        c["c" + Date.now()] = { name: name, own: uid(), ownId: myId(), ownName: (ME && ME.name) || "", at: Date.now() };
+        return clsDoc().set({ c: c }).then(function () { return { ok: true, cls: c }; });
+      });
+    },
+    classDelete: function (pw, cid) {
+      return clsGet().then(function (c) {
+        var x = c[cid]; if (!x) return { ok: false, msg: "없는 학급이에요." };
+        if (x.own !== uid() && !ISADM) return { ok: false, msg: "담임 선생님이나 관리자만 지울 수 있어요." };
+        delete c[cid];
+        var wb = DB.batch(); (TROWS || []).filter(function (r) { return r.sum.cls === x.name; }).slice(0, 400).forEach(function (r) { wb.update(uref(r.uid), { cls: "" }); });
+        wb.set(clsDoc(), { c: c });
+        return wb.commit().then(function () { return { ok: true, cls: c }; });
+      });
+    },
+    teacherClasses: function () {
+      return fbInit().then(function () { return DB.collection("admins").doc(uid()).get().catch(function () { return null; }); }).then(function (a) {
+        var adm = !!(a && a.exists);
+        return clsGet().then(function (c) { return { ok: true, admin: adm, list: Object.keys(c).map(function (k) { return c[k]; }).filter(function (x) { return adm || x.own === uid(); }).map(function (x) { return x.name; }).sort() }; });
+      });
+    },
     saveNotice: function (pw, n) {
       n = n || {}; var t = String(n.title || "").trim().slice(0, 60); if (!t) return Promise.resolve({ ok: false, msg: "제목을 적어 주세요." });
-      return DB.collection("notices").doc("n" + Date.now()).set({ title: t, body: String(n.body || "").trim().slice(0, 1000), created: Date.now() })
+      return DB.collection("notices").doc("n" + Date.now()).set({ title: t, body: String(n.body || "").trim().slice(0, 1000), created: Date.now(), cls: String(n.cls || "").trim().slice(0, 20), by: uid(), byId: myId() })
         .then(function () { return FBA.siteNoticesT(); });
     },
     deleteNotice: function (pw, nid) { return DB.collection("notices").doc(nid).delete().then(function () { return FBA.siteNoticesT(); }); },
@@ -318,12 +358,12 @@
       return DB.collection("users").where("id", "==", id).get().then(function (q) {
         var d = q.docs.filter(function (x) { return !(x.data() || {}).moved; })[0];
         if (!d) return { ok: false, msg: "'" + id + "' 아이디가 없어요. 그 선생님이 사이트에서 아이디를 먼저 만들어야 해요." };
-        return DB.collection("teachers").doc(d.id).set({ id: id, at: Date.now() }).then(function () { return FBA.teacherList(); });
+        return DB.collection("teachers").doc(d.id).set({ id: id, at: Date.now() }).then(function () { return uref(d.id).update({ tch: 1 }).catch(function () { return null; }); }).then(function () { return FBA.teacherList(); });
       });
     },
     teacherRemove: function (pw, tuid) {
       if (tuid === uid()) return Promise.resolve({ ok: false, msg: "자기 자신은 뺄 수 없어요." });
-      return DB.collection("teachers").doc(tuid).delete().then(function () { return FBA.teacherList(); });
+      return DB.collection("teachers").doc(tuid).delete().then(function () { return uref(tuid).update({ tch: 0 }).catch(function () { return null; }); }).then(function () { return FBA.teacherList(); });
     },
     /* 비밀번호를 잊은 학생: 새 아이디를 만들게 한 뒤, 옛 아이디의 기록을 새 아이디로 옮긴다 */
     moveStudent: function (pw, fromId, toId) {
@@ -363,7 +403,7 @@
     ROLE = r || ""; ls("kma.role", S ? { id: S.id, r: ROLE } : null);
     if (ROLE) ss("kma.tpw", "fb"); else { try { sessionStorage.removeItem("kma.tpw"); } catch (e) {} }
     try { document.dispatchEvent(new CustomEvent("kma:role", { detail: ROLE })); } catch (e) {}
-    if (typeof paintPill === "function" && pill) { paintPill(); paintTnav(); }
+    if (typeof paintPill === "function" && pill) { paintPill(); paintTnav(); paintTab(); }
   }
   function checkRole() {
     if (!FBCFG || !S) return Promise.resolve(ROLE);
@@ -428,6 +468,10 @@
     ".kma-run .tm{font-variant-numeric:tabular-nums;font-weight:700;font-size:16px;border:1px solid var(--k-line);border-radius:999px;padding:7px 14px;white-space:nowrap}.kma-run .tm.low{color:var(--k-no);border-color:var(--k-no)}",
     ".kma-run .xs{max-width:520px;margin:9vh auto 0;text-align:center}.kma-run .xs h2{font-size:26px;margin:0 0 6px}.kma-run .xs .big{font-size:17px;margin:0 0 18px}.kma-run .xs ul{text-align:left;margin:0 auto 22px;padding:16px 18px 16px 34px;background:var(--k-soft);border-radius:14px;font-size:14.5px;line-height:1.8;color:var(--k-sub)}",
     ".kma select{width:100%;box-sizing:border-box;border:1px solid var(--k-line);border-radius:10px;padding:11px 12px;font:inherit;font-size:15px;background:var(--k-bg);color:inherit}.kma input:disabled{opacity:.45}",
+    ".kma-tab{display:inline-flex;align-items:center;gap:6px;font-weight:700;cursor:pointer;white-space:nowrap}.kma-tab i{font-style:normal;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#2c4a6b;color:#fff;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}",
+    ".kma-tab.kma-float{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:79;border:1px solid var(--k-line);background:var(--k-bg);color:var(--k-ink);border-radius:999px;padding:8px 16px;font:inherit;font-size:14.5px;box-shadow:0 4px 14px rgba(0,0,0,.1)}",
+    ".kma .ntp{max-height:52vh;overflow:auto;margin:10px 0 0}.kma .ntp .nt small{display:block;color:var(--k-faint);font-size:12.5px;margin-top:4px}",
+    "@media print{.kma-tab.kma-float{display:none!important}}",
     ".kma-run .foot{position:fixed;left:0;right:0;bottom:0;background:var(--k-bg);border-top:1px solid var(--k-line);padding:12px 18px;display:flex;justify-content:center;gap:10px;align-items:center}",
     "@media (max-width:560px){.kma .bars div{grid-template-columns:96px 1fr 58px}.kma-box{padding:22px 18px}}",
     ".kma-pill em{font-style:normal;font-size:12px;font-weight:700;color:var(--k-sub);border-right:1px solid var(--k-line);padding-right:8px}",
@@ -451,7 +495,7 @@
   dim.innerHTML = '<div class="kma-box" role="dialog" aria-modal="true" aria-labelledby="kmaH"></div>';
   var run = document.createElement("div"); run.className = "kma kma-run"; run.hidden = true;
   function mount() {
-    document.body.appendChild(pill); document.body.appendChild(dim); document.body.appendChild(run); paintPill(); paintTnav();
+    document.body.appendChild(pill); document.body.appendChild(dim); document.body.appendChild(run); paintPill(); paintTnav(); paintTab();
     window.KMA.gate = true;
     if (LOCKED) { dim.classList.add("kma-gate"); dim.hidden = false; setTimeout(function () { loginView("in"); }, 0); }
     else if (S && nextUrl()) location.replace(nextUrl());
@@ -462,12 +506,45 @@
     var T = "/suneung-korean/teacher.html";
     el.innerHTML = S && ROLE ? '<a href="' + T + '#st">학생 현황</a><a href="' + T + '#asg">과제</a><a href="' + T + '#nt">공지</a>' + (ROLE === "admin" ? '<a href="' + T + '#adm">선생님 관리</a>' : "") : "";
   }
-  if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
+  /* v107: 학생 화면 위쪽 '과제' 탭 — 화면 머리의 메뉴에 넣고, 메뉴가 없거나 안 보이면 위쪽 가운데에 띄운다 */
+  var topTab = null, tabT = null, tabFloat = false, tabFront = false;
+  function navOf() { return document.querySelector("[data-kma-tnav]") || document.querySelector("header.gnb .gnb-nav, header.top nav, header.topbar .nav, header.topbar .gnb-nav"); }
+  function paintTab(retry) {
+    if (!(S && !ROLE && !LOCKED)) { if (topTab) { topTab.remove(); topTab = null; } return; }
+    var nav = navOf(), n = todo(), inNav = false;
+    if (!topTab) {
+      topTab = document.createElement("a"); topTab.href = "#"; topTab.setAttribute("role", "button");
+      topTab.onclick = function (e) { e.preventDefault(); tab = "asg"; openPanel(); };
+    }
+    if (retry) tabFloat = tabFront = false;
+    if (nav && !tabFloat) {
+      var sib = nav.querySelector("a:not(.kma-tab), button:not(.kma-tab)") || (nav.closest("nav") || nav).querySelector("a:not(.kma-tab), button:not(.kma-tab)");
+      var host = tabFront ? (nav.closest("nav") || nav) : nav;
+      if (topTab.parentNode !== host) { if (tabFront) host.insertBefore(topTab, host.firstChild); else host.appendChild(topTab); }
+      topTab.className = "kma-tab" + (sib && sib.className ? " " + String(sib.className).replace(/\b(active|on|home)\b/g, "").trim() : "");
+      inNav = topTab.getClientRects().length > 0;
+      if (!inNav) tabFloat = true;
+      else if (!tabFront) { var rc = topTab.getBoundingClientRect();      /* 좁은 화면: 메뉴 끝이라 화면 밖이면 맨 앞으로 */
+        if (rc.right > window.innerWidth - 2 || rc.left < 0) { tabFront = true; host = nav.closest("nav") || nav; host.insertBefore(topTab, host.firstChild); } }
+    }
+    if (!inNav) { if (topTab.parentNode !== document.body) document.body.appendChild(topTab); topTab.className = "kma kma-tab kma-float"; }
+    var html = "과제" + (n ? " <i>" + n + "</i>" : "");
+    if (topTab.innerHTML !== html) topTab.innerHTML = html;
+    topTab.setAttribute("aria-label", "과제" + (n ? " " + n + "개" : ""));
+  }
+  function watchTab() {
+    if (!window.MutationObserver) return;
+    new MutationObserver(function () { clearTimeout(tabT); tabT = setTimeout(function () {
+      if (!topTab || !document.body.contains(topTab) || (!tabFloat && topTab.parentNode === document.body && navOf())) paintTab();
+    }, 250); }).observe(document.body, { childList: true, subtree: true });
+    window.addEventListener("resize", function () { clearTimeout(tabT); tabT = setTimeout(function () { paintTab(true); }, 300); });
+  }
+  if (document.body) { mount(); watchTab(); } else document.addEventListener("DOMContentLoaded", function () { mount(); watchTab(); });
   var box = function () { return dim.firstChild; };
   pill.onclick = function () { openPanel(); };
   dim.addEventListener("click", function (e) { if (e.target === dim) closePanel(); });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") { if (!run.hidden) return; if (!dim.hidden) closePanel(); } });
-  function closePanel() { if (LOCKED) return; dim.hidden = true; }
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") { if (document.querySelector(".kp-root")) { window.KMAPrint && window.KMAPrint.close(); return; } if (!run.hidden) return; if (!dim.hidden) closePanel(); } });
+  function closePanel() { if (LOCKED) return; dim.hidden = true; ntOpen = false; }
   function todo() { return (ASG || []).filter(function (a) { return !a.done; }).length; }
   function paintPill() {
     pill.classList.toggle("kma-t", !!(S && ROLE));
@@ -578,10 +655,26 @@
       if (r[0].ok) SUM = r[0].sum; if (r[1].ok) ASG = r[1].list; if (r[2].ok) NT = r[2].list;
       if (CUR && ASG) { var cur = ASG.filter(function (a) { return a.id === CUR.id; })[0]; if (cur) { if (CUR.st && !cur.st) cur.st = CUR.st; if (CUR.done && !cur.done) { cur.done = CUR.done; cur.key = CUR.key; } cur._auto = CUR._auto; cur._busy = CUR._busy; CUR = cur; } }
       (ASG || []).forEach(function (a) { if (isExam(a) && !a.done && examSt(a) && examLeft(a) <= 0 && a !== CUR) lateSubmit(a); });
-      paintPill();
+      paintPill(); paintTab();
       if (show) dim.hidden = false;
-      if (!dim.hidden && S) meView();
+      if (!dim.hidden && S && !ntOpen) meView();
+      noticePop();
     });
+  }
+
+  /* v107: 새 공지 — 로그인한 뒤(화면을 열 때) 아직 못 본 공지가 있으면 창으로 한 번 띄운다 */
+  var ntShown = false, ntOpen = false;
+  function noticePop() {
+    if (ntShown || !S || ROLE || LOCKED || !NT || !NT.length || !dim.hidden || !run.hidden) return;
+    var key = "kma.ns." + S.id, seen = +ls(key) || 0, list = NT.filter(function (n) { return (n.created || 0) > seen; });
+    if (!list.length) return;
+    ntShown = true; ntOpen = true; dim.hidden = false;
+    var newest = Math.max.apply(null, NT.map(function (n) { return n.created || 0; }));
+    box().innerHTML = '<h2 id="kmaH">새 공지 ' + list.length + '개</h2><p class="s" style="margin:0">선생님이 올린 공지예요.</p><div class="ntp">' + list.slice().reverse().slice(0, 5).map(function (n) {
+      return '<div class="nt"><b>' + esc(n.title) + "</b>" + esc(n.body || "").replace(/\n/g, "<br>") + "<small>" + (n.cls ? esc(n.cls) + " · " : "") + new Date(n.created || 0).toLocaleDateString("ko-KR", { month: "long", day: "numeric" }) + "</small></div>"; }).join("") + "</div>" +
+      '<div class="row"><button class="btn pri" type="button" id="kmaNtOk">확인했어요</button>' + (todo() ? '<button class="btn" type="button" id="kmaNtAsg">과제 보기</button>' : "") + "</div>";
+    document.getElementById("kmaNtOk").onclick = function () { ls(key, newest); closePanel(); };
+    var ga = document.getElementById("kmaNtAsg"); if (ga) ga.onclick = function () { ls(key, newest); ntOpen = false; tab = "asg"; meView(); };
   }
 
   /* ---------- 과제 풀기 ---------- */
@@ -605,7 +698,7 @@
     if (a._busy) return; a._busy = true;
     call("siteSubmit", [S.id, S.token, a.id, ls("kma.d." + a.id) || {}]).then(function (r) {
       a._busy = false; if (!r.ok) return;
-      a.done = r.done; a.key = r.key; a._auto = true; ls("kma.d." + a.id, null); ls("kma.x." + a.id, null); paintPill(); if (!dim.hidden && S && !LOCKED) meView();
+      a.done = r.done; a.key = r.key; a._auto = true; ls("kma.d." + a.id, null); ls("kma.x." + a.id, null); paintPill(); paintTab(); if (!dim.hidden && S && !LOCKED) meView();
     });
   }
   function openRun(aid) {
@@ -615,6 +708,13 @@
     if (isExam(CUR) && !CUR.done && !examSt(CUR)) return paintStart();
     paintRun();
     if (isExam(CUR) && !CUR.done) { if (examLeft(CUR) <= 0) doSubmit(true); else startTick(); }
+  }
+  /* v107: 인쇄(미리 보기) — /suneung-korean/js/asgprint.js 를 그때 불러온다 */
+  var printP = null;
+  function printRun() {
+    var a = CUR; if (!a) return;
+    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=107"));
+    printP.then(function () { window.KMAPrint.open(a, {}); }).catch(function () { printP = null; var m = document.getElementById("kmaRM"); if (m) m.textContent = "인쇄 화면을 불러오지 못했어요."; });
   }
   function closeRun() { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; CUR = null; openPanel(); }
   function paintStart() {
@@ -653,7 +753,7 @@
     var a = CUR, done = !!a.done, key = a.key || {}, exam = isExam(a), over = exam && !done && examLeft(a) <= 0;
     var h = '<div class="in"><div class="top"><div><b style="font-size:18px">' + esc(a.title) + '</b><div style="font-size:13px;color:var(--k-sub)">' + a.items.length + "문항" + (exam ? " · 모의고사 " + a.min + "분" : "") + (a.due ? " · 마감 " + esc(a.due) : "") +
       (done ? " · 제출함" + (a.done.n ? " " + a.done.sc + "/" + a.done.n : "") + (a._auto ? " · 시간이 끝나 자동으로 제출했어요" : "") : (exam ? " · 닫아도 시간은 계속 흘러요" : "")) + '</div></div>' +
-      '<div style="display:flex;gap:8px;align-items:center">' + (exam && !done ? '<span class="tm' + (examLeft(a) <= 60000 ? " low" : "") + '" id="kmaTm" role="timer">남은 시간 ' + mmss(examLeft(a)) + "</span>" : "") + '<button class="btn" type="button" id="kmaRX">닫기</button></div></div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' + (exam && !done ? '<span class="tm' + (examLeft(a) <= 60000 ? " low" : "") + '" id="kmaTm" role="timer">남은 시간 ' + mmss(examLeft(a)) + "</span>" : "") + '<button class="btn" type="button" id="kmaPr" title="종이에 풀 수 있게 인쇄(미리 보기)">인쇄</button><button class="btn" type="button" id="kmaRX">닫기</button></div></div>' +
       (a.msg ? '<p class="s" style="margin:14px 0 0;white-space:pre-wrap">' + esc(a.msg) + "</p>" : "");
     var lastP = "";
     a.items.forEach(function (it, n) {
@@ -688,6 +788,7 @@
     run.innerHTML = h;
     fillGm();
     document.getElementById("kmaRX").onclick = closeRun;
+    document.getElementById("kmaPr").onclick = printRun;
     var x2 = document.getElementById("kmaRX2"); if (x2) x2.onclick = closeRun;
     run.querySelectorAll(".ch[data-k]").forEach(function (b) { b.onclick = function () { ANS[b.dataset.k] = +b.dataset.n; ls("kma.d." + a.id, ANS); var y = run.scrollTop; paintRun(); run.scrollTop = y; }; });
     run.querySelectorAll("textarea[data-w]").forEach(function (t) { t.oninput = function () { ANS[t.dataset.w] = t.value; ls("kma.d." + a.id, ANS); }; });
@@ -761,10 +862,16 @@
     box().innerHTML = '<h2 id="kmaH">과제로 내기</h2><p class="s">담은 ' + items.length + "문항을 학생들에게 과제로 냅니다. 객관식은 학생이 제출하면 바로 채점되고, 정답은 제출한 뒤에만 보여요." + (noKey ? " (정답이 없는 " + noKey + "문항은 채점하지 않아요.)" : "") + "</p>" +
       '<label class="f" for="kmaT">제목</label><input type="text" id="kmaT" maxlength="60" value="' + esc(new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" }) + " 과제") + '">' +
       '<label class="f" for="kmaG">안내 말(선택)</label><textarea id="kmaG" maxlength="400" style="min-height:70px"></textarea>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="f" for="kmaD">마감일(선택)</label><input type="date" id="kmaD"></div><div><label class="f" for="kmaC">반(비우면 모두)</label><input type="text" id="kmaC" maxlength="20" placeholder="예: 공무원반"></div></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="f" for="kmaD">마감일(선택)</label><input type="date" id="kmaD"></div><div><label class="f" for="kmaC">학급</label><select id="kmaC"><option value="">불러오는 중…</option></select></div></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="f" for="kmaK">종류</label><select id="kmaK"><option value="">과제 · 시간 제한 없음</option><option value="exam">모의고사 · 시간 제한</option></select></div><div><label class="f" for="kmaMin">제한 시간(분)</label><input type="text" inputmode="numeric" id="kmaMin" maxlength="3" value="' + Math.max(5, Math.round(items.length * 1.5)) + '" disabled></div></div>' +
       '<div class="msg" id="kmaM" role="alert"></div><div class="row"><button class="btn pri" type="button" id="kmaGo">과제 내기</button><button class="btn" type="button" id="kmaX">닫기</button></div>';
     document.getElementById("kmaX").onclick = closePanel;
+    call("teacherClasses", []).then(function (r) {
+      var sel = document.getElementById("kmaC"); if (!sel) return;
+      var list = (r && r.ok && r.list) || [], adm = !!(r && r.admin);
+      sel.innerHTML = (adm || !list.length ? '<option value="">' + (adm ? "모든 학생" : "학급이 없어요 — 먼저 학급을 만들어 주세요") + "</option>" : "") + list.map(function (c) { return "<option>" + esc(c) + "</option>"; }).join("");
+      if (!adm && !list.length) { document.getElementById("kmaGo").disabled = true; document.getElementById("kmaM").innerHTML = '첫 화면 위쪽 ‘학생 현황’에서 학급을 만든 뒤 과제를 낼 수 있어요.'; }
+    });
     document.getElementById("kmaK").onchange = function () {
       var x = this.value === "exam", t = document.getElementById("kmaT"); document.getElementById("kmaMin").disabled = !x; document.getElementById("kmaGo").textContent = x ? "모의고사 내기" : "과제 내기";
       t.value = x ? t.value.replace(/과제$/, "모의고사") : t.value.replace(/모의고사$/, "과제");
