@@ -306,7 +306,7 @@ function mkForm(){
 }
 /* ---------- 선생님 관리(관리자만) ---------- */
 function admView(){
-  M.innerHTML='<h1>선생님 관리</h1><p class="sub">관리자만 보는 화면입니다. 다른 선생님이 사이트에서 아이디를 만든 뒤, 그 아이디를 여기에 넣으면 학생 현황·과제·공지를 쓸 수 있어요.</p>'+
+  M.innerHTML='<h1>선생님 관리</h1><p class="sub">관리자만 보는 화면입니다. 선생님 아이디는 로그인 창에서 따로 만들 수 없어요. 다른 선생님이 로그인 창의 \'처음 왔어요 · 아이디 만들기\'로 아이디를 만든 뒤, 그 아이디를 여기에 넣어 등록하면 학생 현황·과제·공지를 쓸 수 있어요.</p>'+
     '<div class="card"><div class="bar" style="margin:0"><input type="text" id="taId" placeholder="선생님 아이디" style="width:200px"><button class="btn pri" type="button" id="taGo">선생님으로 등록</button></div><div class="msg" id="taM"></div></div><div id="taL" style="margin-top:16px"><p class="sub">불러오는 중…</p></div>';
   function list(r){ if(!r.ok){ $('taL').innerHTML='<p class="msg">'+esc(r.msg||'불러오지 못했어요.')+'</p>'; return; }
     $('taL').innerHTML=r.list.length?'<div class="tw"><table><thead><tr><th>선생님 아이디</th><th>등록한 날</th><th></th></tr></thead><tbody>'+r.list.map(function(t){ return '<tr><td><b>'+esc(t.id)+'</b></td><td>'+day(t.at)+'</td><td class="num"><button class="btn sm" type="button" data-rm="'+esc(t.uid)+'">선생님에서 빼기</button></td></tr>'; }).join('')+'</tbody></table></div>':'<p class="empty">등록한 선생님이 없어요. 관리자는 따로 등록하지 않아도 됩니다.</p>';
