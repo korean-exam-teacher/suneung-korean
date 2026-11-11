@@ -61,15 +61,17 @@ ul.ev{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto}ul.ev li
 .mk-r input{width:18px;height:18px}.mk-v{padding:0 4px 14px 42px}.mk-v img{display:block;max-width:100%;height:auto;margin:6px 0;border-radius:4px}
 mark{background:rgba(242,214,92,.55);color:inherit;border-radius:2px}
 .mk-bk{position:sticky;top:58px;z-index:5;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bg);border:1px solid var(--brand);border-radius:14px;padding:10px 14px;margin:0 0 12px;font-size:14px}.mk-bk b{color:var(--brand)}
+.rs td,.rs th{padding:8px 10px}.rs td.c{text-align:right;color:var(--sub)}.rs td.c.key{color:var(--ok);font-weight:700}.rs td.c.trap{color:var(--no);font-weight:700}.rs td.t{white-space:normal;min-width:200px}.rs tr.x td{background:var(--soft);white-space:normal;cursor:default}.rs tr.x img{display:block;max-width:min(100%,720px);height:auto;margin:6px 0}
+.mk-auto{background:var(--soft);border-radius:14px;padding:10px 14px;font-size:14px}.mk-auto input[type=number]{width:74px;padding:6px 8px}.ck{display:inline-flex;gap:6px;align-items:center;font-size:13.5px;color:var(--sub);cursor:pointer}.ck input{width:17px;height:17px;margin:0}
 .who{display:inline-block;font-size:12.5px;background:var(--brand);color:#fff;border-radius:999px;padding:2px 10px;margin-left:6px;vertical-align:3px;font-weight:600}
 @media (max-width:760px){.mk-r{grid-template-columns:24px minmax(0,1fr) 46px}.mk-r .hide{display:none}.mk-v{padding-left:4px}}
 @media (max-width:760px){.kp{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.bars div{grid-template-columns:120px 1fr 70px}.top nav button{padding:8px 8px;font-size:14px}}
 </style>
 </head>
 <body>
-<header class="top"><a class="brand" href="/suneung-korean/">국어의 모든 것</a><nav id="nav" hidden><a class="home" href="/suneung-korean/">처음 화면</a><button type="button" data-v="st" class="on">학생 현황</button><button type="button" data-v="asg">과제</button><button type="button" data-v="nt">공지</button><button type="button" data-v="adm" id="admTab" hidden>선생님 관리</button><button type="button" id="out">로그아웃</button></nav></header>
+<header class="top"><a class="brand" href="/suneung-korean/">국어의 모든 것</a><nav id="nav" hidden><a class="home" href="/suneung-korean/">처음 화면</a><button type="button" data-v="st" class="on">학생 현황</button><button type="button" data-v="asg">과제</button><button type="button" data-v="rs">응답률</button><button type="button" data-v="nt">공지</button><button type="button" data-v="adm" id="admTab" hidden>선생님 관리</button><button type="button" id="out">로그아웃</button></nav></header>
 <main class="wrap" id="main"></main>
-<script src="js/account.js?v=104" data-noui></script>
+<script src="js/account.js?v=106" data-noui></script>
 <script>
 (function(){
 /* account.js 와 같은 서버 주소를 쓴다 */
@@ -101,10 +103,10 @@ function load(){
 }
 document.querySelectorAll('#nav [data-v]').forEach(function(b){ b.onclick=function(){ VIEW=b.dataset.v; OPEN=null; history.replaceState(null,'','#'+VIEW); paint(); }; });
 $('out').onclick=function(){ PW=''; KMA.logout(); };
-window.addEventListener('hashchange',function(){ var v=(location.hash||'#st').slice(1); if(D&&v!==VIEW&&/^(st|asg|nt|adm)$/.test(v)){ VIEW=v; OPEN=null; paint(); } });
+window.addEventListener('hashchange',function(){ var v=(location.hash||'#st').slice(1); if(D&&v!==VIEW&&/^(st|asg|rs|nt|adm)$/.test(v)){ VIEW=v; OPEN=null; paint(); } });
 function paint(){
   document.querySelectorAll('#nav [data-v]').forEach(function(b){ b.classList.toggle('on',b.dataset.v===(VIEW==='make'?'asg':VIEW)); });
-  if(VIEW==='make') return makeView(); if(VIEW==='asg') return asgView(); if(VIEW==='nt') return ntView(); if(VIEW==='adm'&&ADM) return admView(); stView();
+  if(VIEW==='make') return makeView(); if(VIEW==='asg') return asgView(); if(VIEW==='rs') return rsView(); if(VIEW==='nt') return ntView(); if(VIEW==='adm'&&ADM) return admView(); stView();
 }
 /* ---------- 학생 현황 ---------- */
 function classes(){ var c={}; D.rows.forEach(function(r){ if(r.sum.cls) c[r.sum.cls]=1; }); return Object.keys(c).sort(); }
@@ -155,23 +157,94 @@ function detail(id){
 /* ---------- 과제 ---------- */
 function asgView(){
   var h='<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div><h1>과제</h1><p class="sub" style="margin:0">객관식은 학생이 제출하면 바로 채점되고, 서술형 답은 학생별로 읽을 수 있어요.</p></div><button class="btn pri" type="button" id="mkGo">＋ 기출 골라 과제 만들기</button></div>'+
-    '<p class="sub" style="margin:10px 0 0">공무원 국어·수능·PSAT·LEET·중등임용·대학 논술 기출을 골라 낼 수 있어요. 문제 화면에서 담은 문제로 내도 됩니다(\'과제로 내기\' 단추).</p>';
+    '<p class="sub" style="margin:10px 0 0">공무원 국어·수능·PSAT·LEET·중등임용·대학 논술 기출을 골라 과제나 모의고사(시간 제한)로 낼 수 있어요. 문제 화면에서 담은 문제로 내도 됩니다(\'과제로 내기\' 단추).</p>';
   if(!D.asg.length){ M.innerHTML=h+'<p class="empty">아직 낸 과제가 없어요.</p>'; $('mkGo').onclick=function(){ VIEW='make'; paint(); }; return; }
   h+='<div style="margin-top:18px">'+D.asg.slice().reverse().map(function(a){
-    var who=D.rows.filter(function(r){ return !a.cls||r.sum.cls===a.cls; });
-    var done=who.filter(function(r){return r.sub[a.id];});
+    var aud=D.rows.filter(function(r){ return !a.cls||r.sum.cls===a.cls; });
+    var done=aud.filter(function(r){return r.sub[a.id];});
     var avg=done.length&&done[0].sub[a.id].n?Math.round(done.reduce(function(x,r){return x+r.sub[a.id].sc/r.sub[a.id].n;},0)/done.length*100)+'%':'–';
-    return '<div class="asg"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h3>'+esc(a.title)+'</h3><div class="meta">'+a.items.length+'문항 · '+(a.cls?esc(a.cls):'모든 학생')+(a.due?' · 마감 '+esc(a.due):'')+' · 낸 날 '+day(a.created)+'</div></div>'+
-      '<button class="btn sm" type="button" data-del="'+esc(a.id)+'">지우기</button></div>'+
-      '<div class="meta" style="margin-top:8px">제출 <b>'+done.length+'/'+who.length+'</b> · 평균 '+avg+(who.length>done.length?' · 아직: '+who.filter(function(r){return !r.sub[a.id];}).map(function(r){return esc(r.name||r.id);}).join(', '):'')+'</div>'+
-      (done.length?'<div class="tw" style="margin-top:10px"><table><thead><tr><th>이름(아이디)</th><th class="num">점수</th><th>제출</th><th class="num">횟수</th></tr></thead><tbody>'+done.map(function(r){ var d=r.sub[a.id]; return '<tr data-id="'+esc(r.id)+'"><td>'+esc(who(r.id))+'</td><td class="num">'+(d.n?d.sc+'/'+d.n:'서술형')+'</td><td>'+day(d.at)+'</td><td class="num">'+(d.tries||1)+'</td></tr>'; }).join('')+'</tbody></table></div>':'')+'</div>';
+    var X=a.mode==='exam', going=X?aud.filter(function(r){ return !r.sub[a.id]&&r.ex&&r.ex[a.id]; }):[];
+    return '<div class="asg"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h3>'+esc(a.title)+(X?' <span class="tag">모의고사 '+a.min+'분</span>':'')+'</h3><div class="meta">'+a.items.length+'문항 · '+(a.cls?esc(a.cls):'모든 학생')+(a.due?' · 마감 '+esc(a.due):'')+' · 낸 날 '+day(a.created)+'</div></div>'+
+      '<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn sm" type="button" data-rs="'+esc(a.id)+'">'+(RSOPEN===a.id?'응답률 닫기':'문항별 응답률')+'</button><button class="btn sm" type="button" data-del="'+esc(a.id)+'">지우기</button></span></div>'+
+      '<div class="meta" style="margin-top:8px">제출 <b>'+done.length+'/'+aud.length+'</b> · 평균 '+avg+(going.length?' · 푸는 중: '+going.map(function(r){return esc(r.name||r.id);}).join(', '):'')+(aud.length>done.length+going.length?' · 아직: '+aud.filter(function(r){return !r.sub[a.id]&&going.indexOf(r)<0;}).map(function(r){return esc(r.name||r.id);}).join(', '):'')+'</div>'+
+      (RSOPEN===a.id?rsTable(rsOfAsg(a),true):'')+
+      (done.length?'<div class="tw" style="margin-top:10px"><table><thead><tr><th>이름(아이디)</th><th class="num">점수</th><th>제출</th><th class="num">'+(X?'걸린 시간':'횟수')+'</th></tr></thead><tbody>'+done.map(function(r){ var d=r.sub[a.id]; return '<tr data-id="'+esc(r.id)+'"><td>'+esc(who(r.id))+'</td><td class="num">'+(d.n?d.sc+'/'+d.n:'서술형')+'</td><td>'+day(d.at)+'</td><td class="num">'+(X?(d.dur?Math.max(1,Math.round(d.dur/60000))+'분':'–'):(d.tries||1))+'</td></tr>'; }).join('')+'</tbody></table></div>':'')+'</div>';
   }).join('')+'</div>';
   M.innerHTML=h;
   $('mkGo').onclick=function(){ VIEW='make'; paint(); };
   M.querySelectorAll('[data-del]').forEach(function(b){ b.onclick=function(){
-    if(!b.dataset.sure){ b.dataset.sure=1; b.textContent='정말 지우기'; return; }
-    call('deleteSiteAssign',[PW,b.dataset.del]).then(function(r){ if(r.ok){ D.asg=r.list; paint(); } }); }; });
-  M.querySelectorAll('tbody tr').forEach(function(tr){ tr.onclick=function(){ VIEW='st'; OPEN=tr.dataset.id; paint(); }; });
+    if(!b.dataset.sure){ b.dataset.sure=1; b.textContent='정말 지우기'; b.title='지워도 문항별 응답률은 남아요'; return; }
+    b.disabled=true; call('deleteSiteAssign',[PW,b.dataset.del]).then(function(r){ if(r.ok){ load(); } else { b.disabled=false; b.textContent=r.msg||'지우지 못했어요'; } }); }; });
+  M.querySelectorAll('[data-rs]').forEach(function(b){ b.onclick=function(){ RSOPEN=RSOPEN===b.dataset.rs?null:b.dataset.rs; var y=window.scrollY; paint(); window.scrollTo(0,y); }; });
+  rsBind();
+  M.querySelectorAll('.asg > .tw:not(.rs) tbody tr').forEach(function(tr){ tr.onclick=function(){ VIEW='st'; OPEN=tr.dataset.id; paint(); }; });
+}
+/* ---------- 응답률 (v106) — 학생들이 과제·모의고사에서 고른 답을 문항·선택지별로 모은다. 선생님만 본다 ---------- */
+var RSOPEN=null, RS={src:'',sort:'n',open:null}, CIRC='①②③④⑤';
+var RSN={'adv:gm:':'공무원 국어','sn:':'수능·모의평가','adv:psat:':'PSAT','adv:leet:':'LEET','adv:im:':'중등임용','non:':'대학 논술','hak:':'개념 학습'};
+function rsSrc(k){ for(var p in RSN) if(k.indexOf(p)===0) return p; return ''; }
+function rsRow(k){ return {k:k,c:[0,0,0,0,0,0],t:'',a:'',nc:0,ans:0,it:null,n:0}; }
+function rsFin(r){ r.n=r.c.reduce(function(x,y){return x+y;},0); r.ok=r.ans?r.c[r.ans]:0; return r; }
+function rsOfAsg(a){ return (a.items||[]).filter(function(it){return it.nc;}).map(function(it,i){ var r=rsRow(it.k); r.c=((a.resp||{})[it.k]||r.c).slice(); r.t=it.title||nice(it.k); r.a=it.a||''; r.nc=it.nc; r.ans=(a.key||{})[it.k]||0; r.it=it; r.no=i+1; return rsFin(r); }); }
+function rsAll(){ var m={};
+  function add(k,c,info){ var r=m[k]||(m[k]=rsRow(k)); for(var i=0;i<6;i++) r.c[i]+=+c[i]||0; ['t','a','nc','ans','it'].forEach(function(f){ if(info[f]&&!r[f]) r[f]=info[f]; }); }
+  Object.keys(D.stat||{}).forEach(function(k){ var s=D.stat[k]||{}; if(s.nc) add(k,s.c||[],{t:s.t,a:s.a,nc:s.nc,ans:s.ans}); });
+  (D.asg||[]).forEach(function(a){ (a.items||[]).forEach(function(it){ if(it.nc) add(it.k,(a.resp||{})[it.k]||[],{t:it.title||nice(it.k),a:it.a,nc:it.nc,ans:(a.key||{})[it.k],it:it}); }); });
+  return Object.keys(m).map(function(k){ return rsFin(m[k]); }); }
+function rsP(c,n){ return n?Math.round(c/n*100):0; }
+function rsTable(rows,inAsg){
+  if(!rows.length) return '<p class="empty">객관식 문항이 없어요.</p>';
+  var nc=rows.reduce(function(x,r){return Math.max(x,r.nc);},4);
+  return '<div class="tw rs" style="margin-top:10px"><table><thead><tr>'+(inAsg?'<th class="num">번호</th>':'')+'<th>문항</th><th>영역</th><th class="num">응답</th><th class="num">정답률</th>'+CIRC.slice(0,nc).split('').map(function(c){return '<th class="num">'+c+'</th>';}).join('')+'<th class="num">무응답</th></tr></thead><tbody>'+
+    rows.map(function(r){ var top=0; for(var i=1;i<=r.nc;i++) if(i!==r.ans&&r.c[i]>top) top=r.c[i];
+      var cells=''; for(var j=1;j<=nc;j++){ var p=rsP(r.c[j],r.n), cl=j>r.nc?'':(j===r.ans?' key':(r.n>=3&&r.c[j]===top&&p>=30?' trap':'')); cells+='<td class="c'+cl+'" title="'+(r.c[j]||0)+'명">'+(j>r.nc?'':(r.n?p+'%':'–'))+'</td>'; }
+      return '<tr data-rk="'+esc(r.k)+'"><td class="num"'+(inAsg?'':' hidden')+'>'+(r.no||'')+'</td><td class="t">'+esc(r.t)+'</td><td>'+esc(r.a||'')+'</td><td class="num">'+r.n+'</td><td class="num">'+(r.ans?pct(r.ok,r.n):'<span class="pc">–</span>')+'</td>'+cells+'<td class="c">'+(r.n?rsP(r.c[0],r.n)+'%':'–')+'</td></tr>'+
+        (RS.open===r.k?'<tr class="x"><td colspan="'+(6+nc)+'"><div data-rx="'+esc(r.k)+'">불러오는 중…</div></td></tr>':''); }).join('')+'</tbody></table></div>'+
+    '<p class="sub" style="margin:8px 0 0;font-size:13px"><b style="color:var(--ok)">초록</b>은 정답, <b style="color:var(--no)">빨강</b>은 가장 많이 고른 오답(30% 이상)이에요. 줄을 누르면 문항이 보여요.</p>';
+}
+function rsFind(k){ var it=null; (D.asg||[]).forEach(function(a){ (a.items||[]).forEach(function(x){ if(x.k===k) it=x; }); });
+  if(!it){ var m=/^adv:gm:(.+)-(\d+)$/.exec(k); if(m) it={k:k,gm:{e:m[1],n:+m[2]}}; } return it; }
+function rsBind(){
+  M.querySelectorAll('tr[data-rk]').forEach(function(tr){ tr.onclick=function(){ RS.open=RS.open===tr.dataset.rk?null:tr.dataset.rk; var y=window.scrollY; paint(); window.scrollTo(0,y); }; });
+  M.querySelectorAll('[data-rx]').forEach(function(el){ var it=rsFind(el.dataset.rx); if(it) showItem(it,el); else el.innerHTML='<span class="sub">지운 과제의 문항이라 여기서는 문항을 보여 줄 수 없어요.</span>'; });
+}
+function rsView(){
+  var all=rsAll(), srcs={}; all.forEach(function(r){ srcs[rsSrc(r.k)]=1; });
+  var rows=all.filter(function(r){ return r.n>0&&(!RS.src||rsSrc(r.k)===RS.src); }), none=all.filter(function(r){ return !r.n; }).length;
+  rows.sort(RS.sort==='lo'?function(a,b){ return (a.ok/a.n)-(b.ok/b.n)||b.n-a.n; }:RS.sort==='hi'?function(a,b){ return (b.ok/b.n)-(a.ok/a.n)||b.n-a.n; }:function(a,b){ return b.n-a.n||(a.ok/a.n)-(b.ok/b.n); });
+  var tot=rows.reduce(function(x,r){return x+r.n;},0);
+  var h='<h1>응답률</h1><p class="sub">학생들이 과제와 모의고사에서 고른 답을 문항·선택지별로 모았어요. 이 화면은 선생님에게만 보이고, 과제를 지워도 그 응답은 남아요.</p>'+
+    '<div class="kp"><div><b>'+rows.length+'</b><small>응답이 모인 문항</small></div><div><b>'+tot.toLocaleString()+'</b><small>응답 수(모두)</small></div><div><b>'+(tot?Math.round(rows.reduce(function(x,r){return x+r.ok;},0)/tot*100)+'%':'–')+'</b><small>전체 정답률</small></div><div><b>'+none+'</b><small>아직 응답 없는 문항</small></div></div>'+
+    '<div class="bar"><select id="rsS"><option value="">모든 시험</option>'+Object.keys(srcs).filter(Boolean).map(function(p){ return '<option value="'+p+'"'+(p===RS.src?' selected':'')+'>'+RSN[p]+'</option>'; }).join('')+'</select>'+
+    '<select id="rsO"><option value="n">응답 많은 순</option><option value="lo"'+(RS.sort==='lo'?' selected':'')+'>정답률 낮은 순</option><option value="hi"'+(RS.sort==='hi'?' selected':'')+'>정답률 높은 순</option></select>'+
+    (rows.length?'<button class="btn sm" type="button" id="rsCsv">표로 내려받기(CSV)</button>':'')+'</div>';
+  h+=rows.length?rsTable(rows,false):'<div class="tw"><p class="empty">아직 모인 응답이 없어요. 학생들이 과제나 모의고사를 제출하면 여기에 쌓여요.</p></div>';
+  M.innerHTML=h;
+  $('rsS').onchange=function(){ RS.src=this.value; RS.open=null; paint(); };
+  $('rsO').onchange=function(){ RS.sort=this.value; RS.open=null; paint(); };
+  if($('rsCsv')) $('rsCsv').onclick=function(){
+    var L=[['문항','영역','응답 수','정답','정답률(%)','①','②','③','④','⑤','무응답']];
+    rows.forEach(function(r){ L.push([r.t,r.a||'',r.n,r.ans||'',r.ans?rsP(r.ok,r.n):'',r.c[1],r.c[2],r.c[3],r.c[4],r.nc>=5?r.c[5]:'',r.c[0]]); });
+    var csv='\ufeff'+L.map(function(x){ return x.map(function(v){ v=String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }).join(','); }).join('\r\n');
+    var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='응답률_'+new Date(Date.now()+9*3600000).toISOString().slice(0,10)+'.csv'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500); };
+  rsBind();
+}
+/* 문항 하나 보여 주기(응답률·담은 문항에서 같이 씀) */
+function showItem(it,el){
+  var h='';
+  if(it.p&&it.p.imgs&&it.p.imgs.length) h+=it.p.imgs.map(picH).join('');
+  var S=window.ASG_SRC&&ASG_SRC.sn;
+  if(it.txt){ var pas=it.txt.pas||(it._pk&&S&&S.pas[it._pk]&&!(it.p&&it.p.imgs&&it.p.imgs.length)?S.pas[it._pk]:'');
+    if(pas) h+='<div class="wans" style="max-height:320px;overflow:auto">'+esc(pas)+'</div>';
+    h+='<p style="margin:10px 0 4px"><b>'+esc(it.txt.ask)+'</b></p>'+(it.txt.body?'<div class="wans">'+esc(it.txt.body)+'</div>':'')+((it.txt.ch||[]).length?'<ol style="margin:4px 0 0;padding-left:22px;list-style:none">'+it.txt.ch.map(function(c,i){ return '<li>'+CIRC[i]+' '+esc(c)+'</li>'; }).join('')+'</ol>':''); }
+  h+=(it.q||[]).map(picH).join('');
+  if(it.src) h+='<p class="sub" style="margin:6px 0 0;font-size:12.5px">'+esc(it.src)+'</p>';
+  el.innerHTML=h+(it.gm?'<div data-gmv>그림을 불러오는 중…</div>':'');
+  if(it.gm) gmQ(it.gm.e).then(function(d){ var bx=el.querySelector('[data-gmv]'); if(!bx) return;
+    var link='<a href="/advanced-korean/gongmuwon.html#exam/'+esc(it.gm.e)+'" target="_blank" rel="noopener">시험지에서 '+it.gm.n+'번 보기 ↗</a>';
+    if(!d||!d.q){ bx.innerHTML=link; return; }
+    var g=''; (d.p||[]).forEach(function(p){ if(p.rng[0]<=it.gm.n&&it.gm.n<=p.rng[1]) g+='<img src="'+p.img+'" alt="지문">'; }); (d.q||[]).forEach(function(q){ if(q.n===it.gm.n) g+='<img src="'+q.img+'" alt="'+it.gm.n+'번">'; });
+    bx.innerHTML=g||link; });
 }
 /* ---------- 기출 골라 과제 만들기 (v103: 공무원·수능·PSAT·LEET·임용·대학 논술) ---------- */
 var SRCS=[
@@ -181,13 +254,13 @@ var SRCS=[
   {k:'leet',n:'LEET', f:'/advanced-korean/asg_adv.js?v=103'},
   {k:'im',  n:'중등임용', f:'/advanced-korean/asg_adv.js?v=103'},
   {k:'non', n:'대학 논술', f:'/nonsul-korean/asg_non.js?v=103'}];
-var MK={src:'gm',q:'',a:{},g:'',y:'',e:'',page:1,open:null,bk:[],it:{},step:1}, LOADED={}, GMQ={}, NRM={};
+var MK={src:'gm',q:'',a:{},g:'',y:'',e:'',page:1,open:null,bk:[],it:{},step:1,hide:true,n:10,even:false,am:'',kind:'',min:0,open2:null}, LOADED={}, GMQ={}, NRM={}, USED={};
 function script(src){ if(LOADED[src]) return LOADED[src]; LOADED[src]=new Promise(function(res,rej){ var a=document.createElement('script'); a.src=src; a.onload=res; a.onerror=function(){ delete LOADED[src]; rej(); }; document.head.appendChild(a); }); return LOADED[src]; }
 function srcLoad(k){
   if(k==='gm') return script('/advanced-korean/gm/index.js?v=102').then(function(){ return script('/advanced-korean/gm/gmfind.js?v=102'); }).then(function(){ return GMFind.load(); });
   return script(SRCS.filter(function(x){return x.k===k;})[0].f);
 }
-function gmQ(eid){ return GMQ[eid]||(GMQ[eid]=fetch('/advanced-korean/gm/q/'+eid+'.json?v=101').then(function(r){return r.json();}).catch(function(){return null;})); }
+function gmQ(eid){ return GMQ[eid]||(GMQ[eid]=fetch('/advanced-korean/gm/q/'+eid+'.json?v=106').then(function(r){return r.json();}).catch(function(){return null;})); }
 function nz(s){ return String(s||'').replace(/\s+/g,'').toLowerCase(); }
 function SRC(){ return window.ASG_SRC&&ASG_SRC[MK.src]; }
 /* 회차(시험지 한 회) 열쇠·이름 */
@@ -217,7 +290,22 @@ function bkDel(k){ var i=MK.bk.indexOf(k); if(i>=0) MK.bk.splice(i,1); delete MK
 /* 과제로 보낼 문항: 수능 지문 글은 같은 지문의 첫 문항에만 붙인다 */
 function finalItems(){ var seen={}; return MK.bk.map(function(k){ var it=JSON.parse(JSON.stringify(MK.it[k])), pk=it._pk; delete it._pk;
   if(pk&&!(it.p&&it.p.imgs&&it.p.imgs.length)){ var S=window.ASG_SRC&&ASG_SRC.sn; if(!seen[pk]&&S&&S.pas[pk]) it.txt.pas=S.pas[pk]; seen[pk]=1; } return it; }); }
+/* v106: 이미 낸 문항 — 지금 있는 과제의 문항 + 지운 과제의 문항(보관함) */
+function usedMap(){ var u={}; (D.asg||[]).forEach(function(a){ (a.items||[]).forEach(function(it){ (u[it.k]=u[it.k]||[]).push(a.title); }); }); Object.keys(D.stat||{}).forEach(function(k){ if(!u[k]) u[k]=['지운 과제']; }); return u; }
+function keyOf(id){ return MK.src==='gm'?'adv:gm:'+id:byId(id).it.k; }
+function isUsed(id){ return !!USED[keyOf(id)]; }
+function areaOf(id){ return MK.src==='gm'?(window.GM_DATA.items[id].a||'영역 미정'):(byId(id).a||'(없음)'); }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+/* 자동으로 고르기: 지금 조건에 맞는 문항 가운데 n개를 무작위로(같은 지문 묶음은 함께) 담는다 */
+function autoPick(G,n,even){
+  var pool=shuffle(G.map(function(g){ return {ids:g.ids.filter(function(id){ return !bkHas(id); }), a:areaOf(g.ids[0])}; }).filter(function(g){ return g.ids.length; })), order=pool;
+  if(even){ var by={}, ks=[]; pool.forEach(function(g){ if(!by[g.a]){ by[g.a]=[]; ks.push(g.a); } by[g.a].push(g); }); order=[]; var more=true;
+    while(more){ more=false; ks.forEach(function(k){ var g=by[k].shift(); if(g){ order.push(g); more=true; } }); } }
+  var got=0; order.forEach(function(g){ if(got>=n||got+g.ids.length>n) return; g.ids.forEach(bkAdd); got+=g.ids.length; });
+  return got;
+}
 function makeView(){
+  USED=usedMap();
   M.innerHTML='<p class="sub">문항 목록을 불러오는 중…</p>';
   srcLoad(MK.src).then(function(){ return script('/advanced-korean/gm/index.js?v=102'); }).then(function(){ return script('/advanced-korean/gm/gmfind.js?v=102'); })
     .then(function(){ if(MK.step===2) return mkForm(); mkList(); })
@@ -225,7 +313,9 @@ function makeView(){
 }
 function mkList(){
   var gm=MK.src==='gm', S=gm?null:SRC(), D2=window.GM_DATA, EX=GMFind.EX;
-  var G=mkSearch(), PER=30, pages=Math.max(1,Math.ceil(G.length/PER)); if(MK.page>pages) MK.page=pages;
+  var G0=mkSearch(), nUsed=0, PER=30;
+  var G=G0.map(function(g){ var ids=g.ids.filter(function(id){ return !isUsed(id); }); nUsed+=g.ids.length-ids.length; if(!MK.hide||ids.length===g.ids.length) return g; if(!ids.length) return null; return {ids:ids,pk:g.pk,snip:g.snip,where:g.where}; }).filter(Boolean);
+  var pages=Math.max(1,Math.ceil(G.length/PER)); if(MK.page>pages) MK.page=pages;
   var all=gm?D2.exams:S.items, years={}, grps={}, areas={}, exs={};
   if(gm){ D2.exams.forEach(function(e){ years[e.year]=1; }); GMFind.GRPS.forEach(function(g){ grps[g]=1; }); GMFind.AREAS.concat(['영역 미정']).forEach(function(a){ areas[a]=1; });
     D2.exams.filter(function(e){ return (!MK.g||e.grp===MK.g)&&(!MK.y||String(e.year)===MK.y); }).sort(function(a,b){ return b.year-a.year||a.id.localeCompare(b.id); }).forEach(function(e){ exs[e.id]=e.title; }); }
@@ -239,13 +329,16 @@ function mkList(){
     '<div class="bar">'+(Object.keys(grps).length>1?'<select id="mkG"><option value="">'+(MK.src==='non'?'모든 대학':'모든 시험')+'</option>'+Object.keys(grps).sort().map(function(g){ return '<option'+(g===MK.g?' selected':'')+'>'+esc(g)+'</option>'; }).join('')+'</select>':'')+
     '<select id="mkY"><option value="">모든 연도</option>'+Object.keys(years).sort().reverse().map(function(y){ return '<option'+(y===MK.y?' selected':'')+'>'+y+'</option>'; }).join('')+'</select>'+
     (exList.length?'<select id="mkE"><option value="">회차 하나 고르기</option>'+exList.map(function(k){ return '<option value="'+esc(k)+'"'+(k===MK.e?' selected':'')+'>'+esc(exs[k])+'</option>'; }).join('')+'</select>':'')+
-    (MK.e?'<button class="btn sm" type="button" id="mkAllE">이 회차 모두 담기</button>':'')+'</div>'+
+    (MK.e?'<button class="btn sm" type="button" id="mkAllE">이 회차 모두 담기</button>':'')+
+    '<label class="ck" title="전에 과제·모의고사로 낸 문항(지운 과제 포함)"><input type="checkbox" id="mkHide"'+(MK.hide?' checked':'')+'> 이미 낸 문항 빼기'+(nUsed?' <span style="color:var(--faint)">('+nUsed+'문항)</span>':'')+'</label></div>'+
+    '<div class="bar mk-auto"><b>자동으로 고르기</b><input type="number" id="mkN" min="1" max="60" value="'+MK.n+'" aria-label="문항 수"><span>문항을</span><label class="ck"><input type="checkbox" id="mkEven"'+(MK.even?' checked':'')+'> 영역 골고루</label><button class="btn sm pri" type="button" id="mkAuto">지금 조건에서 뽑아 담기</button>'+(MK.am?'<span style="color:var(--sub);font-size:13px">'+esc(MK.am)+'</span>':'<span style="color:var(--faint);font-size:13px">위에서 시험·영역·연도·낱말을 정한 뒤 누르세요.</span>')+'</div>'+
     '<div class="mk-bk"><span>담은 문항 <b>'+MK.bk.length+'</b>개'+(MK.bk.length>60?' <span style="color:var(--no)">· 한 과제는 60문항까지예요</span>':'')+'</span>'+(MK.bk.length?'<button class="btn pri sm" type="button" id="mkNext"'+(MK.bk.length>60?' disabled':'')+'>다음: 과제 정보 →</button><button class="btn sm" type="button" id="mkClr">비우기</button>':'<span style="color:var(--sub);font-size:13px">줄 앞 네모를 눌러 담으세요. 줄을 누르면 문항이 보여요.</span>')+'</div>'+
     '<p class="sub" style="margin:4px 0">'+(MK.q?'‘'+esc(MK.q)+'’ — ':'')+G.reduce(function(x,g){return x+g.ids.length;},0).toLocaleString()+'문항'+(pages>1?' · '+MK.page+'/'+pages+'쪽':'')+'</p>';
   h+=G.length?'<ul class="mk-l">'+G.slice((MK.page-1)*PER,MK.page*PER).map(function(g){ var id=g.ids[0], k=g.pk||id, inb=g.ids.every(bkHas), title, no, area, tx, note='';
     if(gm){ var it=D2.items[id], e=EX[it.e]; title=e.title.replace(/\s*국어\s*$/,''); no=g.ids.length>1?D2.items[g.ids[0]].n+'~'+D2.items[g.ids[g.ids.length-1]].n+'번':it.n+'번'; area=it.a||'영역 미정'; tx=it.q?esc(it.q):'<span style="color:var(--faint)">(문항 그림으로 보기)</span>'; note=e.mode==='pg'?'쪽 그림':''; }
     else { var x=byId(id); title=exName(x); no=MK.src==='non'?'':(g.ids.length>1?byId(g.ids[0]).n+'~'+byId(g.ids[g.ids.length-1]).n+'번':x.n+'번'); area=x.a||''; tx=esc(x.s||(x.it.txt&&x.it.txt.ask)||''); note=x.it.nc?'':'서술형'; }
     if(g.snip) tx='<span class="tg" style="margin-right:6px">'+g.where+'</span>'+g.snip;
+    var ut=g.ids.filter(isUsed); if(ut.length) tx='<span class="tg" style="margin-right:6px;color:var(--no)" title="'+esc((USED[keyOf(ut[0])]||[]).join(', '))+'">낸 적 있음</span>'+tx;
     return '<li><div class="mk-r" data-k="'+esc(k)+'" style="cursor:pointer"><input type="checkbox" data-bk="'+esc(g.ids.join('\n'))+'"'+(inb?' checked':'')+' aria-label="담기"><span><b>'+esc(title)+'</b></span><span class="hide">'+no+'</span><span class="tg hide">'+esc(area)+'</span><span class="tx">'+tx+'</span><span class="hide" style="color:var(--faint);font-size:12px">'+note+'</span></div>'+(MK.open===k?'<div class="mk-v" id="mkV">불러오는 중…</div>':'')+'</li>'; }).join('')+'</ul>':'<p class="empty">맞는 문항이 없어요.</p>';
   if(pages>1){ h+='<div class="bar" style="justify-content:center">'; var s0=Math.max(1,MK.page-4), e2=Math.min(pages,s0+9); for(var n=s0;n<=e2;n++) h+='<button class="btn sm'+(n===MK.page?' pri':'')+'" type="button" data-p="'+n+'">'+n+'</button>'; h+='</div>'; }
   M.innerHTML=h;
@@ -258,15 +351,21 @@ function mkList(){
   if($('mkG')) $('mkG').onchange=function(){ MK.g=this.value; MK.e=''; MK.page=1; again(); };
   $('mkY').onchange=function(){ MK.y=this.value; MK.e=''; MK.page=1; again(); };
   if($('mkE')) $('mkE').onchange=function(){ MK.e=this.value; MK.page=1; again(); };
-  if($('mkAllE')) $('mkAllE').onclick=function(){ var ids=gm?Object.keys(D2.items).filter(function(id){ return D2.items[id].e===MK.e; }):S.items.filter(function(x){ return exKey(x)===MK.e; }).map(function(x){ return x.i; }); ids.forEach(bkAdd); again(); };
+  if($('mkAllE')) $('mkAllE').onclick=function(){ var ids=gm?Object.keys(D2.items).filter(function(id){ return D2.items[id].e===MK.e; }):S.items.filter(function(x){ return exKey(x)===MK.e; }).map(function(x){ return x.i; }); if(MK.hide) ids=ids.filter(function(id){ return !isUsed(id); }); ids.forEach(bkAdd); MK.am=''; again(); };
+  $('mkHide').onchange=function(){ MK.hide=this.checked; MK.page=1; MK.open=null; again(); };
+  $('mkN').onchange=function(){ MK.n=Math.max(1,Math.min(60,Math.round(+this.value||10))); };
+  $('mkEven').onchange=function(){ MK.even=this.checked; };
+  $('mkAuto').onclick=function(){ MK.n=Math.max(1,Math.min(60,Math.round(+$('mkN').value||10))); var room=60-MK.bk.length, want=Math.min(MK.n,room);
+    if(want<=0){ MK.am='한 과제는 60문항까지예요.'; return again(); }
+    var got=autoPick(G,want,MK.even);
+    MK.am=!got?'조건에 맞는 문항이 없어요. 조건을 넓히거나 ‘이미 낸 문항 빼기’를 꺼 보세요.':got<MK.n?'맞는 문항이 모자라 '+got+'문항만 담았어요.':got+'문항을 뽑아 담았어요. ‘다음: 과제 정보’에서 하나씩 보고 뺄 수 있어요.'; again(); };
   if($('mkNext')) $('mkNext').onclick=function(){ MK.step=2; mkForm(); window.scrollTo(0,0); };
-  if($('mkClr')) $('mkClr').onclick=function(){ MK.bk=[]; MK.it={}; again(); };
+  if($('mkClr')) $('mkClr').onclick=function(){ MK.bk=[]; MK.it={}; MK.am=''; again(); };
   M.querySelectorAll('[data-p]').forEach(function(b){ b.onclick=function(){ MK.page=+b.dataset.p; MK.open=null; mkList(); window.scrollTo(0,0); }; });
   M.querySelectorAll('[data-bk]').forEach(function(c){ c.onclick=function(ev){ ev.stopPropagation(); }; c.onchange=function(){ c.dataset.bk.split('\n').forEach(function(x){ if(c.checked) bkAdd(x); else bkDel(MK.src+'|'+x); }); again(); }; });
   M.querySelectorAll('.mk-r').forEach(function(r){ r.onclick=function(){ MK.open=MK.open===r.dataset.k?null:r.dataset.k; again(); }; });
   if(MK.open){ var g=G.filter(function(x){ return (x.pk||x.ids[0])===MK.open; })[0]; if(g) mkShow(g.ids); }
 }
-var CIRC='①②③④⑤';
 function picH(p){ return '<img src="'+esc(p.s)+'" alt="" loading="lazy">'; }
 function mkShow(ids){
   var el=$('mkV'); if(!el) return;
@@ -290,19 +389,30 @@ function mkShow(ids){
 }
 function mkForm(){
   var cls=classes(), srcN={}; SRCS.forEach(function(x){ srcN[x.k]=x.n; });
-  M.innerHTML='<p style="margin:0 0 6px"><button class="lnk" type="button" id="mkB2">← 문항 더 고르기</button></p><h1>과제 정보</h1><p class="sub">담은 '+MK.bk.length+'문항을 과제로 냅니다. 학생은 로그인하면 오른쪽 아래 단추에서 과제를 봅니다. 객관식은 제출하면 바로 채점되고, 서술형 답은 학생 현황에서 읽을 수 있어요.</p>'+
-    '<div class="card" style="max-width:620px"><label class="sub" style="display:block;margin:0 0 4px">제목</label><input type="text" id="mkT" maxlength="60" style="width:100%" value="'+esc(new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric'})+' 국어 과제')+'">'+
+  var X=MK.kind==='exam', dmin=MK.min||Math.max(5,Math.round(MK.bk.length*1.5)), dstr=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric'});
+  M.innerHTML='<p style="margin:0 0 6px"><button class="lnk" type="button" id="mkB2">← 문항 더 고르기</button></p><h1>과제 정보</h1><p class="sub">담은 '+MK.bk.length+'문항을 과제나 모의고사로 냅니다. 학생은 로그인하면 오른쪽 아래 단추에서 봅니다. 객관식은 제출하면 바로 채점되고, 서술형 답은 학생 현황에서 읽을 수 있어요.</p>'+
+    '<div class="card" style="max-width:620px"><div class="grid2"><div><label class="sub" style="display:block;margin:0 0 4px">종류</label><select id="mkK" style="width:100%"><option value="">과제 · 시간 제한 없음</option><option value="exam"'+(X?' selected':'')+'>모의고사 · 정한 시간 안에</option></select></div><div><label class="sub" style="display:block;margin:0 0 4px">제한 시간(분)</label><input type="number" id="mkMin" min="1" max="300" style="width:100%" value="'+dmin+'"'+(X?'':' disabled')+'></div></div>'+
+    '<p class="sub" id="mkXN" style="margin:8px 0 0;font-size:13px"'+(X?'':' hidden')+'>모의고사는 학생이 ‘시작하기’를 누른 때부터 시간이 흐르고, 시간이 끝나면 그때까지 고른 답이 자동으로 제출돼요.</p>'+
+    '<label class="sub" style="display:block;margin:12px 0 4px">제목</label><input type="text" id="mkT" maxlength="60" style="width:100%" value="'+esc(dstr+(X?' 모의고사':' 국어 과제'))+'">'+
     '<label class="sub" style="display:block;margin:12px 0 4px">안내 말(선택)</label><textarea id="mkM" maxlength="400" style="min-height:70px"></textarea>'+
     '<div class="grid2" style="margin-top:4px"><div><label class="sub" style="display:block;margin:8px 0 4px">마감일(선택)</label><input type="date" id="mkD" style="width:100%"></div><div><label class="sub" style="display:block;margin:8px 0 4px">반(비우면 모든 학생)</label><input type="text" id="mkC" maxlength="20" list="mkCL" style="width:100%" placeholder="예: 공무원반"><datalist id="mkCL">'+cls.map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist></div></div>'+
-    '<div class="msg" id="mkMsg"></div><button class="btn pri" type="button" id="mkSave"'+(MK.bk.length>60?' disabled':'')+'>과제 내기</button></div>'+
-    '<h2>담은 문항</h2><ul class="mk-l">'+MK.bk.map(function(k){ var it=MK.it[k]; return '<li><div class="mk-r" style="grid-template-columns:1fr 60px"><span>'+esc(it.title)+' <small>'+esc(srcN[k.split('|')[0]]||'')+(it.nc?'':' · 서술형')+'</small></span><button class="btn sm" type="button" data-rm="'+esc(k)+'">빼기</button></div></li>'; }).join('')+'</ul>';
+    '<div class="msg" id="mkMsg"></div><button class="btn pri" type="button" id="mkSave"'+(MK.bk.length>60?' disabled':'')+'>'+(X?'모의고사 내기':'과제 내기')+'</button></div>'+
+    '<h2>담은 문항 <span style="font-size:13px;font-weight:400;color:var(--sub)">줄을 누르면 문항이 보여요</span></h2><ul class="mk-l">'+MK.bk.map(function(k,i){ var it=MK.it[k]; return '<li><div class="mk-r" data-o2="'+esc(k)+'" style="grid-template-columns:34px 1fr 60px;cursor:pointer"><span style="color:var(--faint)">'+(i+1)+'</span><span>'+esc(it.title)+' <small>'+esc(srcN[k.split('|')[0]]||'')+(it.a?' · '+esc(it.a):'')+(it.nc?(it.ans?' · 정답 '+CIRC[it.ans-1]:''):' · 서술형')+'</small></span><button class="btn sm" type="button" data-rm="'+esc(k)+'">빼기</button></div>'+(MK.open2===k?'<div class="mk-v" id="mkV2"></div>':'')+'</li>'; }).join('')+'</ul>';
+  var keep=function(){ MK.kind=$('mkK').value; MK.min=Math.round(+$('mkMin').value||0); };
+  $('mkK').onchange=function(){ var x=this.value==='exam', t=$('mkT'); $('mkMin').disabled=!x; $('mkXN').hidden=!x; $('mkSave').textContent=x?'모의고사 내기':'과제 내기';
+    if(t.value===dstr+' 국어 과제'||t.value===dstr+' 모의고사') t.value=dstr+(x?' 모의고사':' 국어 과제'); keep(); };
+  $('mkMin').onchange=keep;
+  M.querySelectorAll('[data-o2]').forEach(function(r){ r.onclick=function(e){ if(e.target.closest('button')) return; keep(); MK.open2=MK.open2===r.dataset.o2?null:r.dataset.o2; var y=window.scrollY; mkForm(); window.scrollTo(0,y); }; });
+  if(MK.open2&&$('mkV2')&&MK.it[MK.open2]) showItem(MK.it[MK.open2],$('mkV2'));
   $('mkB2').onclick=function(){ MK.step=1; makeView(); };
-  M.querySelectorAll('[data-rm]').forEach(function(b){ b.onclick=function(){ bkDel(b.dataset.rm); if(!MK.bk.length){ MK.step=1; return makeView(); } mkForm(); }; });
-  $('mkSave').onclick=function(){ var b=this; b.disabled=true; $('mkMsg').textContent='';
+  M.querySelectorAll('[data-rm]').forEach(function(b){ b.onclick=function(){ keep(); bkDel(b.dataset.rm); if(!MK.bk.length){ MK.step=1; return makeView(); } var y=window.scrollY; mkForm(); window.scrollTo(0,y); }; });
+  $('mkSave').onclick=function(){ var b=this; $('mkMsg').textContent=''; keep();
+    if(MK.kind==='exam'&&!(MK.min>=1)){ $('mkMsg').textContent='제한 시간(분)을 넣어 주세요.'; return; }
+    b.disabled=true;
     var items=finalItems(), key={}; items.forEach(function(x){ if(x.ans) key[x.k]=x.ans; });
-    call('saveSiteAssign',[PW,{title:$('mkT').value,msg:$('mkM').value,due:$('mkD').value,cls:$('mkC').value,items:items,key:key}]).then(function(r){
+    call('saveSiteAssign',[PW,{title:$('mkT').value,msg:$('mkM').value,due:$('mkD').value,cls:$('mkC').value,items:items,key:key,mode:MK.kind,min:MK.min}]).then(function(r){
       b.disabled=false; if(!r.ok){ $('mkMsg').textContent=r.msg||'내지 못했어요.'; return; }
-      MK.bk=[]; MK.it={}; MK.step=1; VIEW='asg'; load(); }); };
+      MK.bk=[]; MK.it={}; MK.step=1; MK.kind=''; MK.min=0; MK.am=''; MK.open2=null; VIEW='asg'; load(); }); };
 }
 /* ---------- 선생님 관리(관리자만) ---------- */
 function admView(){
