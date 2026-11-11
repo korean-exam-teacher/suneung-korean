@@ -78,7 +78,7 @@ select.cadd{width:92px;padding:4px 6px;font-size:13px;color:var(--sub)}
 <body>
 <header class="top"><a class="brand" href="/suneung-korean/">국어의 모든 것</a><nav id="nav" hidden><a class="home" href="/suneung-korean/">처음 화면</a><button type="button" data-v="st" class="on">학생 현황</button><button type="button" data-v="asg">과제</button><button type="button" data-v="rs">응답률</button><button type="button" data-v="nt">공지</button><button type="button" data-v="adm" id="admTab" hidden>선생님 관리</button><button type="button" id="out">로그아웃</button></nav></header>
 <main class="wrap" id="main"></main>
-<script src="js/account.js?v=111" data-noui></script>
+<script src="js/account.js?v=113" data-noui></script>
 <script>
 (function(){
 /* account.js 와 같은 서버 주소를 쓴다 */
@@ -111,9 +111,21 @@ function load(){
 document.querySelectorAll('#nav [data-v]').forEach(function(b){ b.onclick=function(){ VIEW=b.dataset.v; OPEN=null; history.replaceState(null,'','#'+VIEW); paint(); }; });
 $('out').onclick=function(){ PW=''; KMA.logout(); };
 window.addEventListener('hashchange',function(){ var v=(location.hash||'#st').slice(1); if(D&&v!==VIEW&&/^(st|asg|rs|nt|adm)$/.test(v)){ VIEW=v; OPEN=null; paint(); } });
+/* v113: 관리자가 선생님마다 켜고 끄는 기능 — 꺼 둔 기능의 탭·단추는 보이지 않는다(관리자는 늘 모두) */
+var PERMS=[['asg','과제·모의고사 내기'],['nt','공지 올리기'],['cls','학급 만들기·학생 넣기'],['rs','응답률 보기'],['live','수업 열기(화면 같이 보기)'],['mv','이름 고치기·기록 옮기기']];
+function can(f){ return ADM||!(D&&D.me&&D.me.perm&&D.me.perm[f]===0); }
+function applyPerm(){
+  var hide=function(sel,on){ M.querySelectorAll(sel).forEach(function(e){ e.style.display=on?'none':''; }); };
+  document.querySelectorAll('#nav [data-v="rs"]').forEach(function(b){ b.hidden=!can('rs'); });
+  document.querySelectorAll('#nav [data-v="nt"]').forEach(function(b){ b.hidden=!can('nt'); });
+  hide('#mkGo',!can('asg')); hide('#clNew,#clDel,select.cadd',!can('cls')); hide('#mvTo,#mvGo',!can('mv'));
+  if(!can('cls')) M.querySelectorAll('td select').forEach(function(e){ if(e.closest('tbody')) e.disabled=true; });
+}
 function paint(){
   document.querySelectorAll('#nav [data-v]').forEach(function(b){ b.classList.toggle('on',b.dataset.v===(VIEW==='make'?'asg':VIEW)); });
-  if(VIEW==='make') return makeView(); if(VIEW==='asg') return asgView(); if(VIEW==='rs') return rsView(); if(VIEW==='nt') return ntView(); if(VIEW==='adm'&&ADM) return admView(); stView();
+  if((VIEW==='make'&&!can('asg'))||(VIEW==='rs'&&!can('rs'))||(VIEW==='nt'&&!can('nt'))) VIEW='st';
+  if(VIEW==='make') makeView(); else if(VIEW==='asg') asgView(); else if(VIEW==='rs') rsView(); else if(VIEW==='nt') ntView(); else if(VIEW==='adm'&&ADM) admView(); else stView();
+  applyPerm();
 }
 /* v108: 학생 한 명이 여러 학급에 — users.cls 는 학급 이름을 줄바꿈으로 이은 글자열 */
 function clsOf(v){ return String(v||'').split('\n').map(function(x){ return x.trim(); }).filter(Boolean); }
@@ -252,7 +264,7 @@ function evToggle(li){
 }
 /* ---------- 과제 ---------- */
 function asgView(){
-  var h='<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div><h1>과제</h1><p class="sub" style="margin:0">객관식은 학생이 제출하면 바로 채점되고, 서술형 답은 학생별로 읽을 수 있어요.</p></div><button class="btn pri" type="button" id="mkGo">＋ 기출 골라 과제 만들기</button></div>'+
+  var h='<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div><h1>과제</h1><p class="sub" style="margin:0">객관식은 학생이 제출하면 바로 채점되고, 서술형 답은 학생별로 읽을 수 있어요. ‘함께 풀기’를 누르면 학생이 보는 과제 화면이 그대로 열려요.</p></div><button class="btn pri" type="button" id="mkGo">＋ 기출 골라 과제 만들기</button></div>'+
     '<p class="sub" style="margin:10px 0 0">공무원 국어·수능·PSAT·LEET·중등임용·대학 논술 기출을 골라 과제나 모의고사(시간 제한)로 낼 수 있어요. 문제 화면에서 담은 문제로 내도 됩니다(\'과제로 내기\' 단추).</p>';
   if(!D.asg.length){ M.innerHTML=h+'<p class="empty">아직 낸 과제가 없어요.</p>'; $('mkGo').onclick=function(){ VIEW='make'; paint(); }; return; }
   h+='<div style="margin-top:18px">'+D.asg.slice().reverse().map(function(a){
@@ -261,7 +273,7 @@ function asgView(){
     var avg=done.length&&done[0].sub[a.id].n?Math.round(done.reduce(function(x,r){return x+r.sub[a.id].sc/r.sub[a.id].n;},0)/done.length*100)+'%':'–';
     var X=a.mode==='exam', going=X?aud.filter(function(r){ return !r.sub[a.id]&&r.ex&&r.ex[a.id]; }):[];
     return '<div class="asg"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h3>'+esc(a.title)+(X?' <span class="tag">모의고사 '+a.min+'분</span>':'')+'</h3><div class="meta">'+a.items.length+'문항 · '+(a.cls?esc(a.cls):'모든 학생')+(a.due?' · 마감 '+esc(a.due):'')+' · 낸 날 '+day(a.created)+'</div></div>'+
-      '<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn sm" type="button" data-pr="'+esc(a.id)+'">인쇄</button><button class="btn sm" type="button" data-rs="'+esc(a.id)+'">'+(RSOPEN===a.id?'응답률 닫기':'문항별 응답률')+'</button><button class="btn sm" type="button" data-del="'+esc(a.id)+'">지우기</button></span></div>'+
+      '<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><a class="btn sm" href="/suneung-korean/#asg='+esc(a.id)+'" title="학생이 보는 과제 화면을 그대로 열어요. 수업을 열면 학생 화면에도 같이 떠요." style="text-decoration:none">함께 풀기</a><button class="btn sm" type="button" data-pr="'+esc(a.id)+'">인쇄</button><button class="btn sm" type="button" data-rs="'+esc(a.id)+'">'+(RSOPEN===a.id?'응답률 닫기':'문항별 응답률')+'</button><button class="btn sm" type="button" data-del="'+esc(a.id)+'">지우기</button></span></div>'+
       '<div class="meta" style="margin-top:8px">제출 <b>'+done.length+'/'+aud.length+'</b> · 평균 '+avg+(going.length?' · 푸는 중: '+going.map(function(r){return esc(r.name||r.id);}).join(', '):'')+(aud.length>done.length+going.length?' · 아직: '+aud.filter(function(r){return !r.sub[a.id]&&going.indexOf(r)<0;}).map(function(r){return esc(r.name||r.id);}).join(', '):'')+'</div>'+
       (RSOPEN===a.id?rsTable(rsOfAsg(a),true):'')+
       (done.length?'<div class="tw" style="margin-top:10px"><table><thead><tr><th>이름(아이디)</th><th class="num">점수</th><th>제출</th><th class="num">'+(X?'걸린 시간':'횟수')+'</th></tr></thead><tbody>'+done.map(function(r){ var d=r.sub[a.id]; return '<tr data-id="'+esc(r.id)+'"><td>'+esc(who(r.id))+'</td><td class="num">'+(d.n?d.sc+'/'+d.n:'서술형')+'</td><td>'+day(d.at)+'</td><td class="num">'+(X?(d.dur?Math.max(1,Math.round(d.dur/60000))+'분':'–'):(d.tries||1))+'</td></tr>'; }).join('')+'</tbody></table></div>':'')+'</div>';
@@ -537,10 +549,12 @@ function mkForm(){
 }
 /* ---------- 선생님 관리(관리자만) ---------- */
 function admView(){
-  M.innerHTML='<h1>선생님 관리</h1><p class="sub">관리자만 보는 화면입니다. 선생님 아이디는 로그인 창에서 따로 만들 수 없어요. 다른 선생님이 로그인 창의 \'처음 왔어요 · 아이디 만들기\'로 아이디를 만든 뒤, 그 아이디를 여기에 넣어 등록하면 그 선생님이 학급을 만들어 학생을 넣고, 자기 학급에 과제·모의고사·공지를 낼 수 있어요. 선생님은 자기 학급만 보고, 관리자는 모든 학급을 봅니다.</p>'+
+  M.innerHTML='<h1>선생님 관리</h1><p class="sub">관리자만 보는 화면입니다. 선생님 아이디는 로그인 창에서 따로 만들 수 없어요. 선생님마다 쓸 수 있는 기능을 아래 표에서 켜고 끌 수 있어요(바꾸면 그 선생님이 다음에 화면을 열 때부터 적용). 다른 선생님이 로그인 창의 \'처음 왔어요 · 아이디 만들기\'로 아이디를 만든 뒤, 그 아이디를 여기에 넣어 등록하면 그 선생님이 학급을 만들어 학생을 넣고, 자기 학급에 과제·모의고사·공지를 낼 수 있어요. 선생님은 자기 학급만 보고, 관리자는 모든 학급을 봅니다.</p>'+
     '<div class="card"><div class="bar" style="margin:0"><input type="text" id="taId" placeholder="선생님 아이디" style="width:200px"><button class="btn pri" type="button" id="taGo">선생님으로 등록</button></div><div class="msg" id="taM"></div></div><div id="taL" style="margin-top:16px"><p class="sub">불러오는 중…</p></div>';
   function list(r){ if(!r.ok){ $('taL').innerHTML='<p class="msg">'+esc(r.msg||'불러오지 못했어요.')+'</p>'; return; }
-    $('taL').innerHTML=r.list.length?'<div class="tw"><table><thead><tr><th>선생님 아이디</th><th>담임 학급</th><th>등록한 날</th><th></th></tr></thead><tbody>'+r.list.map(function(t){ var cs=(D.cl||[]).filter(function(c){ return c.own===t.uid; }).map(function(c){ return c.name; }); return '<tr><td><b>'+esc(t.id)+'</b></td><td>'+(cs.length?esc(cs.join(', ')):'<span class="cnt">아직 없음</span>')+'</td><td>'+day(t.at)+'</td><td class="num"><button class="btn sm" type="button" data-rm="'+esc(t.uid)+'">선생님에서 빼기</button></td></tr>'; }).join('')+'</tbody></table></div>':'<p class="empty">등록한 선생님이 없어요. 관리자는 따로 등록하지 않아도 됩니다.</p>';
+    $('taL').innerHTML=r.list.length?'<div class="tw"><table><thead><tr><th>선생님 아이디</th><th>담임 학급</th><th>쓸 수 있는 기능 <small style="font-weight:400">(체크를 끄면 그 선생님 화면에서 사라져요)</small></th><th>등록한 날</th><th></th></tr></thead><tbody>'+r.list.map(function(t){ var cs=(D.cl||[]).filter(function(c){ return c.own===t.uid; }).map(function(c){ return c.name; }); return '<tr><td><b>'+esc(t.id)+'</b></td><td>'+(cs.length?esc(cs.join(', ')):'<span class="cnt">아직 없음</span>')+'</td><td><span class="cm" style="max-width:none">'+PERMS.map(function(x){ var pm=(D.perm||{})[t.uid]||{}; return '<label style="display:inline-flex;gap:4px;align-items:center;font-size:13px;margin-right:10px;white-space:nowrap"><input type="checkbox" data-pm="'+esc(t.uid)+'" data-f="'+x[0]+'"'+(pm[x[0]]===0?'':' checked')+'>'+x[1]+'</label>'; }).join('')+'</span></td><td>'+day(t.at)+'</td><td class="num"><button class="btn sm" type="button" data-rm="'+esc(t.uid)+'">선생님에서 빼기</button></td></tr>'; }).join('')+'</tbody></table></div>':'<p class="empty">등록한 선생님이 없어요. 관리자는 따로 등록하지 않아도 됩니다.</p>';
+    $('taL').querySelectorAll('[data-pm]').forEach(function(c){ c.onchange=function(){ var u=c.dataset.pm, pm={}; $('taL').querySelectorAll('[data-pm="'+u+'"]').forEach(function(x){ pm[x.dataset.f]=x.checked?1:0; });
+      call('setPerm',[PW,u,pm]).then(function(r){ if(!r.ok){ c.checked=!c.checked; $('taM').textContent=r.msg||'바꾸지 못했어요.'; return; } D.perm=D.perm||{}; D.perm[u]=r.perm; $('taM').textContent=''; }); }; });
     $('taL').querySelectorAll('[data-rm]').forEach(function(b){ b.onclick=function(){ if(!b.dataset.sure){ b.dataset.sure=1; b.textContent='정말 빼기'; return; } call('teacherRemove',[PW,b.dataset.rm]).then(list); }; }); }
   call('teacherList',[]).then(list);
   $('taGo').onclick=function(){ var v=$('taId').value.trim(); if(!v) return; $('taM').textContent=''; call('teacherAdd',[PW,v]).then(function(r){ if(!r.ok){ $('taM').textContent=r.msg; return; } $('taId').value=''; list(r); }); };
