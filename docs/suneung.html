@@ -2155,7 +2155,7 @@ function renderNotebook(){
     <div class="nb-sec"><h3>다시 풀어야 할 문항 ${wrong.length}개</h3>
       ${wrong.length ? `<div class="result-headrow" aria-hidden="true"><span>회차</span><span>번호</span><span>영역</span><span>소재 · 발문</span><span>풀이</span></div><ul class="result-list" id="nbList">${wrong.map((it,i)=>rowHtml(it, 'nb-'+i)).join('')}</ul>` : '<div class="nb-empty">틀린 문항이 없습니다. 잘하고 있어요!</div>'}
     </div>
-    <div class="nb-actions">${nbConfirm ? '정말 모든 풀이 기록을 지울까요? <button type="button" class="btn-plain" id="nbClearYes" style="color:var(--bad);border-color:var(--bad)">모두 지우기</button><button type="button" class="btn-plain" id="nbClearNo">취소</button>' : '<button type="button" class="btn-plain" id="nbClear">풀이 기록 지우기</button>'}</div>`}
+    <!-- v105: '풀이 기록 지우기' 단추를 없앰(잘못 눌러 기록이 모두 지워지는 일을 막음) -->`}
   `;
   document.getElementById('nbList')?.addEventListener('click', onListClick);
 }
