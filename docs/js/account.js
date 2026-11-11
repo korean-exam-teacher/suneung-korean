@@ -770,7 +770,7 @@
     dim.hidden = true; run.hidden = false; document.documentElement.style.overflow = "hidden"; document.body.classList.add("kma-running");
     run.setAttribute("data-ink-host", "asg:" + aid); run.setAttribute("data-ink-bottom", "78"); run.setAttribute("data-ink-ref", ".in");   /* 과제 화면 위에도 필기(js/ink.js) — 좌표는 가운데 문제 칸 기준 */
     if (!CUR.t && isExam(CUR) && !CUR.done && !examSt(CUR)) { paintStart(); liveTell(); return true; }
-    paintRun(); run.scrollTop = 0;
+    paintRun(); keepY(0);
     if (!CUR.t && isExam(CUR) && !CUR.done) { if (examLeft(CUR) <= 0) doSubmit(true); else startTick(); }
     liveTell(); return true;
   }
@@ -783,7 +783,7 @@
       if (!ASG || !ASG.some(function (a) { return a.id === aid; })) { if (!again) { LIVEWANT = [aid, ratio]; refresh(false); } return; }
       if (!openRun(aid, true)) return; LIVER = -1;
     }
-    if (ratio != null && ratio !== LIVER) { LIVER = ratio; setTimeout(function () { var h = run.scrollHeight - run.clientHeight; if (h > 0) run.scrollTo({ top: Math.round(ratio * h), behavior: "smooth" }); }, 250); }
+    if (ratio != null && ratio !== LIVER) { LIVER = ratio; setTimeout(function () { KEEPT = 0; var h = run.scrollHeight - run.clientHeight; if (h > 0) run.scrollTo({ top: Math.round(ratio * h), behavior: "smooth" }); }, 250); }
   }
   /* v107: 인쇄(미리 보기) — /suneung-korean/js/asgprint.js 를 그때 불러온다 */
   var printP = null;
@@ -807,7 +807,7 @@
         if (!r.ok || !r.st) { b.disabled = false; document.getElementById("kmaRM").textContent = r.msg || "시작하지 못했어요. 인터넷 연결을 확인해 주세요."; return; }
         a.st = r.st; ls("kma.x." + a.id, r.st);
         if (!CUR || CUR.id !== a.id) return;
-        CUR.st = r.st; paintRun(); run.scrollTop = 0;
+        CUR.st = r.st; paintRun(); keepY(0);
         if (examLeft(CUR) <= 0) doSubmit(true); else startTick();
       });
     };
@@ -820,7 +820,7 @@
       var sb2 = document.getElementById("kmaSub"); if (sb2) sb2.disabled = false;
       if (!r.ok) { var m = document.getElementById("kmaRM"); if (m && same) m.textContent = (auto ? "시간이 끝났어요. " : "") + (r.msg || "제출하지 못했어요.") + (auto ? " ‘제출하기’를 다시 눌러 주세요." : ""); return; }
       a.done = r.done; a.key = r.key; a._auto = !!auto; ls("kma.d." + a.id, null); ls("kma.x." + a.id, null); stopTick();
-      if (same) { CUR.done = r.done; CUR.key = r.key; CUR._auto = !!auto; paintRun(); run.scrollTop = 0; }
+      if (same) { CUR.done = r.done; CUR.key = r.key; CUR._auto = !!auto; paintRun(); keepY(0); }
       refresh(false);
     });
   }
@@ -867,9 +867,9 @@
     document.getElementById("kmaRX").onclick = closeRun;
     document.getElementById("kmaPr").onclick = printRun;
     var x2 = document.getElementById("kmaRX2"); if (x2) x2.onclick = closeRun;
-    var tk = document.getElementById("kmaTK"); if (tk) tk.onclick = function () { TSHOW = !TSHOW; var y = run.scrollTop; paintRun(); run.scrollTop = y; };
-    var lv = document.getElementById("kmaLv"); if (lv) lv.onclick = function () { lv.disabled = true; Live.open(); var n = 0, iv = setInterval(function () { if ((Live.code && Live.code()) || ++n > 20) { clearInterval(iv); if (!run.hidden && CUR && CUR.t) { var y = run.scrollTop; paintRun(); run.scrollTop = y; liveTell(); } } }, 400); };
-    run.querySelectorAll(".ch[data-k]").forEach(function (b) { b.onclick = function () { ANS[b.dataset.k] = +b.dataset.n; if (!tv) ls("kma.d." + a.id, ANS); var y = run.scrollTop; paintRun(); run.scrollTop = y; }; });
+    var tk = document.getElementById("kmaTK"); if (tk) tk.onclick = function () { TSHOW = !TSHOW; var y = run.scrollTop; paintRun(); keepY(y); };
+    var lv = document.getElementById("kmaLv"); if (lv) lv.onclick = function () { lv.disabled = true; Live.open(); var n = 0, iv = setInterval(function () { if ((Live.code && Live.code()) || ++n > 20) { clearInterval(iv); if (!run.hidden && CUR && CUR.t) { var y = run.scrollTop; paintRun(); keepY(y); liveTell(); } } }, 400); };
+    run.querySelectorAll(".ch[data-k]").forEach(function (b) { b.onclick = function () { ANS[b.dataset.k] = +b.dataset.n; if (!tv) ls("kma.d." + a.id, ANS); var y = run.scrollTop; paintRun(); keepY(y); }; });
     run.querySelectorAll("textarea[data-w]").forEach(function (t) { t.oninput = function () { ANS[t.dataset.w] = t.value; if (!tv) ls("kma.d." + a.id, ANS); }; });
     var sb = document.getElementById("kmaSub");
     if (sb) sb.onclick = function () {
@@ -878,18 +878,25 @@
     };
   }
   /* 공무원 문항: /advanced-korean/gm/q/<회차>.json 에서 그림을 가져와 채운다(같은 지문은 처음 한 번만) */
-  var GMC = {};
+  var GMC = {}, GMD = {}, KEEPY = 0, KEEPT = 0;
+  /* 다시 그린 뒤 보던 자리 지키기: 그림이 늦게 들어와 높이가 바뀌어도 1.5초 동안은 그 자리로 되돌린다(손으로 움직이면 그만둔다) */
+  function keepY(y) { KEEPY = y; KEEPT = Date.now(); run.scrollTop = y; }
+  function reKeep() { if (Date.now() - KEEPT < 1500 && Math.abs(run.scrollTop - KEEPY) > 1) run.scrollTop = KEEPY; }
+  run.addEventListener("load", function (e) { if (e.target && e.target.tagName === "IMG") reKeep(); }, true);
+  ["wheel", "touchstart", "keydown", "mousedown"].forEach(function (t) { run.addEventListener(t, function () { KEEPT = 0; }, { passive: true }); });
   function fillGm() {
     var shown = {};
     run.querySelectorAll("[data-gm]").forEach(function (el) {
       var p = el.dataset.gm.split("|"), e = p[0], n = +p[1];
-      GMC[e] = GMC[e] || fetch("/advanced-korean/gm/q/" + e + ".json?v=106").then(function (r) { return r.json(); }).catch(function () { return null; });
-      GMC[e].then(function (d) {
+      var put = function (d) {
         if (!d) { el.textContent = "문항 그림을 불러오지 못했어요."; return; }
         var q = (d.q || []).filter(function (x) { return x.n === n; })[0], h = "";
         (d.p || []).forEach(function (x, i) { if (x.rng[0] <= n && n <= x.rng[1] && !shown[e + i]) { shown[e + i] = 1; h += '<img src="' + x.img + '" alt="지문">'; } });
         el.innerHTML = h + (q ? '<img src="' + q.img + '" alt="' + n + '번 문항">' : '<a href="/advanced-korean/gongmuwon.html#exam/' + e + '" target="_blank" rel="noopener">시험지에서 ' + n + '번 보기 ↗</a>');
-      });
+      };
+      if (GMD[e]) return put(GMD[e]);   /* 이미 받은 회차는 바로 채운다 */
+      GMC[e] = GMC[e] || fetch("/advanced-korean/gm/q/" + e + ".json?v=106").then(function (r) { return r.json(); }).catch(function () { return null; });
+      GMC[e].then(function (d) { if (d) GMD[e] = d; put(d); reKeep(); });
     });
   }
   /* 안 푼 문제가 있으면 한 번 더 누르게 한다(창 띄우지 않음) */
