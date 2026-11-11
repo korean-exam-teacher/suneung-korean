@@ -476,7 +476,7 @@
     ".kma .nt{background:var(--k-soft);border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:14px;line-height:1.65}.kma .nt b{display:block;margin-bottom:2px}",
     /* 과제 풀기 */
     ".kma-run{position:fixed;inset:0;z-index:95;background:var(--k-bg);overflow:auto}.kma-run[hidden]{display:none}",
-    ".kma-run .in{max-width:none;margin:0;padding:10px 14px 120px}.kma-run .pas{columns:560px auto;column-gap:40px}",
+    ".kma-run .in{max-width:860px;margin:0 auto;padding:14px 14px 120px}",
     ".kma-run .top{position:sticky;top:0;background:var(--k-bg);display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--k-line);z-index:2}",
     ".kma-run .q{border-bottom:1px solid var(--k-line);padding:22px 0}.kma-run .qh{font-size:13px;color:var(--k-sub);margin-bottom:10px}.kma-run .qh b{color:var(--k-ink);font-size:15px;margin-right:6px}",
     ".kma-run img{display:block;max-width:100%;height:auto;margin:8px 0;border-radius:6px}",
