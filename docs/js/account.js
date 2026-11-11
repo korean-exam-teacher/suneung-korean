@@ -72,7 +72,7 @@
   function sumOf(d) {
     d = d || {}; var a = d.agg || emptyAgg(), days = d.days || {}, ds = Object.keys(days).filter(function (x) { return days[x] > 0; }).sort();
     var wk = 0, lim = day(Date.now() - 6 * 86400000); ds.forEach(function (x) { if (x >= lim) wk += days[x]; });
-    return { n: a.n || 0, f: a.f || 0, wrong: a.wrong || 0, wk: wk, last: d.last || 0, byG: a.byG || {}, byA: a.byA || {}, days: ds.slice(-60), cls: d.cls || "", app: null };
+    return { n: a.n || 0, f: a.f || 0, wrong: a.wrong || 0, wk: wk, last: d.last || 0, byG: a.byG || {}, byA: a.byA || {}, days: ds.slice(-60), cls: d.cls || "", name: d.name || "", app: null };
   }
   function errMsg(e) {
     var c = (e && e.code) || "";
@@ -134,16 +134,18 @@
   }
   function teacherRows() {
     return DB.collection("users").get().then(function (q) {
-      var rows = []; q.forEach(function (d) { var x = d.data() || {}; if (x.moved || d.id === uid()) return; rows.push({ uid: d.id, id: x.id || "?", created: x.created || 0, sum: sumOf(x), sub: {}, mysub: x.sub || {} }); });
+      var rows = []; q.forEach(function (d) { var x = d.data() || {}; if (x.moved || d.id === uid()) return; rows.push({ uid: d.id, id: x.id || "?", name: x.name || "", created: x.created || 0, sum: sumOf(x), sub: {}, mysub: x.sub || {} }); });
       return rows;
     });
   }
   var FBA = {
-    siteSignup: function (id, pw) {
+    siteSignup: function (id, pw, name) {
+      name = String(name || "").replace(/\s+/g, " ").trim().slice(0, 20);
+      if (!name) return Promise.resolve({ ok: false, msg: "이름을 적어 주세요." });
       if (!IDRE.test(String(id || ""))) return Promise.resolve({ ok: false, msg: "아이디는 2~12자 한글·영문·숫자로 적어 주세요." });
       if (String(pw || "").length < 6) return Promise.resolve({ ok: false, msg: "비밀번호는 6자 이상이에요." });
       return fbInit().then(function () { return AU.createUserWithEmailAndPassword(em(id), pw); }).then(function (c) {
-        ME = { id: id, created: Date.now(), days: {}, agg: emptyAgg(), last: 0, sub: {} }; EV = {};
+        ME = { id: id, name: name, created: Date.now(), days: {}, agg: emptyAgg(), last: 0, sub: {} }; EV = {};
         return uref(c.user.uid).set(ME);
       }).then(function () { return { ok: true, id: id, token: "fb", sum: sumOf(ME) }; });
     },
@@ -248,6 +250,16 @@
       var wb = DB.batch(); ["asg", "asgKey", "subs"].forEach(function (c) { wb.delete(DB.collection(c).doc(aid)); });
       return wb.commit().then(function () { return FBA.teacherSite(); }).then(function (r) { return { ok: true, list: r.asg }; });
     },
+    /* v104: 이름 — 학생이 스스로(siteSetName), 선생님이 학생 것을(setName) */
+    siteSetName: function (name) {
+      name = String(name || "").replace(/\s+/g, " ").trim().slice(0, 20); if (!name) return Promise.resolve({ ok: false, msg: "이름을 적어 주세요." });
+      return need().then(function () { return uref(uid()).update({ name: name }); }).then(function () { ME.name = name; return { ok: true, sum: sumOf(ME) }; });
+    },
+    setName: function (pw, id, name) {
+      var r = (TROWS || []).filter(function (x) { return x.id === id; })[0]; if (!r) return Promise.resolve({ ok: false, msg: "없는 학생이에요." });
+      name = String(name || "").replace(/\s+/g, " ").trim().slice(0, 20);
+      return uref(r.uid).update({ name: name }).then(function () { r.name = name; return { ok: true }; });
+    },
     setClass: function (pw, id, cls) {
       var r = (TROWS || []).filter(function (x) { return x.id === id; })[0]; if (!r) return Promise.resolve({ ok: false, msg: "없는 학생이에요." });
       return uref(r.uid).update({ cls: String(cls || "").trim().slice(0, 20) }).then(function () { return { ok: true }; });
@@ -313,19 +325,26 @@
     ROLE = r || ""; ls("kma.role", S ? { id: S.id, r: ROLE } : null);
     if (ROLE) ss("kma.tpw", "fb"); else { try { sessionStorage.removeItem("kma.tpw"); } catch (e) {} }
     try { document.dispatchEvent(new CustomEvent("kma:role", { detail: ROLE })); } catch (e) {}
-    if (typeof paintPill === "function" && pill) paintPill();
+    if (typeof paintPill === "function" && pill) { paintPill(); paintTnav(); }
   }
   function checkRole() {
     if (!FBCFG || !S) return Promise.resolve(ROLE);
     return call("teacherPing", []).then(function (r) { setRole(r && r.ok ? (r.admin ? "admin" : "teacher") : ""); return ROLE; }).catch(function () { return ROLE; });
   }
   if (ROLE) ss("kma.tpw", "fb");
+  /* v104: 문지기 — gate.js 가 html.kma-locked 를 붙여 두면 로그인 창만 보인다 */
+  var HUB = "/suneung-korean/", LOCKED = document.documentElement.classList.contains("kma-locked");
+  function nextUrl() { try { var n = new URLSearchParams(location.search).get("next") || ""; return /^\/(suneung|middle|nonsul|advanced|seonsul)-korean\//.test(n) ? n : ""; } catch (e) { return ""; } }
+  function enter() { var n = nextUrl(); if (n) location.replace(n); else location.reload(); }      /* 로그인한 뒤: 화면 다시 열기 */
+  function lockOut() { S = null; ls(SKEY, null); ls("kma.role", null); try { sessionStorage.removeItem("kma.tpw"); } catch (e) {} if (location.pathname.replace(/index\.html$/, "") === HUB) location.reload(); else location.href = HUB; }
   window.KMA = {
     on: !!(FBCFG || KMA_URL), fb: !!FBCFG, url: KMA_URL, call: call, user: function () { return S && S.id; },
     teacher: function () { return ss("kma.tpw") || ""; },
     role: function () { return ROLE || ""; },
-    record: record, assign: assign, open: function () { openPanel(); }, G: G
+    name: function () { return (SUM && SUM.name) || ""; },
+    record: record, assign: assign, open: function () { openPanel(); }, G: G, gate: false, logout: function () { logout(); }
   };
+  if (NOUI) window.KMA.logout = function () { var go = function () { lockOut(); }; call("siteLogout", []).then(go, go); };
   if (!(FBCFG || KMA_URL) || NOUI) return;
 
   /* ---------- 모양 ---------- */
@@ -377,6 +396,11 @@
     ".kma .who button.on{background:var(--k-ink);color:var(--k-bg);font-weight:700}.kma .who button.on small{color:inherit;opacity:.75}",
     ".kma .who button+button{border-left:1px solid var(--k-line)}",
     ".kma .tbox{border:1px solid var(--k-line);border-radius:14px;padding:16px;margin:4px 0 12px}.kma .tbox ul{margin:8px 0 0;padding-left:18px;font-size:13.5px;color:var(--k-sub);line-height:1.8}",
+    ".kma-dim.kma-gate{background:var(--k-bg);align-items:flex-start;overflow:auto;padding:6vh 16px 40px}.kma-gate .kma-box{box-shadow:none;border:1px solid var(--k-line);max-height:none;width:min(440px,100%)}",
+    ".kma .brand{text-align:center;margin:0 0 22px}.kma .brand b{display:block;font-family:\"YongbiTitle\",\"Noto Serif KR\",serif;font-weight:400;font-size:34px;letter-spacing:-.02em;color:var(--k-ink)}.kma .brand small{display:block;color:var(--k-faint);font-size:13.5px;margin-top:4px}",
+    ".kma .tl{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:0 0 4px}.kma .tl a{display:block;text-align:center;text-decoration:none;border:1px solid var(--k-line);border-radius:12px;padding:14px 8px;font-size:15px;font-weight:700;color:var(--k-ink)}.kma .tl a:hover{border-color:var(--k-brand);color:var(--k-brand)}",
+    ".kma .nm{display:flex;gap:8px;align-items:center;background:var(--k-soft);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:13.5px}.kma .nm input{flex:1;min-width:0;padding:8px 10px!important;font-size:14px!important;background:var(--k-bg)!important}",
+    "[data-kma-tnav]{display:contents}[data-kma-tnav] a{font-weight:700}",
     "@media print{.kma-pill,.kma-dim{display:none!important}}"
   ].join("\n");
   document.head.appendChild(css);
@@ -385,18 +409,29 @@
   var dim = document.createElement("div"); dim.className = "kma kma-dim"; dim.hidden = true;
   dim.innerHTML = '<div class="kma-box" role="dialog" aria-modal="true" aria-labelledby="kmaH"></div>';
   var run = document.createElement("div"); run.className = "kma kma-run"; run.hidden = true;
-  function mount() { document.body.appendChild(pill); document.body.appendChild(dim); document.body.appendChild(run); paintPill(); }
+  function mount() {
+    document.body.appendChild(pill); document.body.appendChild(dim); document.body.appendChild(run); paintPill(); paintTnav();
+    window.KMA.gate = true;
+    if (LOCKED) { dim.classList.add("kma-gate"); dim.hidden = false; setTimeout(function () { loginView("in"); }, 0); }
+    else if (S && nextUrl()) location.replace(nextUrl());
+  }
+  /* 선생님: 첫 화면 위 메뉴에 학생 현황·과제·공지 */
+  function paintTnav() {
+    var el = document.querySelector("[data-kma-tnav]"); if (!el) return;
+    var T = "/suneung-korean/teacher.html";
+    el.innerHTML = S && ROLE ? '<a href="' + T + '#st">학생 현황</a><a href="' + T + '#asg">과제</a><a href="' + T + '#nt">공지</a>' + (ROLE === "admin" ? '<a href="' + T + '#adm">선생님 관리</a>' : "") : "";
+  }
   if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
   var box = function () { return dim.firstChild; };
   pill.onclick = function () { openPanel(); };
   dim.addEventListener("click", function (e) { if (e.target === dim) closePanel(); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") { if (!run.hidden) return; if (!dim.hidden) closePanel(); } });
-  function closePanel() { dim.hidden = true; }
+  function closePanel() { if (LOCKED) return; dim.hidden = true; }
   function todo() { return (ASG || []).filter(function (a) { return !a.done; }).length; }
   function paintPill() {
     pill.classList.toggle("kma-t", !!(S && ROLE));
-    if (S && ROLE) { pill.classList.remove("kma-off"); pill.innerHTML = '<em>' + (ROLE === "admin" ? "관리자" : "선생님") + "</em>" + esc(S.id); pill.setAttribute("aria-label", "선생님 " + S.id + " — 선생님 메뉴 열기"); }
-    else if (S) { var n = todo(); pill.classList.remove("kma-off"); pill.innerHTML = '<em>학생</em>' + esc(S.id) + (n ? ' · 과제 <i>' + n + "</i>" : ""); pill.setAttribute("aria-label", "학생 " + S.id + " — 내 기록과 과제 열기"); }
+    if (S && ROLE) { pill.classList.remove("kma-off"); pill.innerHTML = '<em>' + (ROLE === "admin" ? "관리자" : "선생님") + "</em>" + esc((SUM && SUM.name) || S.id); pill.setAttribute("aria-label", "선생님 " + S.id + " — 선생님 메뉴 열기"); }
+    else if (S) { var n = todo(); pill.classList.remove("kma-off"); pill.innerHTML = '<em>학생</em>' + esc((SUM && SUM.name) || S.id) + (n ? ' · 과제 <i>' + n + "</i>" : ""); pill.setAttribute("aria-label", "학생 " + S.id + " — 내 기록과 과제 열기"); }
     else { pill.classList.add("kma-off"); pill.textContent = "로그인"; pill.setAttribute("aria-label", "로그인 — 학생·선생님"); }
   }
 
@@ -405,74 +440,79 @@
   function loginView(mode, who) {
     if (who) WHO = who;
     var up = mode === "up", T = WHO === "t";
+    var brand = LOCKED ? '<div class="brand"><b>국어의 모든 것</b><small>로그인하면 들어갈 수 있어요</small></div>' : "";
     var head = '<div class="who" role="tablist" aria-label="누구로 들어갈까요"><button type="button" role="tab" data-who="s" class="' + (T ? "" : "on") + '" aria-selected="' + !T + '">학생<small>문제 풀고 과제 제출</small></button><button type="button" role="tab" data-who="t" class="' + (T ? "on" : "") + '" aria-selected="' + T + '">선생님<small>과제 내고 학생 보기</small></button></div>';
-    var txt = T ? (up ? "선생님 아이디를 만듭니다. 만든 뒤 관리자에게 이 아이디를 '선생님으로 등록'해 달라고 하면 선생님 화면을 쓸 수 있어요." : "선생님 아이디로 들어가면 선생님 화면(학생 현황·과제·공지)으로 갑니다. 문제 화면에서는 '과제로 내기' 단추가 보여요.")
-      : (up ? "아이디와 비밀번호를 정하면, 어느 컴퓨터에서 풀어도 기록이 이어지고 선생님이 낸 과제를 받을 수 있어요. 아이디는 이름 대신 번호나 별명으로 정해 주세요." : "아이디로 들어가면 푼 기록이 모이고, 선생님이 낸 과제를 풀 수 있어요.");
-    box().innerHTML = head + '<h2 id="kmaH">' + (T ? (up ? "선생님 아이디 만들기" : "선생님으로 들어가기") : (up ? "학생 아이디 만들기" : "학생으로 들어가기")) + '</h2><p class="s">' + txt + "</p>" +
-      '<form id="kmaF"><label class="f" for="kmaI">' + (T ? "선생님 아이디" : "아이디") + '</label><input type="text" id="kmaI" autocomplete="username" maxlength="12" placeholder="2~12자 한글·영문·숫자">' +
+    var txt = T ? (up ? "선생님 아이디를 만듭니다. 만든 뒤 관리자에게 이 아이디를 '선생님으로 등록'해 달라고 하면 학생 현황·과제·공지를 쓸 수 있어요." : "선생님 아이디로 들어가면 첫 화면 위쪽에 학생 현황·과제·공지가 나타나요.")
+      : (up ? "이름과 아이디, 비밀번호를 정해 주세요. 이름은 선생님만 볼 수 있어요." : "아이디로 들어가면 푼 기록이 모이고, 선생님이 낸 과제를 풀 수 있어요.");
+    box().innerHTML = brand + head + '<h2 id="kmaH">' + (T ? (up ? "선생님 아이디 만들기" : "선생님 로그인") : (up ? "학생 아이디 만들기" : "학생 로그인")) + '</h2><p class="s">' + txt + "</p>" +
+      '<form id="kmaF">' + (up ? '<label class="f" for="kmaN">이름</label><input type="text" id="kmaN" autocomplete="name" maxlength="20" placeholder="예: 홍길동">' : "") +
+      '<label class="f" for="kmaI">' + (T ? "선생님 아이디" : "아이디") + '</label><input type="text" id="kmaI" autocomplete="username" maxlength="12" placeholder="2~12자 한글·영문·숫자">' +
       '<label class="f" for="kmaP">비밀번호</label><input type="password" id="kmaP" autocomplete="' + (up ? "new-password" : "current-password") + '" placeholder="' + (FBCFG ? "6" : "4") + '자 이상">' +
       (up ? '<label class="f" for="kmaP2">비밀번호 한 번 더</label><input type="password" id="kmaP2" autocomplete="new-password">' : "") +
-      '<div class="msg" id="kmaM" role="alert"></div><div class="row"><button class="btn pri" type="submit">' + (up ? "만들고 들어가기" : "들어가기") + '</button>' +
+      '<div class="msg" id="kmaM" role="alert"></div><div class="row"><button class="btn pri" type="submit">' + (up ? "만들고 로그인" : "로그인") + '</button>' +
       '<button class="lnk" type="button" id="kmaSw">' + (up ? "이미 아이디가 있어요" : (T ? "선생님 아이디 만들기" : "처음 왔어요 · 아이디 만들기")) + "</button></div>" +
-      (T ? "" : '<p class="s" style="margin:14px 0 0">비밀번호를 잊으면 선생님께 말씀드리세요. 로그인하지 않아도 문제는 그대로 풀 수 있어요(기록은 이 컴퓨터에만).</p>') + "</form>";
+      (T ? "" : '<p class="s" style="margin:14px 0 0">비밀번호를 잊으면 선생님께 말씀드리세요.</p>') + "</form>";
     box().querySelectorAll("[data-who]").forEach(function (b) { b.onclick = function () { loginView(mode, b.dataset.who); }; });
     document.getElementById("kmaSw").onclick = function () { loginView(up ? "in" : "up"); };
     document.getElementById("kmaF").onsubmit = function (e) {
       e.preventDefault();
       var id = document.getElementById("kmaI").value.trim(), pw = document.getElementById("kmaP").value, m = document.getElementById("kmaM");
+      var nm = up ? document.getElementById("kmaN").value.replace(/\s+/g, " ").trim() : "";
+      if (up && !nm) { m.textContent = "이름을 적어 주세요."; document.getElementById("kmaN").focus(); return; }
       if (up && pw !== document.getElementById("kmaP2").value) { m.textContent = "비밀번호가 서로 달라요."; return; }
       var b = e.target.querySelector(".pri"); b.disabled = true; m.textContent = "";
-      call(up ? "siteSignup" : "siteLogin", [id, pw]).then(function (r) {
-        if (!r.ok) { b.disabled = false; m.textContent = r.msg || "들어가지 못했어요."; return; }
+      call(up ? "siteSignup" : "siteLogin", up ? [id, pw, nm] : [id, pw]).then(function (r) {
+        if (!r.ok) { b.disabled = false; m.textContent = r.msg || "로그인하지 못했어요."; return; }
         S = { id: id, token: r.token }; ls(SKEY, S); SUM = r.sum || null; ROLE = null;
         checkRole().then(function (role) {
-          b.disabled = false;
-          if (T && !role) { teacherWait(id, up); return; }
-          if (T && role && !NOUI) { location.href = "/suneung-korean/teacher.html"; return; }
-          flush(); refresh(true);
+          if (T && !role) { b.disabled = false; teacherWait(id, up); return; }
+          m.style.color = "var(--k-sub)"; m.textContent = "로그인했어요. 화면을 여는 중…";
+          enter();
         });
       });
     };
-    setTimeout(function () { var i = document.getElementById("kmaI"); i && i.focus(); }, 30);
+    setTimeout(function () { var i = document.getElementById(up ? "kmaN" : "kmaI"); i && i.focus(); }, 30);
   }
   /* 선생님 쪽으로 들어왔는데 아직 등록 전 */
   function teacherWait(id, made) {
-    box().innerHTML = '<h2 id="kmaH">' + (made ? "선생님 아이디를 만들었어요" : "아직 선생님으로 등록되지 않았어요") + '</h2><p class="s">관리자(학교 담당 선생님)에게 아이디 <b>' + esc(id) + "</b>를 선생님 화면의 '선생님 관리'에서 등록해 달라고 하세요. 등록되면 다시 '선생님으로 들어가기'를 누르면 됩니다.</p>" +
-      '<div class="row"><button class="btn pri" type="button" id="kmaRe">등록됐는지 다시 확인</button><button class="btn" type="button" id="kmaOut2">나가기</button></div><div class="msg" id="kmaM"></div>';
-    document.getElementById("kmaRe").onclick = function () { checkRole().then(function (r) { if (r) location.href = "/suneung-korean/teacher.html"; else document.getElementById("kmaM").textContent = "아직 등록 전이에요."; }); };
-    document.getElementById("kmaOut2").onclick = function () { logout(); loginView("in", "t"); };
+    box().innerHTML = (LOCKED ? '<div class="brand"><b>국어의 모든 것</b></div>' : "") + '<h2 id="kmaH">' + (made ? "선생님 아이디를 만들었어요" : "아직 선생님으로 등록되지 않았어요") + '</h2><p class="s">관리자(학교 담당 선생님)에게 아이디 <b>' + esc(id) + "</b>를 '선생님 관리'에서 등록해 달라고 하세요. 등록되면 첫 화면 위쪽에 학생 현황·과제·공지가 나타나요. 등록 전에도 사이트는 둘러볼 수 있어요.</p>" +
+      '<div class="row"><button class="btn pri" type="button" id="kmaRe">등록됐는지 다시 확인</button><button class="btn" type="button" id="kmaGoIn">사이트 둘러보기</button><button class="lnk" type="button" id="kmaOut2">로그아웃</button></div><div class="msg" id="kmaM"></div>';
+    document.getElementById("kmaRe").onclick = function () { checkRole().then(function (r) { if (r) enter(); else document.getElementById("kmaM").textContent = "아직 등록 전이에요."; }); };
+    document.getElementById("kmaGoIn").onclick = enter;
+    document.getElementById("kmaOut2").onclick = logout;
   }
-  function logout() { if (S) call("siteLogout", [S.id, S.token]); S = null; ls(SKEY, null); SUM = ASG = NT = null; setRole(""); ls("kma.role", null); paintPill(); }
+  /* 로그아웃: 로그인 창(첫 화면)으로 돌아간다 */
+  function logout() { var go = function () { lockOut(); }; SUM = ASG = NT = null; if (S) call("siteLogout", [S.id, S.token]).then(go, go); else go(); }
 
   /* ---------- 내 기록 · 과제 · 공지 ---------- */
   var tab = "asg";
   function teacherView() {
-    var adm = ROLE === "admin";
-    box().innerHTML = '<h2 id="kmaH">' + esc(S.id) + ' <span class="tag done">' + (adm ? "관리자" : "선생님") + "</span></h2>" +
-      '<div class="tbox"><a class="btn pri" href="/suneung-korean/teacher.html" style="display:inline-block;text-decoration:none">선생님 화면 열기</a>' +
-      "<ul><li>학생 현황 · 과제(기출 골라 만들기) · 공지" + (adm ? " · 선생님 관리" : "") + "는 선생님 화면에서 해요.</li><li>문제 화면에서는 회차·담은 문제 옆 '과제로 내기' 단추로 바로 낼 수 있어요.</li></ul></div>" +
-      '<div class="row" style="justify-content:space-between"><button class="lnk" type="button" id="kmaOut">나가기(로그아웃)</button><button class="btn" type="button" id="kmaX">닫기</button></div>';
+    var adm = ROLE === "admin", T = "/suneung-korean/teacher.html";
+    box().innerHTML = '<h2 id="kmaH">' + esc((SUM && SUM.name) || S.id) + ' <span class="tag done">' + (adm ? "관리자" : "선생님") + "</span></h2>" +
+      '<p class="s">첫 화면 위쪽 메뉴에서도 열 수 있어요. 문제 화면에서는 담은 문제 옆 \'과제로 내기\' 단추로 바로 낼 수 있어요.</p>' +
+      '<div class="tl"><a href="' + T + '#st">학생 현황</a><a href="' + T + '#asg">과제</a><a href="' + T + '#nt">공지</a>' + (adm ? '<a href="' + T + '#adm">선생님 관리</a>' : "") + "</div>" +
+      '<div class="row" style="justify-content:space-between"><button class="lnk" type="button" id="kmaOut">로그아웃</button><button class="btn" type="button" id="kmaX">닫기</button></div>';
     document.getElementById("kmaX").onclick = closePanel;
-    document.getElementById("kmaOut").onclick = function () { logout(); loginView("in"); };
+    document.getElementById("kmaOut").onclick = logout;
   }
   function meView() {
     if (ROLE) return teacherView();
     var s = SUM || { n: 0, f: 0, wk: 0, byG: {}, cls: "" };
-    var role = "";
-    var h = '<h2 id="kmaH">' + esc(S.id) + (role ? ' <span class="tag done">' + role + "</span>" : "") + (s.cls ? ' <span class="tag">' + esc(s.cls) + "</span>" : "") + "</h2>" +
-      (role ? '<p class="s">' + role + ' 아이디예요. 학생 현황·과제·공지' + (ROLE === "admin" ? "·선생님 관리" : "") + '는 선생님 화면에서 해요.</p><div class="row" style="margin:8px 0 4px"><a class="btn pri" href="/suneung-korean/teacher.html">선생님 화면 열기</a></div>' : "") +
+    var h = '<h2 id="kmaH">' + esc(s.name || S.id) + (s.name ? ' <small style="font-size:14px;font-weight:500;color:var(--k-sub)">' + esc(S.id) + "</small>" : "") + (s.cls ? ' <span class="tag">' + esc(s.cls) + "</span>" : "") + "</h2>" +
+      (SUM && !s.name ? '<form class="nm" id="kmaNF"><span>이름을 적어 주세요</span><input type="text" id="kmaNM" maxlength="20" placeholder="예: 홍길동" aria-label="이름"><button class="btn pri" type="submit" style="padding:8px 14px">저장</button></form>' : "") +
       '<div class="stat"><div><b>' + s.n + '</b><small>푼 문제</small></div><div><b>' + pct(s.f, s.n) + '</b><small>첫 시도 정답률</small></div><div><b>' + s.wk + "</b><small>최근 7일</small></div></div>" +
       '<div class="tabs" role="tablist"><button type="button" data-t="asg" class="' + (tab === "asg" ? "on" : "") + '">과제' + (todo() ? " " + todo() : "") + '</button><button type="button" data-t="rec" class="' + (tab === "rec" ? "on" : "") + '">내 기록</button><button type="button" data-t="nt" class="' + (tab === "nt" ? "on" : "") + '">공지' + ((NT || []).length ? " " + NT.length : "") + "</button></div><div id=\"kmaB\"></div>" +
-      '<div class="row" style="justify-content:space-between"><button class="lnk" type="button" id="kmaOut">나가기(로그아웃)</button><button class="btn" type="button" id="kmaX">닫기</button></div>';
+      '<div class="row" style="justify-content:space-between"><button class="lnk" type="button" id="kmaOut">로그아웃</button><button class="btn" type="button" id="kmaX">닫기</button></div>';
     box().innerHTML = h;
+    var nf = document.getElementById("kmaNF"); if (nf) nf.onsubmit = function (e) { e.preventDefault(); var v = document.getElementById("kmaNM").value.trim(); if (!v) return; call("siteSetName", [v]).then(function (r) { if (r.ok) { SUM = r.sum; meView(); } }); };
     box().querySelectorAll("[data-t]").forEach(function (b) { b.onclick = function () { tab = b.dataset.t; meView(); }; });
     document.getElementById("kmaX").onclick = closePanel;
-    document.getElementById("kmaOut").onclick = function () { logout(); loginView("in"); };
+    document.getElementById("kmaOut").onclick = logout;
     var B = document.getElementById("kmaB");
     if (tab === "rec") {
       var rows = GO.filter(function (g) { return s.byG[g]; }).map(function (g) { var v = s.byG[g]; return "<div><span>" + G[g] + '</span><em><i style="width:' + Math.round(v.c / v.t * 100) + '%"></i></em><small>' + pct(v.c, v.t) + " · " + v.t + "</small></div>"; }).join("");
       B.innerHTML = rows ? '<h3>갈래별 첫 시도 정답률</h3><div class="bars">' + rows + "</div>" : '<p class="s" style="margin-top:14px">아직 푼 기록이 없어요. 문제를 풀고 채점하면 여기에 쌓여요.</p>';
-      if (s.app) B.innerHTML += '<p class="s" style="margin-top:14px">공무원 기출 연습장에서 푼 문제 ' + s.app.t + "개(정답률 " + pct(s.app.c, s.app.t) + ")도 선생님 화면에 함께 보여요.</p>";
+      if (s.app) B.innerHTML += '<p class="s" style="margin-top:14px">공무원 기출 연습장에서 푼 문제 ' + s.app.t + "개(정답률 " + pct(s.app.c, s.app.t) + ")도 선생님에게 함께 보여요.</p>";
     } else if (tab === "nt") {
       B.innerHTML = (NT || []).length ? '<div style="margin-top:14px">' + NT.slice().reverse().map(function (n) { return '<div class="nt"><b>' + esc(n.title) + "</b>" + esc(n.body || "") + "</div>"; }).join("") + "</div>" : '<p class="s" style="margin-top:14px">공지가 없어요.</p>';
     } else {
@@ -492,7 +532,7 @@
   function refresh(show) {
     if (!S) return;
     Promise.all([call("siteMe", [S.id, S.token]), call("siteAssignments", [S.id, S.token]), call("siteNotices", [S.id, S.token])]).then(function (r) {
-      if (r[0].relogin || r[1].relogin) { S = null; ls(SKEY, null); paintPill(); if (!dim.hidden) loginView("in"); return; }
+      if (r[0].relogin || r[1].relogin) { lockOut(); return; }
       if (r[0].ok) SUM = r[0].sum; if (r[1].ok) ASG = r[1].list; if (r[2].ok) NT = r[2].list;
       paintPill();
       if (show) dim.hidden = false;
@@ -595,7 +635,7 @@
     var b = q.slice(0, 300);
     call("siteSave", [S.id, S.token, b]).then(function (r) {
       if (r.ok) { var now = ls(QKEY) || []; ls(QKEY, now.slice(b.length)); if (now.length > b.length) flush(); }
-      else if (r.relogin) { S = null; ls(SKEY, null); paintPill(); }
+      else if (r.relogin) { lockOut(); }
     });
   }
   document.addEventListener("visibilitychange", function () {
@@ -618,7 +658,7 @@
     var pw = ss("kma.tpw");
     dim.hidden = false;
     if (!pw) {
-      box().innerHTML = '<h2 id="kmaH">과제로 내기</h2><p class="s">' + (FBCFG ? "선생님 아이디로 로그인해야 과제를 낼 수 있어요. 오른쪽 아래 단추나 선생님 화면에서 선생님 아이디로 들어와 주세요." : "선생님 화면에서 선생님 비밀번호로 먼저 들어와 주세요. 같은 창(탭)에서 이 화면으로 돌아오면 과제를 낼 수 있어요.") + '</p><div class="row"><a class="btn pri" href="/suneung-korean/teacher.html" target="_blank" rel="noopener">선생님 화면 열기</a><button class="btn" type="button" id="kmaX">닫기</button></div>';
+      box().innerHTML = '<h2 id="kmaH">과제로 내기</h2><p class="s">' + (FBCFG ? "선생님 아이디로 로그인해야 과제를 낼 수 있어요. 로그아웃한 뒤 로그인 창에서 '선생님'을 골라 들어와 주세요." : "선생님 화면에서 선생님 비밀번호로 먼저 들어와 주세요. 같은 창(탭)에서 이 화면으로 돌아오면 과제를 낼 수 있어요.") + '</p><div class="row"><button class="btn" type="button" id="kmaX">닫기</button></div>';
       document.getElementById("kmaX").onclick = closePanel; return;
     }
     var noKey = items.filter(function (x) { return x.nc && !x.ans; }).length;
@@ -634,12 +674,13 @@
       call("saveSiteAssign", [pw, { title: document.getElementById("kmaT").value, msg: document.getElementById("kmaG").value, due: document.getElementById("kmaD").value, cls: document.getElementById("kmaC").value, items: items, key: key }]).then(function (r) {
         b.disabled = false;
         if (!r.ok) { document.getElementById("kmaM").textContent = r.msg || "내지 못했어요."; return; }
-        box().innerHTML = '<h2 id="kmaH">과제를 냈어요</h2><p class="s">학생들이 로그인하면 오른쪽 아래 단추에 과제가 보여요. 제출 현황은 선생님 화면에서 볼 수 있어요.</p><div class="row"><a class="btn pri" href="/suneung-korean/teacher.html#asg">제출 현황 보기</a><button class="btn" type="button" id="kmaX">닫기</button></div>';
+        box().innerHTML = '<h2 id="kmaH">과제를 냈어요</h2><p class="s">학생들이 로그인하면 오른쪽 아래 단추에 과제가 보여요. 제출 현황은 첫 화면 위쪽 ‘과제’에서 볼 수 있어요.</p><div class="row"><a class="btn pri" href="/suneung-korean/teacher.html#asg">제출 현황 보기</a><button class="btn" type="button" id="kmaX">닫기</button></div>';
         document.getElementById("kmaX").onclick = closePanel;
       });
     };
   }
 
   /* 처음 열 때: 로그인되어 있으면 요약·과제 수 받아 오기 + 남은 기록 보내기 */
-  if (S) { call("siteResume", [S.id, S.token]).then(function (r) { if (!r.ok) { S = null; ls(SKEY, null); setRole(""); paintPill(); return; } SUM = r.sum; flush(); refresh(false); checkRole(); }); }
+  /* 서버가 '로그인 안 됨'이라고 답하면(msg 없음) 잠그고, 연결이 안 된 것뿐이면(msg 있음) 그대로 둔다 */
+  if (S) { call("siteResume", [S.id, S.token]).then(function (r) { if (!r.ok) { if (!r.msg) lockOut(); return; } SUM = r.sum; flush(); refresh(false); checkRole(); }); }
 })();
