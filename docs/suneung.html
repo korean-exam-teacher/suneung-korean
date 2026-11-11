@@ -1973,7 +1973,7 @@ document.addEventListener('click', e=>{
     const r = records[key] || {n:0, w:0};
     r.n += 1; if(!ok) r.w += 1; r.r = ok ? 'O' : 'X'; r.c = n; r.t = Date.now();
     records[key] = r; saveJSON(REC_KEY, records);
-    if(window.KMA) KMA.record('sn:'+key, ok, it.영역);
+    if(window.KMA) KMA.record('sn:'+key, ok, it.영역, n);
     revealIn(bar.parentElement, it, n);
     const msg = bar.querySelector('.solve-msg');
     msg.className = 'solve-msg ' + (ok ? 'ok' : 'no');
@@ -3399,6 +3399,6 @@ footer .guide details{border-color:var(--line)!important;background:none!importa
 <script src="/middle-korean/js/config.js?v=93"></script>
 <script src="/middle-korean/js/ink.js?v=102"></script>
 <script src="/middle-korean/js/live.js?v=93"></script>
-<script src="js/account.js?v=104"></script>
+<script src="js/account.js?v=110"></script>
 </body>
 </html>

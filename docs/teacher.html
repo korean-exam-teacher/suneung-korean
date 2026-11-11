@@ -46,6 +46,7 @@ td.num{text-align:right}th.num{text-align:right}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .bars div{display:grid;grid-template-columns:180px 1fr 90px;gap:10px;align-items:center;font-size:13.5px;margin:6px 0}.bars em{display:block;height:7px;border-radius:4px;background:var(--soft);overflow:hidden}.bars em i{display:block;height:100%;background:var(--brand);opacity:.75}.bars small{color:var(--sub);text-align:right}
 ul.ev li[data-ek]{cursor:pointer}ul.ev li[data-ek]:hover{background:var(--soft)}ul.ev li.evx{display:block;background:var(--soft);border-radius:10px;padding:12px 14px;margin:4px 0;cursor:default}.evx img{display:block;max-width:min(100%,720px);height:auto;margin:6px 0;border-radius:4px}.evx .wans{background:var(--surface)}
+.hp-crop{width:100%;margin:0 0 6px}.hp-crop .hp-in{position:relative;overflow:hidden;height:0;background:#fff}.hp-crop .hp-in img{position:absolute;max-width:none;height:auto;display:block;margin:0;border-radius:0}
 ul.ev{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto}ul.ev li{display:flex;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
 .ok{color:var(--ok)}.no{color:var(--no)}
 .asg{border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px;background:var(--surface)}
@@ -77,7 +78,7 @@ select.cadd{width:92px;padding:4px 6px;font-size:13px;color:var(--sub)}
 <body>
 <header class="top"><a class="brand" href="/suneung-korean/">국어의 모든 것</a><nav id="nav" hidden><a class="home" href="/suneung-korean/">처음 화면</a><button type="button" data-v="st" class="on">학생 현황</button><button type="button" data-v="asg">과제</button><button type="button" data-v="rs">응답률</button><button type="button" data-v="nt">공지</button><button type="button" data-v="adm" id="admTab" hidden>선생님 관리</button><button type="button" id="out">로그아웃</button></nav></header>
 <main class="wrap" id="main"></main>
-<script src="js/account.js?v=108" data-noui></script>
+<script src="js/account.js?v=110" data-noui></script>
 <script>
 (function(){
 /* account.js 와 같은 서버 주소를 쓴다 */
@@ -196,7 +197,7 @@ function detail(id){
       '<div class="grid2"><div><h2>영역별 첫 시도 정답률</h2><div class="bars">'+(A||'<p class="sub">기록 없음</p>')+'</div>'+
       '<h2>과제 제출</h2><ul class="ev">'+(subs||'<li>제출한 과제 없음</li>')+'</ul>'+
       (FBM?'<h2>기록 옮기기</h2><p class="sub" style="margin:0 0 8px">비밀번호를 잊은 학생은 새 아이디를 만들게 한 뒤, 이 학생의 기록을 새 아이디로 옮겨 주세요.</p><div class="bar"><input type="text" id="mvTo" placeholder="새 아이디" style="width:160px"><button class="btn sm" type="button" id="mvGo">이 기록을 옮기기</button><span class="msg" id="mvM" style="margin:0"></span></div>':'')+'</div>'+
-      '<div><h2>최근 푼 문제 <span style="font-size:13px;font-weight:400;color:var(--sub)">줄을 누르면 그 문항이 보여요</span></h2><ul class="ev" id="evL">'+(r.ev.length?r.ev.slice(0,120).map(function(e){ return '<li data-ek="'+esc(e.k)+'"><span>'+esc(nice(e.k))+(e.a?' <span class="cnt">'+esc(e.a)+'</span>':'')+'</span><span>'+stt(e)+(e.c>1?' · '+e.c+'번':'')+' · '+day(e.t)+'</span></li>'; }).join(''):'<li>기록 없음</li>')+'</ul></div></div></div>';
+      '<div><h2>최근 푼 문제 <span style="font-size:13px;font-weight:400;color:var(--sub)">줄을 누르면 그 문항이 보여요</span></h2><ul class="ev" id="evL">'+(r.ev.length?r.ev.slice(0,120).map(function(e){ return '<li data-ek="'+esc(e.k)+'"><span>'+esc(selfTitle(e.k))+(e.a?' <span class="cnt">'+esc(e.a)+'</span>':'')+'</span><span>'+stt(e)+(e.p?' · 고른 답 '+CIRC[e.p-1]:'')+(e.c>1?' · '+e.c+'번':'')+' · '+day(e.t)+'</span></li>'; }).join(''):'<li>기록 없음</li>')+'</ul></div></div></div>';
     $('dx').onclick=function(){ OPEN=null; el.innerHTML=''; };
     el.querySelectorAll('li[data-ek]').forEach(function(li){ li.onclick=function(){ evToggle(li); }; });
     var mg=$('mvGo'); if(mg) mg.onclick=function(){ var to=$('mvTo').value.trim(); if(!to) return; if(!mg.dataset.sure){ mg.dataset.sure=1; mg.textContent=to+'(으)로 정말 옮기기'; return; }
@@ -210,14 +211,21 @@ window.HP_TEXT_LOADED=function(eid,t){ HPT[eid]=t; };
 function pl(v){ return String(v==null?'':v).replace(/[\uFDD0-\uFDD3]/g,''); }
 function srcIndex(name,file){ return SIDX[name]||(SIDX[name]=script(file).then(function(){ var m={}; (name==='adv'?['psat','leet','im']:[name]).forEach(function(n){ var S=window.ASG_SRC&&ASG_SRC[n]; if(S) S.items.forEach(function(x){ m[x.it.k]=x; }); }); return m; })); }
 function fromSrc(name,file,k){ return srcIndex(name,file).then(function(M){ var x=M[k]; if(!x) return null; var it=JSON.parse(JSON.stringify(x.it)); if(x.pk) it._pk=x.pk; return {it:it,ans:x.it.ans||0}; }); }
+function hpCrop(list,e){ return (list||[]).map(function(c){ var pg=(e.pages||{})[c[0]]||[595,842], W=pg[0], w=c[3]-c[1], hh=c[4]-c[2];
+  return '<div class="hp-crop" style="max-width:'+Math.round(w/W*1400)+'px"><div class="hp-in" style="padding-top:'+(hh/w*100).toFixed(3)+'%"><img src="/middle-korean/data/hakpyeong/img/'+esc(e.id.replace('고','g'))+'_'+esc(c[0])+'.png" alt="" loading="lazy" style="width:'+(W/w*100).toFixed(3)+'%;left:'+(-c[1]/w*100).toFixed(3)+'%;top:'+(-c[2]/hh*100).toFixed(3)+'%"></div></div>'; }).join(''); }
 function hpItem(key){ var eid=key.split('||')[0];
   HPD=HPD||script('/middle-korean/data/hakpyeong/index.js?v=95').then(function(){ return window.HP_DATA; });
   return HPD.then(function(D){ var q=D&&D.items[key]; if(!q) return null;
     return script('/middle-korean/data/hakpyeong/t/'+eid.replace('고','g')+'.js?v=95').catch(function(){}).then(function(){
-      var T=HPT[eid]||{}, t=(T.items||{})[key]||{}, p=q.p?((T.passages||{})[q.p]||{}):{}, e=D.exams.filter(function(x){ return x.id===eid; })[0]||{};
-      var fig=t.bogiFig||t.stFig||t.chFig||p.fig||p.pua;
-      return {it:{k:'hak:'+key,title:e.y+'년 '+e.m+'월 고'+e.g+' 학력평가 '+q.n+'번',nc:(t.ch||[]).length||5,txt:{pas:p.pua?'':pl(p.text),ask:pl(t.st||q.st),body:pl(t.bogi),ch:(t.ch||[]).map(pl)}},ans:+q.ans||0,
-        note:fig?'그림·표·옛 글자가 있는 부분은 여기서 보이지 않아요. 학습소(개념 학습)에서 확인하세요.':''}; }); }); }
+      var T=HPT[eid]||{}, t=(T.items||{})[key]||{}, p=q.p?((T.passages||{})[q.p]||{}):{}, nt=t.nk?((T.notes||{})[t.nk]||null):null, e=D.exams.filter(function(x){ return x.id===eid; })[0]||{id:eid,pages:{}};
+      var box=function(x){ return '<div class="wans" style="max-height:340px;overflow:auto">'+esc(pl(x))+'</div>'; }, h='';
+      /* 지문 → (참고 자료) → 발문 → 보기 → 선택지. 그림·표가 있는 곳은 원본 쪽 그림을 잘라서 */
+      if(p.pc&&(p.fig||p.pua||!p.text)) h+=hpCrop(p.pc,e); else if(p.text) h+=box((p.head?p.head+'\n':'')+p.text);
+      if(nt) h+=nt.fig&&nt.pc?hpCrop(nt.pc,e):(nt.text?box((nt.bl?'<'+nt.bl+'>\n':'')+nt.text):'');
+      h+=t.stFig?hpCrop(t.stFig,e):'<p style="margin:10px 0 4px"><b>'+q.n+'. '+esc(pl(t.st||q.st))+'</b></p>';
+      h+=t.bogiFig?hpCrop(t.bogiFig,e):(t.bogi?box((t.bl?'<'+t.bl+'>\n':'')+t.bogi):'');
+      h+=t.chFig?hpCrop(t.chFig,e):((t.ch||[]).length?'<ol style="margin:4px 0 0;padding-left:22px;list-style:none">'+t.ch.map(function(c,i){ return '<li>'+CIRC[i]+' '+esc(pl(c))+'</li>'; }).join('')+'</ol>':'');
+      return {it:{k:'hak:'+key,title:e.y+'년 '+e.m+'월 고'+e.g+' 학력평가 '+q.n+'번',nc:5},ans:+q.ans||0,html:h}; }); }); }
 function basicItem(key){ BSC=BSC||script('/middle-korean/data/basic.js?v=97').then(function(){ return window.BASIC; });
   return BSC.then(function(B){ var x=B&&B.items[key]; if(!x) return null; var p=key.split(':'), a=(B.areas||[]).filter(function(z){ return z.id===p[1]; })[0]||{}, ps=x.p&&B.passages?B.passages[x.p]:null;
     return {it:{k:'hak:'+key,title:'기초학력 '+(a.name||'')+' '+p[2]+'단계 '+p[3]+'번',nc:(x.ch||[]).length,txt:{pas:ps?pl((ps.title?ps.title+'\n':'')+ps.text):'',ask:pl(x.st),body:pl(x.bogi),ch:(x.ch||[]).map(pl)}},ans:+x.a||0}; }); }
@@ -239,7 +247,7 @@ function evToggle(li){
   evItem(li.dataset.ek).then(function(r){ if(!box.parentNode) return;
     if(!r){ box.innerHTML='<span class="sub" style="margin:0">이 문항은 여기서 보여 줄 수 없어요(자료에 없는 문항).</span>'; return; }
     box.innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>'+esc(r.it.title||nice(li.dataset.ek))+'</b><span class="sub" style="margin:0;white-space:nowrap">'+(r.it.nc?(r.ans?'정답 '+CIRC[r.ans-1]:'정답 없음'):'서술형')+'</span></div>'+(r.note?'<p class="sub" style="margin:6px 0 0;font-size:13px">'+esc(r.note)+'</p>':'')+'<div data-ev></div>';
-    showItem(r.it,box.querySelector('[data-ev]'));
+    if(r.html) box.querySelector('[data-ev]').innerHTML=r.html; else showItem(r.it,box.querySelector('[data-ev]'));
   }).catch(function(){ if(box.parentNode) box.innerHTML='<span class="msg" style="margin:0">문항을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</span>'; });
 }
 /* ---------- 과제 ---------- */
@@ -272,16 +280,26 @@ function asgView(){
 function printAsg(a,key){ script('/suneung-korean/js/asgprint.js?v=107').then(function(){ KMAPrint.open(a,{key:key||{}}); }).catch(function(){ alertMsg('인쇄 화면을 불러오지 못했어요.'); }); }
 function alertMsg(t){ var m=$('mkMsg'); if(m) m.textContent=t; }
 /* ---------- 응답률 (v106) — 학생들이 과제·모의고사에서 고른 답을 문항·선택지별로 모은다. 선생님만 본다 ---------- */
-var RSOPEN=null, RS={src:'',sort:'n',open:null}, CIRC='①②③④⑤';
+var RSOPEN=null, RS={src:'',sort:'n',open:null,mode:'all',busy:false}, CIRC='①②③④⑤';
 var RSN={'adv:gm:':'공무원 국어','sn:':'수능·모의평가','adv:psat:':'PSAT','adv:leet:':'LEET','adv:im:':'중등임용','non:':'대학 논술','hak:':'개념 학습'};
 function rsSrc(k){ for(var p in RSN) if(k.indexOf(p)===0) return p; return ''; }
 function rsRow(k){ return {k:k,c:[0,0,0,0,0,0],t:'',a:'',nc:0,ans:0,it:null,n:0}; }
 function rsFin(r){ r.n=r.c.reduce(function(x,y){return x+y;},0); r.ok=r.ans?r.c[r.ans]:0; return r; }
 function rsOfAsg(a){ return (a.items||[]).filter(function(it){return it.nc;}).map(function(it,i){ var r=rsRow(it.k); r.c=((a.resp||{})[it.k]||r.c).slice(); r.t=it.title||nice(it.k); r.a=it.a||''; r.nc=it.nc; r.ans=(a.key||{})[it.k]||0; r.it=it; r.no=i+1; return rsFin(r); }); }
-function rsAll(){ var m={};
-  function add(k,c,info){ var r=m[k]||(m[k]=rsRow(k)); for(var i=0;i<6;i++) r.c[i]+=+c[i]||0; ['t','a','nc','ans','it'].forEach(function(f){ if(info[f]&&!r[f]) r[f]=info[f]; }); }
-  Object.keys(D.stat||{}).forEach(function(k){ var s=D.stat[k]||{}; if(s.nc) add(k,s.c||[],{t:s.t,a:s.a,nc:s.nc,ans:s.ans}); });
-  (D.asg||[]).forEach(function(a){ (a.items||[]).forEach(function(it){ if(it.nc) add(it.k,(a.resp||{})[it.k]||[],{t:it.title||nice(it.k),a:it.a,nc:it.nc,ans:(a.key||{})[it.k],it:it}); }); });
+/* v110: 혼자 푼 문제 — 문항 이름·선택지 수는 열쇠에서 짐작한다(정답은 첫 풀이에 맞힌 학생이 고른 번호) */
+function selfTitle(k){ var m=/^adv:gm:(.+)-(\d+)$/.exec(k), G=window.GM_DATA;
+  if(m){ var e=G&&G.exams.filter(function(x){ return x.id===m[1]; })[0]; return (e?e.title.replace(/\s*국어\s*/,' ').replace(/\s+/g,' ').trim():'공무원 '+m[1])+' '+(+m[2])+'번'; }
+  var p=k.replace(/^(sn|hak):/,'').split('||'), h=/^(\d{4})-(\d\d)-고(\d)$/.exec(p[0]);
+  if(p.length===3&&h) return h[1]+'년 '+(+h[2])+'월 고'+h[3]+' 학력평가 '+p[2]+'번';
+  if(p.length===3) return (/^hak:/.test(k)?'개념 학습 · ':'수능 · ')+p[0]+' '+p[1]+' '+p[2]+'번';
+  return nice(k); }
+function selfNc(k){ var m=/^adv:gm:(.+)-\d+$/.exec(k), G=window.GM_DATA; if(m){ var e=G&&G.exams.filter(function(x){ return x.id===m[1]; })[0]; return e?e.nc:4; } return 5; }
+function rsAll(){ var m={}, md=RS.mode||'all';
+  function add(k,c,info){ var r=m[k]||(m[k]=rsRow(k)); for(var i=0;i<6;i++) r.c[i]+=+c[i]||0; ['t','a','nc','ans','it'].forEach(function(f){ if(info[f]&&!r[f]) r[f]=info[f]; }); return r; }
+  if(md!=='self'){
+    Object.keys(D.stat||{}).forEach(function(k){ var s=D.stat[k]||{}; if(s.nc) add(k,s.c||[],{t:s.t,a:s.a,nc:s.nc,ans:s.ans}); });
+    (D.asg||[]).forEach(function(a){ (a.items||[]).forEach(function(it){ if(it.nc) add(it.k,(a.resp||{})[it.k]||[],{t:it.title||nice(it.k),a:it.a,nc:it.nc,ans:(a.key||{})[it.k],it:it}); }); }); }
+  if(md!=='asg'&&D.self) Object.keys(D.self).forEach(function(k){ var s=D.self[k], r=add(k,s.c||[],{t:selfTitle(k),a:s.a,nc:selfNc(k),ans:s.ans}); if(!r.ans) r.z=1; });
   return Object.keys(m).map(function(k){ return rsFin(m[k]); }); }
 function rsP(c,n){ return n?Math.round(c/n*100):0; }
 function rsTable(rows,inAsg){
@@ -290,7 +308,7 @@ function rsTable(rows,inAsg){
   return '<div class="tw rs" style="margin-top:10px"><table><thead><tr>'+(inAsg?'<th class="num">번호</th>':'')+'<th>문항</th><th>영역</th><th class="num">응답</th><th class="num">정답률</th>'+CIRC.slice(0,nc).split('').map(function(c){return '<th class="num">'+c+'</th>';}).join('')+'<th class="num">무응답</th></tr></thead><tbody>'+
     rows.map(function(r){ var top=0; for(var i=1;i<=r.nc;i++) if(i!==r.ans&&r.c[i]>top) top=r.c[i];
       var cells=''; for(var j=1;j<=nc;j++){ var p=rsP(r.c[j],r.n), cl=j>r.nc?'':(j===r.ans?' key':(r.n>=3&&r.c[j]===top&&p>=30?' trap':'')); cells+='<td class="c'+cl+'" title="'+(r.c[j]||0)+'명">'+(j>r.nc?'':(r.n?p+'%':'–'))+'</td>'; }
-      return '<tr data-rk="'+esc(r.k)+'"><td class="num"'+(inAsg?'':' hidden')+'>'+(r.no||'')+'</td><td class="t">'+esc(r.t)+'</td><td>'+esc(r.a||'')+'</td><td class="num">'+r.n+'</td><td class="num">'+(r.ans?pct(r.ok,r.n):'<span class="pc">–</span>')+'</td>'+cells+'<td class="c">'+(r.n?rsP(r.c[0],r.n)+'%':'–')+'</td></tr>'+
+      return '<tr data-rk="'+esc(r.k)+'"><td class="num"'+(inAsg?'':' hidden')+'>'+(r.no||'')+'</td><td class="t">'+esc(r.t)+'</td><td>'+esc(r.a||'')+'</td><td class="num">'+r.n+'</td><td class="num">'+(r.ans?pct(r.ok,r.n):(r.z&&r.n?pct(0,r.n):'<span class="pc">–</span>'))+'</td>'+cells+'<td class="c">'+(r.n?rsP(r.c[0],r.n)+'%':'–')+'</td></tr>'+
         (RS.open===r.k?'<tr class="x"><td colspan="'+(6+nc)+'"><div data-rx="'+esc(r.k)+'">불러오는 중…</div></td></tr>':''); }).join('')+'</tbody></table></div>'+
     '<p class="sub" style="margin:8px 0 0;font-size:13px"><b style="color:var(--ok)">초록</b>은 정답, <b style="color:var(--no)">빨강</b>은 가장 많이 고른 오답(30% 이상)이에요. 줄을 누르면 문항이 보여요.</p>';
 }
@@ -298,20 +316,27 @@ function rsFind(k){ var it=null; (D.asg||[]).forEach(function(a){ (a.items||[]).
   if(!it){ var m=/^adv:gm:(.+)-(\d+)$/.exec(k); if(m) it={k:k,gm:{e:m[1],n:+m[2]}}; } return it; }
 function rsBind(){
   M.querySelectorAll('tr[data-rk]').forEach(function(tr){ tr.onclick=function(){ RS.open=RS.open===tr.dataset.rk?null:tr.dataset.rk; var y=window.scrollY; paint(); window.scrollTo(0,y); }; });
-  M.querySelectorAll('[data-rx]').forEach(function(el){ var it=rsFind(el.dataset.rx); if(it) showItem(it,el); else el.innerHTML='<span class="sub">지운 과제의 문항이라 여기서는 문항을 보여 줄 수 없어요.</span>'; });
+  M.querySelectorAll('[data-rx]').forEach(function(el){ var k=el.dataset.rx, it=null; (D.asg||[]).forEach(function(a){ (a.items||[]).forEach(function(x){ if(x.k===k) it=x; }); });
+    if(it){ showItem(it,el); return; }
+    evItem(k).then(function(r){ if(!el.isConnected) return; if(!r){ el.innerHTML='<span class="sub">이 문항은 여기서 보여 줄 수 없어요.</span>'; return; } if(r.html) el.innerHTML=r.html; else showItem(r.it,el); })
+      .catch(function(){ if(el.isConnected) el.innerHTML='<span class="msg">문항을 불러오지 못했어요.</span>'; }); });
 }
 function rsView(){
+  /* 혼자 푼 문제의 응답은 이 화면을 처음 열 때 한 번 불러온다(학생마다 기록 문서를 읽음) */
+  if(RS.mode!=='asg'&&!D.self&&!RS.busy){ RS.busy=true;
+    Promise.all([call('teacherChoices',[PW,D.rows.map(function(r){ return r.id; })]), script('/advanced-korean/gm/index.js?v=102').catch(function(){})]).then(function(x){ RS.busy=false; D.self=(x[0]&&x[0].ok&&x[0].m)||{}; if(VIEW==='rs') paint(); }, function(){ RS.busy=false; D.self={}; if(VIEW==='rs') paint(); }); }
   var all=rsAll(), srcs={}; all.forEach(function(r){ srcs[rsSrc(r.k)]=1; });
   var rows=all.filter(function(r){ return r.n>0&&(!RS.src||rsSrc(r.k)===RS.src); }), none=all.filter(function(r){ return !r.n; }).length;
   rows.sort(RS.sort==='lo'?function(a,b){ return (a.ok/a.n)-(b.ok/b.n)||b.n-a.n; }:RS.sort==='hi'?function(a,b){ return (b.ok/b.n)-(a.ok/a.n)||b.n-a.n; }:function(a,b){ return b.n-a.n||(a.ok/a.n)-(b.ok/b.n); });
   var tot=rows.reduce(function(x,r){return x+r.n;},0);
-  var h='<h1>응답률</h1><p class="sub">학생들이 과제와 모의고사에서 고른 답을 문항·선택지별로 모았어요. 이 화면은 선생님에게만 보이고, 과제를 지워도 그 응답은 남아요.</p>'+
+  var h='<h1>응답률</h1><p class="sub">학생들이 과제·모의고사에서 고른 답과, 혼자 풀 때 처음 고른 답을 문항·선택지별로 모았어요. 이 화면은 선생님에게만 보이고, 과제를 지워도 그 응답은 남아요.'+(RS.busy?' <b>혼자 푼 문제의 응답을 불러오는 중…</b>':'')+'</p>'+
     '<div class="kp"><div><b>'+rows.length+'</b><small>응답이 모인 문항</small></div><div><b>'+tot.toLocaleString()+'</b><small>응답 수(모두)</small></div><div><b>'+(tot?Math.round(rows.reduce(function(x,r){return x+r.ok;},0)/tot*100)+'%':'–')+'</b><small>전체 정답률</small></div><div><b>'+none+'</b><small>아직 응답 없는 문항</small></div></div>'+
-    '<div class="bar"><select id="rsS"><option value="">모든 시험</option>'+Object.keys(srcs).filter(Boolean).map(function(p){ return '<option value="'+p+'"'+(p===RS.src?' selected':'')+'>'+RSN[p]+'</option>'; }).join('')+'</select>'+
+    '<div class="bar"><select id="rsM" aria-label="어떤 응답을 볼까요"><option value="all">과제 + 혼자 푼 문제</option><option value="asg"'+(RS.mode==='asg'?' selected':'')+'>과제·모의고사만</option><option value="self"'+(RS.mode==='self'?' selected':'')+'>혼자 푼 문제만</option></select><select id="rsS"><option value="">모든 시험</option>'+Object.keys(srcs).filter(Boolean).map(function(p){ return '<option value="'+p+'"'+(p===RS.src?' selected':'')+'>'+RSN[p]+'</option>'; }).join('')+'</select>'+
     '<select id="rsO"><option value="n">응답 많은 순</option><option value="lo"'+(RS.sort==='lo'?' selected':'')+'>정답률 낮은 순</option><option value="hi"'+(RS.sort==='hi'?' selected':'')+'>정답률 높은 순</option></select>'+
     (rows.length?'<button class="btn sm" type="button" id="rsCsv">표로 내려받기(CSV)</button>':'')+'</div>';
-  h+=rows.length?rsTable(rows,false):'<div class="tw"><p class="empty">아직 모인 응답이 없어요. 학생들이 과제나 모의고사를 제출하면 여기에 쌓여요.</p></div>';
+  h+=rows.length?rsTable(rows,false):'<div class="tw"><p class="empty">아직 모인 응답이 없어요. 학생들이 과제·모의고사를 제출하거나 문제를 풀면 여기에 쌓여요.</p></div>';
   M.innerHTML=h;
+  $('rsM').onchange=function(){ RS.mode=this.value; RS.open=null; paint(); };
   $('rsS').onchange=function(){ RS.src=this.value; RS.open=null; paint(); };
   $('rsO').onchange=function(){ RS.sort=this.value; RS.open=null; paint(); };
   if($('rsCsv')) $('rsCsv').onclick=function(){
