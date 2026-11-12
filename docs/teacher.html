@@ -64,6 +64,12 @@ ul.ev{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto}ul.ev li
 mark{background:rgba(242,214,92,.55);color:inherit;border-radius:2px}
 .mk-bk{position:sticky;top:58px;z-index:5;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bg);border:1px solid var(--brand);border-radius:14px;padding:10px 14px;margin:0 0 12px;font-size:14px}.mk-bk b{color:var(--brand)}
 .rs td,.rs th{padding:8px 10px}.rs td.c{text-align:right;color:var(--sub)}.rs td.c.key{color:var(--ok);font-weight:700}.rs td.c.trap{color:var(--no);font-weight:700}.rs td.t{white-space:normal;min-width:200px}.rs tr.x td{background:var(--soft);white-space:normal;cursor:default}.rs tr.x img{display:block;max-width:min(100%,720px);height:auto;margin:6px 0}
+/* v118: 응답률에서 펼친 문항 — 화면 가득(지문을 위에 가득, 문항은 그 아래). '보통 크기로'를 누르면 전처럼 */
+.rs tr.x .rx-full img{max-width:100%}
+.rx-flow{display:flex;gap:24px;align-items:flex-start;margin:6px 0 14px}.rx-strip{flex:0 0 auto}.rx-seg{overflow:hidden}.rs tr.x .rx-full .rx-seg img{display:block;max-width:none;margin:0}
+.rs tr.x .rx-full .wans{max-height:none!important;overflow:visible!important;font-size:clamp(15px,1.2vw,24px);line-height:1.9;padding:14px 18px}
+.rs tr.x .rx-full p,.rs tr.x .rx-full ol{font-size:clamp(15px,1.2vw,24px)}.rs tr.x .rx-full p.sub{font-size:13px}
+.rx-bar{text-align:right;margin:0 0 4px;font-size:13px}
 .mk-auto{background:var(--soft);border-radius:14px;padding:10px 14px;font-size:14px}.mk-auto input[type=number]{width:74px;padding:6px 8px}.ck{display:inline-flex;gap:6px;align-items:center;font-size:13.5px;color:var(--sub);cursor:pointer}.ck input{width:17px;height:17px;margin:0}
 .clc{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}.clc div{border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13.5px;background:var(--surface)}.clc div.on{border-color:var(--brand)}.clc b{font-size:14.5px}.clc small{color:var(--sub);margin-left:6px}
 select.cls{width:130px;padding:5px 8px;font-size:13.5px}
@@ -302,7 +308,8 @@ function asgView(){
 function printAsg(a,key){ script('/suneung-korean/js/asgprint.js?v=107').then(function(){ KMAPrint.open(a,{key:key||{}}); }).catch(function(){ alertMsg('인쇄 화면을 불러오지 못했어요.'); }); }
 function alertMsg(t){ var m=$('mkMsg'); if(m) m.textContent=t; }
 /* ---------- 응답률 (v106) — 학생들이 과제·모의고사에서 고른 답을 문항·선택지별로 모은다. 선생님만 본다 ---------- */
-var RSOPEN=null, RS={src:'',sort:'n',open:null,mode:'all',busy:false}, CIRC='①②③④⑤';
+var RSOPEN=null, RS={src:'',sort:'n',open:null,mode:'all',busy:false,fit:true}, CIRC='①②③④⑤';
+try{ if(localStorage.getItem('kma.rsfit')==='0') RS.fit=false; }catch(e){}
 var RSN={'adv:gm:':'공무원 국어','sn:':'수능·모의평가','adv:psat:':'PSAT','adv:leet:':'LEET','adv:im:':'중등임용','non:':'대학 논술','hak:':'개념 학습'};
 function rsSrc(k){ for(var p in RSN) if(k.indexOf(p)===0) return p; return ''; }
 function rsRow(k){ return {k:k,c:[0,0,0,0,0,0],t:'',a:'',nc:0,ans:0,it:null,n:0}; }
@@ -331,12 +338,13 @@ function rsTable(rows,inAsg){
     rows.map(function(r){ var top=0; for(var i=1;i<=r.nc;i++) if(i!==r.ans&&r.c[i]>top) top=r.c[i];
       var cells=''; for(var j=1;j<=nc;j++){ var p=rsP(r.c[j],r.n), cl=j>r.nc?'':(j===r.ans?' key':(r.n>=3&&r.c[j]===top&&p>=30?' trap':'')); cells+='<td class="c'+cl+'" title="'+(r.c[j]||0)+'명">'+(j>r.nc?'':(r.n?p+'%':'–'))+'</td>'; }
       return '<tr data-rk="'+esc(r.k)+'"><td class="num"'+(inAsg?'':' hidden')+'>'+(r.no||'')+'</td><td class="t">'+esc(r.t)+'</td><td>'+esc(r.a||'')+'</td><td class="num">'+r.n+'</td><td class="num">'+(r.ans?pct(r.ok,r.n):(r.z&&r.n?pct(0,r.n):'<span class="pc">–</span>'))+'</td>'+cells+'<td class="c">'+(r.n?rsP(r.c[0],r.n)+'%':'–')+'</td></tr>'+
-        (RS.open===r.k?'<tr class="x"><td colspan="'+(6+nc)+'"><div data-rx="'+esc(r.k)+'">불러오는 중…</div></td></tr>':''); }).join('')+'</tbody></table></div>'+
+        (RS.open===r.k?'<tr class="x"><td colspan="'+(6+nc)+'"><div class="rx-bar"><button class="lnk" type="button" data-rxs>'+(RS.fit?'보통 크기로 보기':'화면 가득 보기')+'</button></div><div data-rx="'+esc(r.k)+'"'+(RS.fit?' class="rx-full"':'')+'>불러오는 중…</div></td></tr>':''); }).join('')+'</tbody></table></div>'+
     '<p class="sub" style="margin:8px 0 0;font-size:13px"><b style="color:var(--ok)">초록</b>은 정답, <b style="color:var(--no)">빨강</b>은 가장 많이 고른 오답(30% 이상)이에요. 줄을 누르면 문항이 보여요.</p>';
 }
 function rsFind(k){ var it=null; (D.asg||[]).forEach(function(a){ (a.items||[]).forEach(function(x){ if(x.k===k) it=x; }); });
   if(!it){ var m=/^adv:gm:(.+)-(\d+)$/.exec(k); if(m) it={k:k,gm:{e:m[1],n:+m[2]}}; } return it; }
 function rsBind(){
+  M.querySelectorAll('[data-rxs]').forEach(function(b){ b.onclick=function(){ RS.fit=!RS.fit; try{ localStorage.setItem('kma.rsfit',RS.fit?'1':'0'); }catch(e){} var y=window.scrollY; paint(); window.scrollTo(0,y); }; });
   M.querySelectorAll('tr[data-rk]').forEach(function(tr){ tr.onclick=function(){ RS.open=RS.open===tr.dataset.rk?null:tr.dataset.rk; var y=window.scrollY; paint(); window.scrollTo(0,y); }; });
   M.querySelectorAll('[data-rx]').forEach(function(el){ var k=el.dataset.rx, it=null; (D.asg||[]).forEach(function(a){ (a.items||[]).forEach(function(x){ if(x.k===k) it=x; }); });
     if(it){ showItem(it,el); return; }
@@ -368,22 +376,62 @@ function rsView(){
     var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='응답률_'+new Date(Date.now()+9*3600000).toISOString().slice(0,10)+'.csv'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500); };
   rsBind();
 }
+/* v118: 화면 가득 보기 — 지문 그림은 시험지의 한 단을 자른 것이라 글자를 다시 흘릴 수 없다.
+   그래서 줄 사이 빈 곳을 찾아 자르고, 조각을 옆으로 이어 붙여 화면 너비를 채운다. 문항 그림은 같은 배율로 그 아래에 둔다. */
+function rxCuts(im){ if(im._cuts) return im._cuts;
+  try{ var w=im.naturalWidth, h=im.naturalHeight, c=document.createElement('canvas'); c.width=w; c.height=h; var x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,w,h); x.drawImage(im,0,0);
+    var d=x.getImageData(0,0,w,h).data, col=new Uint32Array(w), dark=new Uint8Array(w*h), i, y, X;
+    for(y=0;y<h;y++) for(X=0;X<w;X++){ i=(y*w+X)*4; if(d[i]*0.3+d[i+1]*0.59+d[i+2]*0.11<150){ dark[y*w+X]=1; col[X]++; } }
+    var rule=new Uint8Array(w); for(X=0;X<w;X++) if(col[X]>h*0.6){ for(i=Math.max(0,X-2);i<=Math.min(w-1,X+2);i++) rule[i]=1; }   /* 테두리 세로줄은 빼고 본다 */
+    var cuts=[], run=-1;
+    for(y=0;y<=h;y++){ var blank=y<h; if(blank) for(X=0;X<w;X++) if(dark[y*w+X]&&!rule[X]){ blank=false; break; }
+      if(blank){ if(run<0) run=y; } else { if(run>0&&y<h&&y-run>=3) cuts.push((run+y)/2/w); run=-1; } }
+    return (im._cuts=cuts); }catch(e){ return (im._cuts=[]); } }
+function rxFlow(root){ if(!root||!root.classList.contains('rx-full')) return;
+  var ready=function(ims){ return Promise.all(ims.map(function(im){ return im.complete?im:new Promise(function(res){ im.addEventListener('load',res); im.addEventListener('error',res); }); })); };
+  var gap=24, vh=window.innerHeight*0.72, boxes=[].slice.call(root.querySelectorAll('.rx-pas')), f=0, W;
+  /* 다시 맞출 때(창 크기를 바꿨을 때): 앞서 넓혀 둔 것을 잠깐 치우고 칸 너비를 잰다 */
+  boxes.forEach(function(b){ if(b._ims) b.style.display='none'; }); [].forEach.call(root.querySelectorAll('img'),function(im){ if(!im.closest('.rx-pas,.hp-crop')) im.style.width=''; });
+  W=root.clientWidth; boxes.forEach(function(b){ b.style.display=''; });
+  var rest=function(){ var q=[].slice.call(root.querySelectorAll('img')).filter(function(im){ return !im.closest('.rx-pas,.hp-crop'); });
+    ready(q).then(function(){ q.forEach(function(im){ if(!im.naturalWidth) return; var k=f||Math.min(1.3*Math.min(im.naturalWidth,720),W)/im.naturalWidth; im.style.width=Math.round(Math.min(W,im.naturalWidth*k))+'px'; }); }); };
+  if(!boxes.length){ rest(); return; }
+  boxes.forEach(function(box,bi){ var ims=box._ims||(box._ims=[].slice.call(box.querySelectorAll('img')));
+    ready(ims).then(function(){ if(!box.isConnected) return;
+      var ok=ims.filter(function(i){ return i.naturalWidth>0; }); if(!ok.length){ if(bi===boxes.length-1) rest(); return; }
+      var nw=Math.max.apply(null,ok.map(function(i){ return i.naturalWidth; })), d0=Math.min(nw,720), segs=[], tot=0, cand=[];
+      ok.forEach(function(im){ var hh=im.naturalHeight/im.naturalWidth; if(tot) cand.push(tot); rxCuts(im).forEach(function(c){ cand.push(tot+c); }); segs.push({im:im,y0:tot,h:hh}); tot+=hh; });   /* 높이 단위: 그림 너비=1 */
+      var maxN=Math.max(1,Math.floor((W+gap)/(d0*0.8+gap))), N=maxN, n, sw;
+      if(!cand.length) maxN=N=1;
+      for(n=1;n<=maxN;n++){ sw=Math.min(d0*1.3,(W-gap*(n-1))/n); if(tot*sw/n<=vh){ N=n; break; } }
+      sw=Math.floor(Math.min(d0*1.3,(W-gap*(N-1))/N)); f=sw/nw;
+      var cuts=[0], j; for(j=1;j<N;j++){ var t=tot*j/N, best=-1, bd=1e9; cand.forEach(function(c){ if(c>cuts[cuts.length-1]+0.05&&Math.abs(c-t)<bd){ bd=Math.abs(c-t); best=c; } }); cuts.push(best>0?best:t); }
+      cuts.push(tot);
+      box.innerHTML=''; box.className='rx-pas rx-flow';
+      for(j=0;j<N;j++){ var a=cuts[j], b=cuts[j+1], st=document.createElement('div'); st.className='rx-strip'; st.style.width=sw+'px';
+        segs.forEach(function(sg){ var t0=Math.max(a,sg.y0), t1=Math.min(b,sg.y0+sg.h); if(t1-t0<=0) return;
+          var dv=document.createElement('div'), im=document.createElement('img'); dv.className='rx-seg'; dv.style.height=Math.round((t1-t0)*sw)+'px';
+          im.src=sg.im.src; im.alt=sg.im.alt||''; im.style.width=sw+'px'; im.style.marginTop=(-Math.round((t0-sg.y0)*sw))+'px'; dv.appendChild(im); st.appendChild(dv); });
+        box.appendChild(st); }
+      if(bi===boxes.length-1) rest(); }); });
+}
+var RXT=null; window.addEventListener('resize',function(){ clearTimeout(RXT); RXT=setTimeout(function(){ [].forEach.call(document.querySelectorAll('.rx-full'),rxFlow); },250); });
 /* 문항 하나 보여 주기(응답률·담은 문항에서 같이 씀) */
 function showItem(it,el){
   var h='';
-  if(it.p&&it.p.imgs&&it.p.imgs.length) h+=it.p.imgs.map(picH).join('');
+  if(it.p&&it.p.imgs&&it.p.imgs.length) h+='<div class="rx-pas">'+it.p.imgs.map(picH).join('')+'</div>';
   var S=window.ASG_SRC&&ASG_SRC.sn;
   if(it.txt){ var pas=it.txt.pas||(it._pk&&S&&S.pas[it._pk]&&!(it.p&&it.p.imgs&&it.p.imgs.length)?S.pas[it._pk]:'');
     if(pas) h+='<div class="wans" style="max-height:320px;overflow:auto">'+esc(pas)+'</div>';
     h+='<p style="margin:10px 0 4px"><b>'+esc(it.txt.ask)+'</b></p>'+(it.txt.body?'<div class="wans">'+esc(it.txt.body)+'</div>':'')+((it.txt.ch||[]).length?'<ol style="margin:4px 0 0;padding-left:22px;list-style:none">'+it.txt.ch.map(function(c,i){ return '<li>'+CIRC[i]+' '+esc(c)+'</li>'; }).join('')+'</ol>':''); }
   h+=(it.q||[]).map(picH).join('');
   if(it.src) h+='<p class="sub" style="margin:6px 0 0;font-size:12.5px">'+esc(it.src)+'</p>';
-  el.innerHTML=h+(it.gm?'<div data-gmv>그림을 불러오는 중…</div>':'');
+  el.innerHTML=h+(it.gm?'<div data-gmv>그림을 불러오는 중…</div>':''); rxFlow(el);
   if(it.gm) gmQ(it.gm.e).then(function(d){ var bx=el.querySelector('[data-gmv]'); if(!bx) return;
     var link='<a href="/advanced-korean/gongmuwon.html#exam/'+esc(it.gm.e)+'" target="_blank" rel="noopener">시험지에서 '+it.gm.n+'번 보기 ↗</a>';
     if(!d||!d.q){ bx.innerHTML=link; return; }
-    var g=''; (d.p||[]).forEach(function(p){ if(p.rng[0]<=it.gm.n&&it.gm.n<=p.rng[1]) g+='<img src="'+p.img+'" alt="지문">'; }); (d.q||[]).forEach(function(q){ if(q.n===it.gm.n) g+='<img src="'+q.img+'" alt="'+it.gm.n+'번">'; });
-    bx.innerHTML=g||link; });
+    var g=''; (d.p||[]).forEach(function(p){ if(p.rng[0]<=it.gm.n&&it.gm.n<=p.rng[1]) g+='<img src="'+p.img+'" alt="지문">'; }); if(g) g='<div class="rx-pas">'+g+'</div>'; (d.q||[]).forEach(function(q){ if(q.n===it.gm.n) g+='<img src="'+q.img+'" alt="'+it.gm.n+'번">'; });
+    bx.innerHTML=g||link; rxFlow(el); });
 }
 /* ---------- 기출 골라 과제 만들기 (v103: 공무원·수능·PSAT·LEET·임용·대학 논술) ---------- */
 var SRCS=[
