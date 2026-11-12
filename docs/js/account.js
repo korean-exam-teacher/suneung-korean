@@ -7,6 +7,7 @@
  *
  * 각 갈래에서 쓰는 법
  *   KMA.record('adv:psat:PS2024a-12', true, 'PSAT', 3)   // 학생이 채점한 순간 한 번 부르면 됨(로그인 안 했으면 무시). 끝의 3은 고른 번호(없으면 생략)
+ * v117(2026-11-12): 관리자가 학급의 담임을 바꾼다 — classOwner(학급 id, 선생님 uid). teacherSite 가 관리자에게 선생님 목록(tch)을 함께 준다
  * v110(2026-11-11): 혼자 푼 문제도 고른 번호를 남긴다 — KMA.record(열쇠, 맞았나, 영역, 고른 번호). ev 기록 [첫, 마지막, 횟수, 시각, 영역, 첫 번호, 마지막 번호]
  * v108(2026-11-11): 학생 한 명이 여러 학급에 — users/{uid}.cls 에 학급 이름을 줄바꿈(\n)으로 이어 적는다(하나뿐이면 전과 같음)
  * v107(2026-11-11): 과제 인쇄(js/asgprint.js), 학생 화면 위쪽 '과제' 탭, 새 공지 알림 창, 학급(선생님이 만들고 학생을 넣음 — asgKey/_cls)
@@ -245,11 +246,12 @@
       });
     },
     teacherSite: function () {
-      var rows, asg = [], CL = {}, PM = {};
+      var rows, asg = [], CL = {}, PM = {}, TL = [];
       return fbInit().then(teacherRows).then(function (r) {
         rows = r; if (!ISADM) return null;
         return DB.collection("teachers").get().then(function (q) { var t = {}; q.forEach(function (d) { t[d.id] = 1; });
           rows.forEach(function (x) { if (t[x.uid] && !x.tch) uref(x.uid).update({ tch: 1 }).catch(function () {}); });
+          TL = rows.filter(function (x) { return t[x.uid]; }).map(function (x) { return { uid: x.uid, id: x.id, name: x.name }; });
           rows = rows.filter(function (x) { return !t[x.uid]; }); });
       }).then(permGet).then(function (p) { PM = p; MYPERM = ISADM ? {} : (p[uid()] || {}); }).then(clsGet).then(function (c) {
         CL = c;
@@ -271,7 +273,7 @@
       }).then(function () { return DB.collection("notices").orderBy("created").get(); }).then(function (q) {
         var nt = []; q.forEach(function (d) { var x = d.data(); x.id = d.id; nt.push(x); });
         return statDoc().get().then(function (d) { return (d.data() || {}).it || {}; }).catch(function () { return {}; }).then(function (stat) {
-          TROWS = rows; return { ok: true, at: Date.now(), rows: rows, asg: asg, nt: nt, g: G, stat: stat, cls: CL, perm: PM, me: { uid: uid(), id: myId(), admin: ISADM, perm: MYPERM } };
+          TROWS = rows; return { ok: true, at: Date.now(), rows: rows, asg: asg, nt: nt, g: G, stat: stat, cls: CL, perm: PM, tch: TL, me: { uid: uid(), id: myId(), name: (ME && ME.name) || "", admin: ISADM, perm: MYPERM } };
         });
       });
     },
@@ -353,6 +355,25 @@
         if (Object.keys(c).some(function (k) { return c[k].name === name; })) return { ok: false, msg: "이미 있는 학급 이름이에요." };
         c["c" + Date.now()] = { name: name, own: uid(), ownId: myId(), ownName: (ME && ME.name) || "", at: Date.now() };
         return clsDoc().set({ c: c }).then(function () { return { ok: true, cls: c }; });
+      });
+    },
+    /* v117: 관리자가 학급의 담임을 바꾼다 — 담임은 관리자 자신이거나 선생님으로 등록된 아이디 */
+    classOwner: function (pw, cid, tuid) {
+      if (!ISADM) return Promise.resolve({ ok: false, msg: "관리자만 담임을 바꿀 수 있어요." });
+      tuid = String(tuid || "");
+      var who = tuid === uid() ? Promise.resolve({ id: myId(), name: (ME && ME.name) || "" })
+        : DB.collection("teachers").doc(tuid).get().then(function (t) {
+          if (!t.exists) return null;
+          return uref(tuid).get().then(function (u) { var x = u.data() || {}; return { id: x.id || (t.data() || {}).id || "?", name: x.name || "" }; });
+        });
+      return who.then(function (w) {
+        if (!w) return { ok: false, msg: "선생님으로 등록된 아이디가 아니에요." };
+        return clsDoc().get().then(function (d) {
+          var c = (d.data() || {}).c || {};
+          if (!c[cid]) return { ok: false, msg: "없는 학급이에요." };
+          c[cid].own = tuid; c[cid].ownId = w.id; c[cid].ownName = w.name;
+          return clsDoc().set({ c: c }).then(function () { return { ok: true, cls: c }; });
+        });
       });
     },
     classDelete: function (pw, cid) {
