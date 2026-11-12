@@ -69,6 +69,7 @@ mark{background:rgba(242,214,92,.55);color:inherit;border-radius:2px}
 select.cls{width:130px;padding:5px 8px;font-size:13.5px}
 .cm{display:flex;flex-wrap:wrap;gap:4px;align-items:center;max-width:280px}.cm .tag{display:inline-flex;align-items:center;gap:2px;padding:2px 4px 2px 10px}.cm .tag.ro{padding:2px 10px;opacity:.7}
 .cx{border:0;background:none;font:inherit;font-size:15px;line-height:1;color:var(--faint);cursor:pointer;padding:2px 5px;border-radius:999px}.cx:hover{color:var(--no)}
+select.own{width:auto;max-width:150px;padding:2px 6px;font-size:13px;margin-left:2px}
 select.cadd{width:92px;padding:4px 6px;font-size:13px;color:var(--sub)}
 .who{display:inline-block;font-size:12.5px;background:var(--brand);color:#fff;border-radius:999px;padding:2px 10px;margin-left:6px;vertical-align:3px;font-weight:600}
 @media (max-width:760px){.mk-r{grid-template-columns:24px minmax(0,1fr) 46px}.mk-r .hide{display:none}.mk-v{padding-left:4px}}
@@ -78,7 +79,7 @@ select.cadd{width:92px;padding:4px 6px;font-size:13px;color:var(--sub)}
 <body>
 <header class="top"><a class="brand" href="/suneung-korean/">국어의 모든 것</a><nav id="nav" hidden><a class="home" href="/suneung-korean/">처음 화면</a><button type="button" data-v="st" class="on">학생 현황</button><button type="button" data-v="asg">과제</button><button type="button" data-v="rs">응답률</button><button type="button" data-v="nt">공지</button><button type="button" data-v="adm" id="admTab" hidden>선생님 관리</button><button type="button" id="out">로그아웃</button></nav></header>
 <main class="wrap" id="main"></main>
-<script src="js/account.js?v=114" data-noui></script>
+<script src="js/account.js?v=117" data-noui></script>
 <script>
 (function(){
 /* account.js 와 같은 서버 주소를 쓴다 */
@@ -144,6 +145,10 @@ function scope(){
     D.asg=D.asgAll.filter(function(a){ return a.by===me.uid||(a.cls&&mine[a.cls])||(!a.by&&!a.cls); });
     D.nt=D.ntAll.filter(function(n){ return n.by===me.uid||(n.cls&&mine[n.cls])||(!n.by&&!n.cls); }); }
 }
+/* v117: 관리자가 담임을 정한다 — 고를 수 있는 사람은 관리자 자신과 등록한 선생님 */
+function ownOpts(cur,curLab){ var me=D.me||{uid:''}, L=[[me.uid,'나(관리자)']].concat((D.tch||[]).map(function(t){ return [t.uid,t.name?t.name+' ('+t.id+')':t.id]; }));
+  if(cur&&!L.some(function(x){ return x[0]===cur; })) L.push([cur,curLab||'?']);
+  return L.map(function(x){ return '<option value="'+esc(x[0])+'"'+(x[0]===cur?' selected':'')+'>'+esc(x[1])+'</option>'; }).join(''); }
 /* ---------- 학생 현황 ---------- */
 function classes(){ return (D.my||[]).map(function(c){ return c.name; }); }
 function clsOpts(cur,all){ var L=classes(); return (all?'<option value="">'+all+'</option>':'')+L.map(function(c){ return '<option'+(c===cur?' selected':'')+'>'+esc(c)+'</option>'; }).join('')+(cur&&L.indexOf(cur)<0?'<option selected>'+esc(cur)+'</option>':''); }
@@ -164,11 +169,11 @@ function stView(){
   var dd=[]; for(var i=13;i>=0;i--){ var d=new Date(Date.now()-i*86400000+9*3600000).toISOString().slice(0,10); dd.push(d); }
   var h='<h1>학생 현황</h1><p class="sub">'+new Date(D.at).toLocaleString('ko-KR')+' 기준 · 아이디를 만든 학생이 모두 나와요. 줄을 누르면 자세히 볼 수 있고, 이름·학급은 여기서 고칠 수 있어요. <button class="lnk" type="button" id="rl">새로 고침</button></p>'+
     '<div class="kp"><div><b>'+rows.length+'</b><small>학생</small></div><div><b>'+wk+'</b><small>최근 7일 공부한 학생</small></div><div><b>'+tot.toLocaleString()+'</b><small>푼 문제(모두)</small></div><div><b>'+(tot?Math.round(f/tot*100)+'%':'–')+'</b><small>첫 시도 정답률</small></div></div>'+
-    '<div class="clc">'+(D.my.length?D.my.map(function(c){ return '<div class="'+(c.name===CLS?'on':'')+'"><b>'+esc(c.name)+'</b><small>'+(cnt[c.name]||0)+'명'+(ADM?' · 담임 '+esc(c.ownName||c.ownId||'?'):'')+'</small></div>'; }).join(''):'<div>아직 학급이 없어요. 아래 ‘＋ 학급 만들기’로 학급을 만든 뒤, ‘학급 없는 학생’에서 우리 반 학생을 골라 넣어 주세요.</div>')+'</div>'+
+    '<div class="clc">'+(D.my.length?D.my.map(function(c){ return '<div class="'+(c.name===CLS?'on':'')+'"><b>'+esc(c.name)+'</b><small>'+(cnt[c.name]||0)+'명'+(ADM?' · 담임 '+(FBM?'<select class="own" data-own="'+esc(c.id)+'" aria-label="'+esc(c.name)+' 담임">'+ownOpts(c.own,c.ownName||c.ownId)+'</select>':esc(c.ownName||c.ownId||'?')):'')+'</small></div>'; }).join(''):'<div>아직 학급이 없어요. 아래 ‘＋ 학급 만들기’로 학급을 만든 뒤, ‘학급 없는 학생’에서 우리 반 학생을 골라 넣어 주세요.</div>')+'</div>'+
     '<div class="bar"><label>학급 <select id="cf"><option value="">'+(ADM?'모든 학생':'내 학급 모두')+'</option>'+classes().map(function(c){return '<option'+(c===CLS?' selected':'')+'>'+esc(c)+'</option>';}).join('')+'<option value="__free__"'+(FREE?' selected':'')+'>학급 없는 학생 ('+D.free.length+')</option></select></label>'+
-    '<button class="btn sm" type="button" id="clNew">＋ 학급 만들기</button><span id="clForm" hidden><input type="text" id="clName" maxlength="20" placeholder="학급 이름 — 예: 3학년 2반" style="width:220px;padding:6px 10px"> <button class="btn sm pri" type="button" id="clGo">만들기</button></span>'+
+    '<button class="btn sm" type="button" id="clNew">＋ 학급 만들기</button><span id="clForm" hidden><input type="text" id="clName" maxlength="20" placeholder="학급 이름 — 예: 3학년 2반" style="width:220px;padding:6px 10px"> '+(ADM&&FBM?'<label>담임 <select id="clOwn" class="own">'+ownOpts((D.me||{}).uid,'')+'</select></label> ':'')+'<button class="btn sm pri" type="button" id="clGo">만들기</button></span>'+
     (CLS&&!FREE?'<button class="btn sm" type="button" id="clDel">이 학급 지우기</button>':'')+'<span class="msg" id="clM" style="margin:0"></span></div>'+
-    (FREE?'<p class="sub" style="margin:0 0 10px">아직 어느 학급에도 들어 있지 않은 학생이에요. ‘학급’ 칸에서 '+(ADM?'학급을 고르면':'내 학급을 고르면')+' 그 학급에 들어갑니다.</p>':(ADM&&D.cl.length>1?'<p class="sub" style="margin:0 0 10px">관리자는 한 학생을 여러 학급에 넣을 수 있어요. ‘학급’ 칸의 ‘＋ 학급’으로 넣고, 이름 옆 ×로 뺍니다.</p>':''));
+    (FREE?'<p class="sub" style="margin:0 0 10px">아직 어느 학급에도 들어 있지 않은 학생이에요. ‘학급’ 칸에서 '+(ADM?'학급을 고르면':'내 학급을 고르면')+' 그 학급에 들어갑니다.</p>':(ADM&&D.cl.length?'<p class="sub" style="margin:0 0 10px">'+(FBM?'학급 카드의 ‘담임’ 칸에서 그 학급의 담임 선생님을 바꿀 수 있어요. ':'')+(D.cl.length>1?'관리자는 한 학생을 여러 학급에 넣을 수 있어요. ‘학급’ 칸의 ‘＋ 학급’으로 넣고, 이름 옆 ×로 뺍니다.':'')+'</p>':''));
   if(!rows.length){ M.innerHTML=h+'<div class="tw"><p class="empty">'+(FREE?'학급 없는 학생이 없어요.':D.my.length?'이 학급에 아직 학생이 없어요. ‘학급 없는 학생’에서 골라 넣어 주세요.':'아직 학생이 없어요.')+'</p></div>'; bindTop(); return; }
   h+='<div class="tw"><table><thead><tr><th>이름</th><th>아이디</th><th>학급</th><th>마지막 공부</th><th>최근 14일</th><th class="num">7일</th><th class="num">푼 문제</th><th class="num">정답률</th><th class="num">남은 오답</th>'+
     GO.map(function(g){return '<th class="num" title="'+G[g]+'">'+GS[g]+'</th>';}).join('')+'<th class="num">과제</th>'+(FBM?'':'<th class="num">공무원 앱</th>')+'</tr></thead><tbody>'+
@@ -192,7 +197,12 @@ function stView(){
 function who(id){ var r=(D.rows||[]).filter(function(x){return x.id===id;})[0]; return r&&r.name?r.name+' ('+id+')':id; }
 function bindTop(){ var cf=$('cf'); if(cf) cf.onchange=function(){ CLS=cf.value; OPEN=null; paint(); }; var rl=$('rl'); if(rl) rl.onclick=load;
   var cn=$('clNew'); if(cn) cn.onclick=function(){ $('clForm').hidden=false; cn.hidden=true; $('clName').focus(); };
-  var cg=$('clGo'); if(cg){ var mk=function(){ var v=$('clName').value.trim(); if(!v) return; cg.disabled=true; call('classSave',[PW,v]).then(function(r){ cg.disabled=false; if(!r.ok){ $('clM').textContent=r.msg||'만들지 못했어요.'; return; } D.cls=r.cls; scope(); CLS=v; paint(); }); }; cg.onclick=mk; $('clName').onkeydown=function(e){ if(e.key==='Enter') mk(); }; }
+  var cg=$('clGo'); if(cg){ var mk=function(){ var v=$('clName').value.trim(); if(!v) return; cg.disabled=true; var ow=$('clOwn'), to=ow?ow.value:''; call('classSave',[PW,v]).then(function(r){ if(!r.ok){ cg.disabled=false; $('clM').textContent=r.msg||'만들지 못했어요.'; return; } D.cls=r.cls;
+      var cid=Object.keys(r.cls).filter(function(k){ return r.cls[k].name===v; })[0], fin=function(m){ cg.disabled=false; scope(); CLS=v; paint(); if(m) $('clM').textContent=m; };
+      if(!to||!cid||to===(D.me||{}).uid){ fin(); return; }
+      call('classOwner',[PW,cid,to]).then(function(q){ if(q.ok) D.cls=q.cls; fin(q.ok?'':'학급은 만들었지만 담임은 정하지 못했어요. '+(q.msg||'')); }); }); }; cg.onclick=mk; $('clName').onkeydown=function(e){ if(e.key==='Enter') mk(); }; }
+  M.querySelectorAll('select[data-own]').forEach(function(o){ var was=o.value; o.onchange=function(){ o.disabled=true; call('classOwner',[PW,o.dataset.own,o.value]).then(function(r){ o.disabled=false;
+    if(!r.ok){ o.value=was; $('clM').textContent=r.msg||'담임을 바꾸지 못했어요.'; return; } D.cls=r.cls; scope(); var y=window.scrollY; paint(); window.scrollTo(0,y); }); }; });
   var cd=$('clDel'); if(cd) cd.onclick=function(){ var c=D.my.filter(function(x){ return x.name===CLS; })[0]; if(!c) return;
     if(!cd.dataset.sure){ cd.dataset.sure=1; cd.textContent='정말 지우기(학생은 ‘학급 없는 학생’으로)'; return; }
     cd.disabled=true; call('classDelete',[PW,c.id]).then(function(r){ if(!r.ok){ cd.disabled=false; $('clM').textContent=r.msg||'지우지 못했어요.'; return; } CLS=''; load(); }); };
