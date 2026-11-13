@@ -25,6 +25,15 @@
 .blank.wide{display:block;text-align:center;margin:.4em 0;padding:.35em 0}
 .go-concept{text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
+<style id="crumb-v120">
+/* v120: 지금 있는 곳 — 국어의 모든 것 › 갈래 › (하위 화면). 앞쪽은 작고 흐리게, 지금 화면만 또렷하게 */
+.crumb{display:inline-flex;align-items:baseline;gap:8px;white-space:nowrap}
+.logo .crumb a{font-size:15px;color:inherit;text-decoration:none;opacity:.58;transition:opacity .15s}
+.logo .crumb a:hover{opacity:1}
+.logo .crumb i{font-style:normal;font-size:13px;opacity:.34}
+.logo .crumb a.here{font-size:21px;opacity:1}
+@media (max-width:480px){.crumb{gap:6px}.logo .crumb a{font-size:13.5px}.logo .crumb a.here{font-size:18px}}
+</style>
 </head>
 <body>
 <style>
@@ -963,9 +972,7 @@ footer .guide details{border-color:var(--line)!important;background:none!importa
 </style>
 <header class="gnb">
   <div class="inner">
-    <a class="logo" href="./" aria-label="국어의 모든 것 첫 화면으로 (지금: ᄉᆡ미 기픈 므른 · 수능)">
-      <span class="logo-text"><span class="logo-old" lang="okm">ᄉᆡ미 기픈 므른</span><span class="logo-sub">수능 국어</span><span class="logo-gloss">샘이 깊은 물은</span></span>
-    </a>
+    <div class="logo"><span class="crumb"><a class="logo-old" href="/suneung-korean/">국어의 모든 것</a><i aria-hidden="true">›</i><a class="logo-old here" lang="okm" href="suneung.html" aria-current="page" title="수능 국어 · 샘이 깊은 물은">ᄉᆡ미 기픈 므른</a></span></div>
     <nav class="gnb-nav" id="gnbNav" aria-label="주 메뉴">
       <button class="gnb-link active" type="button" data-mode="legacy">전개년 기출문제</button>
       <button class="gnb-link" type="button" data-mode="2028">2028 개편 예시문항</button>
