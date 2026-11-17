@@ -632,6 +632,12 @@
     ".kma-run .pas{border:1px solid var(--k-line);border-radius:12px;padding:14px 16px;font-size:15px;line-height:1.85;white-space:pre-wrap;word-break:keep-all;margin-bottom:10px}",
     BRKCSS,
     ".kma-run .ask{font-size:16px;font-weight:600;line-height:1.6;margin:8px 0;word-break:keep-all}",
+    /* v127: 지문과 문제를 나란히 — 넓은 화면(가로 960px·세로 520px 이상: 컴퓨터, 가로로 든 태블릿)에서만. 좁으면 지문 아래에 문제 */
+    ".kma-run .set{border-bottom:1px solid var(--k-line)}.kma-run .set-p{padding-top:22px}.kma-run .set-p .pas{margin-bottom:0}.kma-run .set-q .q:last-child{border-bottom:0}",
+    "@media (min-width:960px) and (min-height:520px){.kma-run .set,.kma-run.sets .top{margin-left:calc((832px - min(1560px,100vw - 48px))/2);margin-right:calc((832px - min(1560px,100vw - 48px))/2)}" +
+    ".kma-run .set{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,1fr);column-gap:28px;align-items:start}" +
+    ".kma-run .set-p{position:sticky;top:var(--kr-top,76px);max-height:calc(100vh - var(--kr-top,76px) - var(--kr-bot,72px));max-height:calc(100dvh - var(--kr-top,76px) - var(--kr-bot,72px));overflow:auto;-webkit-overflow-scrolling:touch;padding:16px 6px 16px 0;box-sizing:border-box}" +
+    ".kma-run .set-p img:first-child{margin-top:0}.kma-run .set-q{min-width:0}.kma-run .set-q .q:first-child{padding-top:16px}}",
     ".kma u.ul,.kma-run u.ul{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.24em;text-decoration-skip-ink:none}.kma .bx,.kma-run .bx{border:1px solid currentColor;padding:0 .18em;margin:0 .06em;-webkit-box-decoration-break:clone;box-decoration-break:clone}",
     ".kma-run .chs{display:grid;gap:6px;margin-top:10px}.kma-run .ch{display:flex;gap:10px;text-align:left;border:1px solid var(--k-line);background:none;color:inherit;border-radius:10px;padding:10px 14px;font:inherit;font-size:15px;line-height:1.6;cursor:pointer;word-break:keep-all}",
     ".kma-run .nums{display:flex;gap:8px;margin-top:10px}.kma-run .nums .ch{width:46px;height:46px;justify-content:center;align-items:center;padding:0;font-size:18px;border-radius:50%}",
@@ -954,19 +960,21 @@
       if (window.ASG_SN_MARK) c0.items.forEach(snApply);
       else snm().then(function () { if (!window.ASG_SN_MARK || CUR !== c0) return; c0.items.forEach(snApply); var y = run.scrollTop; paintRun(); run.scrollTop = y; });
     }
+    if (CUR && !CUR._gmw && !GMAP && CUR.items.some(function (it) { return it.gm; })) {
+      CUR._gmw = 1; var c1 = CUR;
+      gmMap().then(function (M) { if (!M || CUR !== c1 || run.hidden) return; var y = run.scrollTop; paintRun(); keepY(y); });
+    }
     var a = CUR, tv = !!a.t, done = !!a.done, key = a.key || {}, exam = isExam(a), over = !tv && exam && !done && examLeft(a) <= 0, show = done || (tv && TSHOW);
     var lc = tv && window.Live && Live.code ? Live.code() : "";
     var h = '<div class="in"><div class="top"><div><b style="font-size:18px">' + esc(a.title) + '</b><div style="font-size:13px;color:var(--k-sub)">' + a.items.length + "문항" + (exam ? " · 모의고사 " + a.min + "분" : "") + (a.due ? " · 마감 " + esc(a.due) : "") +
       (tv ? " · " + esc(a.cls || "모든 학생") + " · 선생님 보기(제출되지 않아요)" : done ? " · 제출함" + (a.done.n ? " " + a.done.sc + "/" + a.done.n : "") + (a._auto ? " · 시간이 끝나 자동으로 제출했어요" : "") : (exam ? " · 닫아도 시간은 계속 흘러요" : "")) + '</div></div>' +
       '<div style="display:flex;gap:8px;align-items:center">' + (tv ? '<button class="btn" type="button" id="kmaTK">' + (TSHOW ? "정답 숨기기" : "정답 보기") + "</button>" : "") + (!tv && exam && !done ? '<span class="tm' + (examLeft(a) <= 60000 ? " low" : "") + '" id="kmaTm" role="timer">남은 시간 ' + mmss(examLeft(a)) + "</span>" : "") + '<button class="btn" type="button" id="kmaPr" title="종이에 풀 수 있게 인쇄(미리 보기)">인쇄</button><button class="btn" type="button" id="kmaRX">닫기</button></div></div>' +
       (a.msg ? '<p class="s" style="margin:14px 0 0;white-space:pre-wrap">' + esc(a.msg) + "</p>" : "");
-    var lastP = "";
-    a.items.forEach(function (it, n) {
+    /* v127: 같은 지문의 문항을 한 묶음(.set)으로 — 지문은 .set-p(넓은 화면에서는 왼쪽 붙박이 칸), 문항은 .set-q. 지문이 없는 문항은 전처럼 가운데 한 줄 */
+    var qHtml = function (it, n) {
       var v = ANS[it.k], ans = key[it.k];
-      h += '<div class="q"><div class="qh"><b>' + (n + 1) + ".</b>" + esc(it.title || "") + "</div>";
-      if (it.p && it.p.imgs && it.p.imgs.length) { var pk = JSON.stringify(it.p.imgs[0]); if (pk !== lastP) h += it.p.imgs.map(pic).join(""); lastP = pk; }
+      var h = '<div class="q"><div class="qh"><b>' + (n + 1) + ".</b>" + esc(it.title || "") + "</div>";
       if (it.txt) {
-        if (it.txt.pas) h += '<div class="pas">' + pasH(it.txt.pas, it.txt.pk || it._pk) + "</div>";
         h += '<div class="ask">' + mkh(it.txt.ask) + "</div>" + (it.txt.body ? '<div class="pas">' + pasH(it.txt.body, "보기:" + String(it.k || "").slice(3)) + "</div>" : "");
       }
       h += (it.q || []).map(pic).join("");
@@ -986,12 +994,36 @@
       }
       if (it.src) h += '<div style="font-size:12px;color:var(--k-faint);margin-top:8px">' + esc(it.src) + "</div>";
       h += "</div>";
+      return h;
+    };
+    var gmP = function (it) { var m = it.gm && GMAP && GMAP.e && GMAP.e[it.gm.e], i; if (!m || (GMAP.pg || []).indexOf(it.gm.e) >= 0) return -1; for (i = 0; i < (m.p || []).length; i++) if (m.p[i][0] <= it.gm.n && it.gm.n <= m.p[i][1]) return i; return -1; };
+    var setKey = function (it, n) {
+      if (it.p && it.p.imgs && it.p.imgs.length) return "P" + JSON.stringify(it.p.imgs[0]);
+      if (it.txt && (it.txt.pk || it._pk)) return "T" + (it.txt.pk || it._pk);
+      if (it.txt && it.txt.pas) return "S" + n;
+      var g = gmP(it); return g >= 0 ? "G" + it.gm.e + "|" + g : "";
+    };
+    var sets = [], cur = null;
+    a.items.forEach(function (it, n) { var k = setKey(it, n); if (k && cur && cur.k === k) cur.n.push(n); else { cur = { k: k, n: [n] }; sets.push(cur); } });
+    sets.forEach(function (s, si) {
+      var it0 = a.items[s.n[0]], ph = "", c = s.k.charAt(0), wp;
+      if (c === "P") ph = it0.p.imgs.map(pic).join("");
+      else if (c === "T" || c === "S") { wp = s.n.map(function (n) { return a.items[n]; }).filter(function (x) { return x.txt && x.txt.pas; })[0];
+        if (!wp && c === "T") wp = a.items.filter(function (x) { return x.txt && x.txt.pas && "T" + (x.txt.pk || x._pk) === s.k; })[0];   /* 같은 지문의 문항이 떨어져 담겼으면 그 지문을 다시 보여 준다 */
+        if (wp) ph = '<div class="pas">' + pasH(wp.txt.pas, wp.txt.pk || wp._pk) + "</div>"; }
+      else if (c === "G") ph = '<div data-gmp="' + esc(s.k.slice(1)) + '"><span style="font-size:13px;color:var(--k-faint)">지문 그림을 불러오는 중…</span></div>';
+      var qs = s.n.map(function (n) { return qHtml(a.items[n], n); }).join("");
+      h += ph ? '<div class="set"><div class="set-p" data-ls="' + si + '">' + ph + '</div><div class="set-q">' + qs + "</div></div>" : qs;
     });
     h += "</div>";
     var left = a.items.filter(function (it) { return it.nc ? !ANS[it.k] : !String(ANS[it.k] || "").trim(); }).length;
     h += '<div class="foot">' + (tv ? '<span style="font-size:14px;color:var(--k-sub)">' + (lc ? "수업 <b style=\"letter-spacing:2px;color:var(--k-ink)\">" + esc(lc) + "</b> · 학생 화면에도 이 과제가 떠 있어요" : "학생과 함께 보려면") + "</span>" + (lc ? "" : (can("live") && window.Live && Live.open ? '<button class="btn pri" type="button" id="kmaLv">학생 화면에 띄우기(수업 열기)</button>' : "")) + '<button class="btn" type="button" id="kmaRX2">닫기</button>' : done ? '<span style="font-size:14px">제출했어요' + (a.done.n ? " · " + a.done.sc + "/" + a.done.n + "점" : "") + '</span><button class="btn" type="button" id="kmaRX2">닫기</button>'
       : '<span style="font-size:14px;color:var(--k-sub)">' + (left ? "안 푼 문제 " + left + "개" : "다 풀었어요") + '</span><button class="btn pri" type="button" id="kmaSub">제출하기</button>') + '<span class="msg" id="kmaRM" role="alert" style="margin:0"></span></div>';
+    var keepIn = {};   /* v127: 지문 칸 안에서 보던 자리(답을 고르면 화면을 다시 그리므로) */
+    if (run._cur === a.id) [].forEach.call(run.querySelectorAll(".set-p[data-ls]"), function (e) { if (e.scrollTop) keepIn[e.getAttribute("data-ls")] = e.scrollTop; });
+    run._cur = a.id; run._keepIn = keepIn;
     run.innerHTML = h;
+    setTops(); keepBoxes();
     fillGm();
     document.getElementById("kmaRX").onclick = closeRun;
     document.getElementById("kmaPr").onclick = printRun;
@@ -1010,6 +1042,10 @@
   var KEEPY = 0, KEEPT = 0;
   /* 다시 그린 뒤 보던 자리 지키기: 그림이 늦게 들어와 높이가 바뀌어도 1.5초 동안은 그 자리로 되돌린다(손으로 움직이면 그만둔다) */
   function keepY(y) { KEEPY = y; KEEPT = Date.now(); run.scrollTop = y; }
+  function keepBoxes() { var k = run._keepIn || {}; [].forEach.call(run.querySelectorAll(".set-p[data-ls]"), function (e) { var y = k[e.getAttribute("data-ls")]; if (y && Math.abs(e.scrollTop - y) > 1) e.scrollTop = y; }); }
+  /* 붙박이 지문 칸이 과제 머리 아래·아래 띠 위에 오도록 */
+  function setTops() { var t = run.querySelector(".top"), f = run.querySelector(".foot"); run.style.setProperty("--kr-top", ((t ? t.offsetHeight : 74) + 2) + "px"); run.style.setProperty("--kr-bot", ((f ? f.offsetHeight : 64) + 8) + "px"); run.classList.toggle("sets", !!run.querySelector(".set")); }
+  window.addEventListener("resize", function () { if (!run.hidden && CUR) setTops(); });
   function reKeep() { if (Date.now() - KEEPT < 1500 && Math.abs(run.scrollTop - KEEPY) > 1) run.scrollTop = KEEPY; }
   run.addEventListener("load", function (e) { if (e.target && e.target.tagName === "IMG") reKeep(); }, true);
   ["wheel", "touchstart", "keydown", "mousedown"].forEach(function (t) { run.addEventListener(t, function () { KEEPT = 0; }, { passive: true }); });
@@ -1062,6 +1098,11 @@
       });
     };
     gmMap().then(function (M) {
+      [].forEach.call(run.querySelectorAll("[data-gmp]"), function (el) {   /* v127: 지문 칸 */
+        var p = el.getAttribute("data-gmp").split("|"), e = p[0], i = +p[1], m = M && M.e[e], x = m && m.p && m.p[i];
+        if (x) { el.innerHTML = gmTag(e, "p", i, x.slice(2), "지문"); shown[e + i] = 1; } else el.innerHTML = "";
+      });
+      keepBoxes();
       els.forEach(function (el) {
         if (!el.isConnected) return;
         var p = el.dataset.gm.split("|"), e = p[0], n = +p[1], m = M && M.e[e];
@@ -1170,7 +1211,7 @@
     "body.ev-on main.layout{grid-template-columns:minmax(0,1fr)!important}body.ev-on main.layout>#filterPanel,body.ev-on main.layout>aside.side{display:none!important}" +
     ".pg.two{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,1fr);align-items:start;overflow:visible}" +
     ".pg.two>.pg-head{grid-column:1/-1;border-radius:var(--radius) var(--radius) 0 0}" +
-    ".pg.two>.pg-body{position:sticky;top:var(--ev-top,74px);max-height:calc(100vh - var(--ev-top,74px) - 8px);max-height:calc(100dvh - var(--ev-top,74px) - 8px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-right:1px solid var(--line);padding:14px}" +
+    ".pg.two>.pg-body{position:sticky;top:var(--ev-top,74px);max-height:calc(100vh - var(--ev-top,74px) - 8px);max-height:calc(100dvh - var(--ev-top,74px) - 8px);overflow:auto;-webkit-overflow-scrolling:touch;border-right:1px solid var(--line);padding:14px}" +
     ".pg.two>.pg-body .passage{max-height:none;overflow:visible;border:0;padding:6px 8px;background:transparent}" +
     ".pg.two>.pg-side{min-width:0}" +
     ".pg.two>.pg-side>.pg-qs{padding:12px 16px;position:sticky;top:var(--ev-top,74px);z-index:2;background:var(--bg);border-bottom:1px solid var(--line)}" +
