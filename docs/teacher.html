@@ -97,7 +97,7 @@ select.cadd{width:92px;padding:4px 6px;font-size:13px;color:var(--sub)}
 <body>
 <header class="top"><span class="crumb"><a class="brand" href="/suneung-korean/">국어의 모든 것</a><i aria-hidden="true">›</i><a class="brand here" href="teacher.html" aria-current="page">선생님 화면</a></span><nav id="nav" hidden><a class="home" href="/suneung-korean/">처음 화면</a><button type="button" data-v="st" class="on">학생 현황</button><button type="button" data-v="asg">과제</button><button type="button" data-v="rs">응답률</button><button type="button" data-v="nt">공지</button><button type="button" data-v="adm" id="admTab" hidden>선생님 관리</button><button type="button" id="out">로그아웃</button></nav></header>
 <main class="wrap" id="main"></main>
-<script src="js/account.js?v=117" data-noui></script>
+<script src="js/account.js?v=121" data-noui></script>
 <script>
 (function(){
 /* account.js 와 같은 서버 주소를 쓴다 */
@@ -317,7 +317,7 @@ function asgView(){
   M.querySelectorAll('.asg > .tw:not(.rs) tbody tr').forEach(function(tr){ tr.onclick=function(){ VIEW='st'; OPEN=tr.dataset.id; paint(); }; });
 }
 /* v107: 인쇄(미리 보기) — 학생 화면과 같은 /suneung-korean/js/asgprint.js */
-function printAsg(a,key){ script('/suneung-korean/js/asgprint.js?v=107').then(function(){ KMAPrint.open(a,{key:key||{}}); }).catch(function(){ alertMsg('인쇄 화면을 불러오지 못했어요.'); }); }
+function printAsg(a,key){ script('/suneung-korean/js/asgprint.js?v=121').then(function(){ KMAPrint.open(a,{key:key||{}}); }).catch(function(){ alertMsg('인쇄 화면을 불러오지 못했어요.'); }); }
 function alertMsg(t){ var m=$('mkMsg'); if(m) m.textContent=t; }
 /* ---------- 응답률 (v106) — 학생들이 과제·모의고사에서 고른 답을 문항·선택지별로 모은다. 선생님만 본다 ---------- */
 var RSOPEN=null, RS={src:'',sort:'n',open:null,mode:'all',busy:false,fit:true}, CIRC='①②③④⑤';
@@ -462,7 +462,9 @@ function srcLoad(k){
   /* v119: 수능은 유형 묶음·갈래 표를 함께 불러온다(못 불러와도 과제 만들기는 된다) */
   return k==='sn'?ld.then(function(){ return script('/suneung-korean/asg_sn_type.js?v=119').catch(function(){}); }):ld;
 }
-function gmQ(eid){ return GMQ[eid]||(GMQ[eid]=fetch('/advanced-korean/gm/q/'+eid+'.json?v=106').then(function(r){return r.json();}).catch(function(){return null;})); }
+/* v121: 받지 못하면 다시 받는다(account.js KMA.gmExam — 3번까지). 실패는 기억하지 않아 다음에 열면 또 받아 본다 */
+function gmQ(eid){ if(window.KMA&&KMA.gmExam) return KMA.gmExam(eid);
+  return GMQ[eid]||(GMQ[eid]=fetch('/advanced-korean/gm/q/'+eid+'.json?v=106').then(function(r){ if(!r.ok) throw 0; return r.json(); }).catch(function(){ delete GMQ[eid]; return null; })); }
 function nz(s){ return String(s||'').replace(/\s+/g,'').toLowerCase(); }
 function SRC(){ return window.ASG_SRC&&ASG_SRC[MK.src]; }
 /* 회차(시험지 한 회) 열쇠·이름 */
@@ -498,10 +500,12 @@ function usedMap(){ var u={}; (D.asg||[]).forEach(function(a){ (a.items||[]).for
 function keyOf(id){ return MK.src==='gm'?'adv:gm:'+id:byId(id).it.k; }
 function isUsed(id){ return !!USED[keyOf(id)]; }
 function areaOf(id){ return MK.src==='gm'?(window.GM_DATA.items[id].a||'영역 미정'):(byId(id).a||'(없음)'); }
+/* v121: 문항 그림 없이 쪽 그림만 있는 회차(서울시 7회·군무원 1회) — 스스로 뽑을 때는 뺀다(학생 화면에 문항이 안 나오고 '시험지에서 보기' 줄만 나와서) */
+function pgOnly(id){ if(MK.src!=='gm') return false; var D2=window.GM_DATA, it=D2&&D2.items[id], e=it&&window.GMFind&&GMFind.EX[it.e]; return !!(e&&e.mode==='pg'); }
 function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 /* 자동으로 고르기: 지금 조건에 맞는 문항 가운데 n개를 무작위로(같은 지문 묶음은 함께) 담는다 */
 function autoPick(G,n,even){
-  var pool=shuffle(G.map(function(g){ return {ids:g.ids.filter(function(id){ return !bkHas(id); }), a:areaOf(g.ids[0])}; }).filter(function(g){ return g.ids.length; })), order=pool;
+  var pool=shuffle(G.map(function(g){ return {ids:g.ids.filter(function(id){ return !bkHas(id)&&!pgOnly(id); }), a:areaOf(g.ids[0])}; }).filter(function(g){ return g.ids.length; })), order=pool;
   if(even){ var by={}, ks=[]; pool.forEach(function(g){ if(!by[g.a]){ by[g.a]=[]; ks.push(g.a); } by[g.a].push(g); }); order=[]; var more=true;
     while(more){ more=false; ks.forEach(function(k){ var g=by[k].shift(); if(g){ order.push(g); more=true; } }); } }
   var got=0; order.forEach(function(g){ if(got>=n||got+g.ids.length>n) return; g.ids.forEach(bkAdd); got+=g.ids.length; });
@@ -527,7 +531,7 @@ function remedy(k,title){ var r=remSrc(k); if(!r||!can('asg')) return;
     MK.from={title:title||nice(k),lab:name,got:0,miss:!has,area:!gm};
     if(has){ var area=areaOf(r.id), t=typeOf(r.id), gen=genreOf(r.id); MK.a[area]=1; MK.t=t; MK.from.lab=name+' · '+area+(t?' · '+t:''); MK.from.area=!t;
       var same=function(g){ var x=genreOf(g.ids[0]); return gen.some(function(q){ return x.indexOf(q)>=0; })?1:0; };
-      var G=shuffle(mkSearch().map(function(g){ return {ids:g.ids.filter(function(id){ return id!==r.id&&!isUsed(id)&&!bkHas(id); })}; }).filter(function(g){ return g.ids.length; }));
+      var G=shuffle(mkSearch().map(function(g){ return {ids:g.ids.filter(function(id){ return id!==r.id&&!isUsed(id)&&!bkHas(id)&&!pgOnly(id); })}; }).filter(function(g){ return g.ids.length; }));
       if(gen.length) G.sort(function(a,b){ return same(b)-same(a); });
       var want=Math.min(5,60-MK.bk.length), got=0;
       G.forEach(function(g){ if(got>=want||got+g.ids.length>want) return; g.ids.forEach(bkAdd); got+=g.ids.length; });
