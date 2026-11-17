@@ -7,6 +7,7 @@
  *
  * 각 갈래에서 쓰는 법
  *   KMA.record('adv:psat:PS2024a-12', true, 'PSAT', 3)   // 학생이 채점한 순간 한 번 부르면 됨(로그인 안 했으면 무시). 끝의 3은 고른 번호(없으면 생략)
+ * v121(2026-11-17): 과제 화면의 공무원 문항 그림을 문항마다 따로 받는다(/advanced-korean/gm/i/…, 크기·지문 범위는 gm/imap.json). 받지 못하면 스스로 다시 받고(그림 3번·회차 파일 3번), 끝내 안 되면 '다시 불러오기' 단추. 실패를 기억해 두지 않는다. KMA.gmExam(회차) — 선생님 화면·인쇄도 함께 씀. 모든 화면의 그림: 받지 못하면 두 번 더 받아 본다.
  * v117(2026-11-12): 관리자가 학급의 담임을 바꾼다 — classOwner(학급 id, 선생님 uid). teacherSite 가 관리자에게 선생님 목록(tch)을 함께 준다
  * v110(2026-11-11): 혼자 푼 문제도 고른 번호를 남긴다 — KMA.record(열쇠, 맞았나, 영역, 고른 번호). ev 기록 [첫, 마지막, 횟수, 시각, 영역, 첫 번호, 마지막 번호]
  * v108(2026-11-11): 학생 한 명이 여러 학급에 — users/{uid}.cls 에 학급 이름을 줄바꿈(\n)으로 이어 적는다(하나뿐이면 전과 같음)
@@ -39,9 +40,18 @@
    * users/{uid}/ev/{갈래}: {m:{문항키:[첫 결과, 마지막 결과, 횟수, 시각, 영역]}}
    * asg/{과제}, asgKey/{과제}:{key}, subs/{과제}:{uid:{at,ans,id}}, notices/{id}, teachers/{uid}(콘솔에서만)
    */
+  var GMC = {}, GMD = {}, GMN = 0, GMW = [], GMAP = null, GMAPP = null;   /* v121: 공무원 문항 그림 받아 둔 것(선생님 화면에서도 쓰므로 맨 위에) */
   var ISADM = false, FB_VER = "10.12.5", FBP = null, AU = null, DB = null, ME = null, EV = null, TROWS = null;
   var IDRE = /^[0-9A-Za-z가-힣_.-]{2,12}$/;
-  function loadJs(src) { return new Promise(function (res, rej) { var s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = function () { rej(new Error("load")); }; document.head.appendChild(s); }); }
+  /* v121: 받지 못하면 1초·2.5초 뒤 다시(모두 3번) */
+  function loadJs(src, n) {
+    n = n || 0;
+    return new Promise(function (res, rej) {
+      var s = document.createElement("script"); s.src = src + (n ? (src.indexOf("?") < 0 ? "?" : "&") + "r=" + n : ""); s.onload = res;
+      s.onerror = function () { if (s.parentNode) s.parentNode.removeChild(s); if (n < 2) setTimeout(function () { loadJs(src, n + 1).then(res, rej); }, n ? 2500 : 1000); else rej(new Error("load")); };
+      document.head.appendChild(s);
+    });
+  }
   function fbInit() {
     if (FBP) return FBP;
     var base = "https://www.gstatic.com/firebasejs/" + FB_VER + "/";
@@ -53,6 +63,7 @@
         AU = app.auth(); DB = app.firestore();
         return new Promise(function (res) { var un = AU.onAuthStateChanged(function (u) { un(); res(u); }); });
       });
+    var fp = FBP; fp.catch(function () { if (FBP === fp) FBP = null; });   /* v121: 연결에 실패한 것을 기억해 두지 않는다 — 다음에 누르면 다시 연결해 본다 */
     return FBP;
   }
   var B32 = "abcdefghijklmnopqrstuvwxyz234567";
@@ -490,8 +501,26 @@
     fbApp: FBCFG ? function () { return fbInit().then(function () { return firebase.apps.filter(function (a) { return a.name === "kma"; })[0] || null; }); } : null,
     liveAsg: function (aid, ratio) { liveAsg(aid, ratio); },
     name: function () { return (SUM && SUM.name) || ""; },
-    record: record, assign: assign, open: function () { openPanel(); }, G: G, gate: false, logout: function () { logout(); }
+    record: record, assign: assign, open: function () { openPanel(); }, G: G, gate: false, logout: function () { logout(); },
+    gmExam: gmExam
   };
+  /* v121: 그림을 받지 못했을 때 — 어느 화면이든 두 번 더 받아 보고(1초·3초 뒤), 과제의 공무원 문항 그림은 그래도 안 되면 회차 통째 파일에서 꺼내 온다 */
+  document.addEventListener("error", function (ev) {
+    var im = ev.target; if (!im || im.tagName !== "IMG") return;
+    var u = im.getAttribute("src") || ""; if (!u || u.slice(0, 5) === "data:" || u.slice(0, 5) === "blob:") return;
+    var k = +(im.getAttribute("data-rt") || 0);
+    if (k < 2) { im.setAttribute("data-rt", k + 1); setTimeout(function () { if (!im.isConnected) return; var base = u.replace(/[?&]rt=\d+/, ""); im.src = base + (base.indexOf("?") < 0 ? "?" : "&") + "rt=" + (k + 1); }, k ? 3000 : 1000); return; }
+    var f = im.getAttribute("data-gmf"); if (!f || im.getAttribute("data-rt") === "x") return;
+    im.setAttribute("data-rt", "x");
+    var p = f.split("|");
+    gmExam(p[0]).then(function (d) {
+      if (!im.isConnected) return;
+      var x = d && (p[1] === "q" ? (d.q || []).filter(function (q) { return q.n === +p[2]; })[0] : (d.p || [])[+p[2]]);
+      if (x && x.img) { im.src = x.img; return; }
+      var box = im.closest("[data-gm]"); if (box) box.innerHTML = '<span style="font-size:14px;color:var(--k-sub)">문항 그림을 불러오지 못했어요. </span><button type="button" class="btn" data-gmre style="padding:6px 12px;font-size:13.5px">다시 불러오기</button>';
+    });
+  }, true);
+
   if (NOUI) window.KMA.logout = function () { var go = function () { lockOut(); }; call("siteLogout", []).then(go, go); };
   if (!(FBCFG || KMA_URL) || NOUI) return;
 
@@ -810,7 +839,7 @@
   var printP = null;
   function printRun() {
     var a = CUR; if (!a) return;
-    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=107"));
+    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=121"));
     printP.then(function () { window.KMAPrint.open(a, {}); }).catch(function () { printP = null; var m = document.getElementById("kmaRM"); if (m) m.textContent = "인쇄 화면을 불러오지 못했어요."; });
   }
   function closeRun(quiet) { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; document.body.classList.remove("kma-running"); CUR = null; LIVEOPEN = ""; liveTell(); if (quiet !== true) openPanel(); }
@@ -899,27 +928,75 @@
     };
   }
   /* 공무원 문항: /advanced-korean/gm/q/<회차>.json 에서 그림을 가져와 채운다(같은 지문은 처음 한 번만) */
-  var GMC = {}, GMD = {}, KEEPY = 0, KEEPT = 0;
+  var KEEPY = 0, KEEPT = 0;
   /* 다시 그린 뒤 보던 자리 지키기: 그림이 늦게 들어와 높이가 바뀌어도 1.5초 동안은 그 자리로 되돌린다(손으로 움직이면 그만둔다) */
   function keepY(y) { KEEPY = y; KEEPT = Date.now(); run.scrollTop = y; }
   function reKeep() { if (Date.now() - KEEPT < 1500 && Math.abs(run.scrollTop - KEEPY) > 1) run.scrollTop = KEEPY; }
   run.addEventListener("load", function (e) { if (e.target && e.target.tagName === "IMG") reKeep(); }, true);
   ["wheel", "touchstart", "keydown", "mousedown"].forEach(function (t) { run.addEventListener(t, function () { KEEPT = 0; }, { passive: true }); });
-  function fillGm() {
-    var shown = {};
-    run.querySelectorAll("[data-gm]").forEach(function (el) {
-      var p = el.dataset.gm.split("|"), e = p[0], n = +p[1];
-      var put = function (d) {
-        if (!d) { el.textContent = "문항 그림을 불러오지 못했어요."; return; }
-        var q = (d.q || []).filter(function (x) { return x.n === n; })[0], h = "";
-        (d.p || []).forEach(function (x, i) { if (x.rng[0] <= n && n <= x.rng[1] && !shown[e + i]) { shown[e + i] = 1; h += '<img src="' + x.img + '" alt="지문">'; } });
-        el.innerHTML = h + (q ? '<img src="' + q.img + '" alt="' + n + '번 문항">' : '<a href="/advanced-korean/gongmuwon.html#exam/' + e + '" target="_blank" rel="noopener">시험지에서 ' + n + '번 보기 ↗</a>');
-      };
-      if (GMD[e]) return put(GMD[e]);   /* 이미 받은 회차는 바로 채운다 */
-      GMC[e] = GMC[e] || fetch("/advanced-korean/gm/q/" + e + ".json?v=106").then(function (r) { return r.json(); }).catch(function () { return null; });
-      GMC[e].then(function (d) { if (d) GMD[e] = d; put(d); reKeep(); });
+  /* v121: 받아 오기 — 실패하면 조금 쉬었다 다시(모두 tries번), 한 번에 셋까지만, 실패는 기억하지 않는다 */
+  function getJson(url, tries) {
+    return new Promise(function (res) {
+      var k = 0;
+      (function go() {
+        var ac = window.AbortController ? new AbortController() : null, t = setTimeout(function () { if (ac) ac.abort(); }, 45000);
+        fetch(url + (k ? (url.indexOf("?") < 0 ? "?" : "&") + "r=" + k : ""), ac ? { signal: ac.signal } : {}).then(function (r) { if (!r.ok) throw 0; return r.json(); })
+          .then(function (d) { clearTimeout(t); res(d); }, function () { clearTimeout(t); if (++k < tries) setTimeout(go, k * 1500); else res(null); });
+      })();
     });
   }
+  function slot(fn) {
+    return new Promise(function (res) {
+      var go = function () { GMN++; fn().then(function (v) { GMN--; res(v); var n = GMW.shift(); if (n) n(); }); };
+      if (GMN < 3) go(); else GMW.push(go);
+    });
+  }
+  /* 회차 통째 파일(1~2MB) — 그림을 따로 받지 못했을 때, 선생님 화면, 인쇄에서 쓴다 */
+  function gmExam(e) {
+    if (GMD[e]) return Promise.resolve(GMD[e]);
+    if (!GMC[e]) GMC[e] = slot(function () { return getJson("/advanced-korean/gm/q/" + e + ".json?v=106", 3); }).then(function (d) { delete GMC[e]; if (d) GMD[e] = d; return d; });
+    return GMC[e];
+  }
+  /* 문항 그림 목록(크기·지문 범위·필기 열쇠) */
+  function gmMap() {
+    if (GMAP) return Promise.resolve(GMAP);
+    if (!GMAPP) GMAPP = getJson("/advanced-korean/gm/imap.json?v=121", 3).then(function (d) { GMAPP = null; if (d && d.e) GMAP = d; return GMAP; });
+    return GMAPP;
+  }
+  function gmTag(e, kind, id, m, alt) {   /* m = [너비, 높이, 필기 열쇠, (확장자)] */
+    return '<img src="/advanced-korean/gm/i/' + esc(e) + "-" + kind + id + "." + (m[3] || "webp") + '" width="' + m[0] + '" height="' + m[1] + '" data-ik="' + esc(m[2]) + '" data-gmf="' + esc(e) + "|" + kind + "|" + id + '" alt="' + alt + '" decoding="async">';
+  }
+  function fillGm() {
+    var shown = {}, els = [].slice.call(run.querySelectorAll("[data-gm]"));
+    if (!els.length) return;
+    var link = function (e, n) { return '<a href="/advanced-korean/gongmuwon.html#exam/' + esc(e) + '" target="_blank" rel="noopener">시험지에서 ' + n + '번 보기 ↗</a>'; };
+    var fail = function (el) { el.innerHTML = '<span style="font-size:14px;color:var(--k-sub)">문항 그림을 불러오지 못했어요. </span><button type="button" class="btn" data-gmre style="padding:6px 12px;font-size:13.5px">다시 불러오기</button>'; };
+    /* 회차 통째 파일로 채우기(예전 방식) */
+    var byExam = function (el, e, n) {
+      gmExam(e).then(function (d) {
+        if (!el.isConnected) return;
+        if (!d) { fail(el); return; }
+        var q = (d.q || []).filter(function (x) { return x.n === n; })[0], h = "";
+        (d.p || []).forEach(function (x, i) { if (x.rng[0] <= n && n <= x.rng[1] && !shown[e + i]) { shown[e + i] = 1; h += '<img src="' + x.img + '" alt="지문">'; } });
+        el.innerHTML = h + (q ? '<img src="' + q.img + '" alt="' + n + '번 문항">' : link(e, n));
+        reKeep();
+      });
+    };
+    gmMap().then(function (M) {
+      els.forEach(function (el) {
+        if (!el.isConnected) return;
+        var p = el.dataset.gm.split("|"), e = p[0], n = +p[1], m = M && M.e[e];
+        if (M && (M.pg || []).indexOf(e) >= 0) { el.innerHTML = link(e, n); return; }   /* 쪽 그림만 있는 회차: 시험지로 가는 줄 */
+        if (!m) { byExam(el, e, n); return; }
+        var h = "";
+        (m.p || []).forEach(function (x, i) { if (x[0] <= n && n <= x[1] && !shown[e + i]) { shown[e + i] = 1; h += gmTag(e, "p", i, x.slice(2), "지문"); } });
+        el.innerHTML = h + (m.q && m.q[n] ? gmTag(e, "q", n, m.q[n], n + "번 문항") : link(e, n));
+      });
+      reKeep();
+    });
+  }
+  /* 다시 불러오기 단추 */
+  run.addEventListener("click", function (ev) { var b = ev.target.closest && ev.target.closest("[data-gmre]"); if (!b) return; ev.preventDefault(); b.disabled = true; b.textContent = "불러오는 중…"; fillGm(); });
   /* 안 푼 문제가 있으면 한 번 더 누르게 한다(창 띄우지 않음) */
   function confirmLeft(b, left) {
     if (b.dataset.sure) return true;

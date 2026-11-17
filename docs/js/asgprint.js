@@ -48,7 +48,9 @@
   function loadImg(src) {
     return IMG[src] || (IMG[src] = new Promise(function (res) { var im = new Image(); im.onload = function () { res({ ok: true, src: src, w: im.naturalWidth, h: im.naturalHeight, im: im }); }; im.onerror = function () { res({ ok: false, src: src, w: 760, h: 200 }); }; im.src = src; }));
   }
-  function gmQ(e) { return GMQ[e] || (GMQ[e] = fetch("/advanced-korean/gm/q/" + e + ".json?v=106").then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })); }
+  /* v121: 받지 못하면 다시 받는다(KMA.gmExam — 3번까지). 실패는 기억하지 않는다 */
+  function gmQ(e) { if (window.KMA && KMA.gmExam) return KMA.gmExam(e);
+    return GMQ[e] || (GMQ[e] = fetch("/advanced-korean/gm/q/" + e + ".json?v=106").then(function (r) { if (!r.ok) throw 0; return r.json(); }).catch(function () { delete GMQ[e]; return null; })); }
   /* 그림을 끊어도 되는 자리(흰 줄 한가운데)의 y — 상자 옆선 같은 세로줄은 빼고 본다 */
   function cuts(o) {
     if (CUT[o.src]) return CUT[o.src];
