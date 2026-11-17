@@ -902,6 +902,7 @@
         }
         h += "</div>";
         if (show && ans) h += v === ans ? '<div class="res ok">맞았어요</div>' : '<div class="res no">' + (v ? "아쉬워요 · " : "") + "정답 " + CIR[ans - 1] + "</div>";
+        else if (show) h += '<div class="res" style="color:var(--k-faint)">정답이 공개되지 않은 문항이라 채점하지 않았어요</div>';   /* v122 */
       } else {
         h += '<textarea data-w="' + esc(it.k) + '" placeholder="답을 적어 주세요"' + (done || over ? " readonly" : "") + ">" + esc(v || "") + "</textarea>";
       }
