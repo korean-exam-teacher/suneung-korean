@@ -1157,3 +1157,61 @@
   if (S) { call("siteResume", [S.id, S.token]).then(function (r) { if (!r.ok) { if (!r.msg) lockOut(); return; } SUM = r.sum; flush(); checkRole().then(function () { refresh(false); }); }); }
   window.addEventListener("hashchange", function () { if (S && !NOUI && /^#asg=/.test(location.hash || "")) refresh(false); });
 })();
+
+/* v126: 새미 기픈 므른 회차별 보기 — 화면이 넓으면(가로 960px 이상·세로 520px 이상: 컴퓨터, 가로로 든 태블릿) 지문은 왼쪽에 붙박아 두고 문제는 오른쪽에 펼친다.
+   좁으면(세로로 든 태블릿·휴대전화) 전처럼 지문 아래에 문제. 이때 왼쪽 조건 칸은 숨겨 화면을 가득 쓴다(나가려면 ‘← 목록으로’).
+   suneung.html 을 고치지 않고, 그 화면의 renderExamView 가 그린 것을 감싼다. */
+(function () {
+  var sec = document.getElementById("examView");
+  if (!sec || typeof window.renderExamView !== "function" || !document.querySelector("main.layout")) return;
+  var MQ = "(min-width:960px) and (min-height:520px)", mq = window.matchMedia(MQ);
+  var st = document.createElement("style"); st.id = "ev-two";
+  st.textContent = "@media " + MQ + "{" +
+    "body.ev-on main.layout{grid-template-columns:minmax(0,1fr)!important}body.ev-on main.layout>#filterPanel,body.ev-on main.layout>aside.side{display:none!important}" +
+    ".pg.two{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,1fr);align-items:start;overflow:visible}" +
+    ".pg.two>.pg-head{grid-column:1/-1;border-radius:var(--radius) var(--radius) 0 0}" +
+    ".pg.two>.pg-body{position:sticky;top:var(--ev-top,74px);max-height:calc(100vh - var(--ev-top,74px) - 8px);max-height:calc(100dvh - var(--ev-top,74px) - 8px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-right:1px solid var(--line);padding:14px}" +
+    ".pg.two>.pg-body .passage{max-height:none;overflow:visible;border:0;padding:6px 8px;background:transparent}" +
+    ".pg.two>.pg-side{min-width:0}" +
+    ".pg.two>.pg-side>.pg-qs{padding:12px 16px;position:sticky;top:var(--ev-top,74px);z-index:2;background:var(--bg);border-bottom:1px solid var(--line)}" +
+    ".pg.two>.pg-side>.detail{border-top:0;border-bottom:1px solid var(--line);border-radius:0;background:var(--bg)}.pg.two>.pg-side>.detail:last-child{border-bottom:0}" +
+    "}";
+  document.head.appendChild(st);
+  function top() { var g = document.querySelector("header.gnb"), h = g && getComputedStyle(g).position === "sticky" ? Math.round(g.getBoundingClientRect().height) + 1 : 8; document.documentElement.style.setProperty("--ev-top", h + "px"); }
+  function openAll(side) {
+    [].forEach.call(side.querySelectorAll(".detail"), function (d) { d.hidden = false; });
+    [].forEach.call(side.querySelectorAll(".qbtn"), function (q) { q.classList.add("on"); q.setAttribute("aria-expanded", "true"); });
+  }
+  function wrap() {
+    document.body.classList.toggle("ev-on", !sec.hidden);
+    if (sec.hidden) return;
+    top();
+    [].forEach.call(sec.querySelectorAll("article.pg"), function (pg) {
+      var body = null, kids = [], i, e;
+      for (i = 0; i < pg.children.length; i++) { e = pg.children[i]; if (e.classList.contains("pg-body")) body = e; else if (e.classList.contains("pg-qs") || e.classList.contains("detail")) kids.push(e); }
+      if (pg.classList.contains("two") || !body) return;
+      var side = document.createElement("div"); side.className = "pg-side";
+      kids.forEach(function (k) { side.appendChild(k); });
+      pg.appendChild(side); pg.classList.add("two");
+      var qs = side.querySelector(".pg-qs"); if (qs) qs.classList.add("ev-bar");   /* 필기 층이 이 붙박이 줄 아래로 가게(ink.js liftBars) */
+      if (mq.matches) openAll(side);   /* 나란히 볼 때는 문항을 처음부터 펼쳐 둔다 */
+    });
+  }
+  var old = window.renderExamView;
+  window.renderExamView = function (f) { old(f); try { wrap(); } catch (e) { } };
+  try { new MutationObserver(function () { document.body.classList.toggle("ev-on", !sec.hidden); }).observe(sec, { attributes: true, attributeFilter: ["hidden"] }); } catch (e) { }
+  /* 태블릿을 돌려 넓어지면 문항을 펼친다 */
+  var onMq = function () { top(); if (mq.matches && !sec.hidden) [].forEach.call(sec.querySelectorAll(".pg.two>.pg-side"), openAll); };
+  if (mq.addEventListener) mq.addEventListener("change", onMq); else if (mq.addListener) mq.addListener(onMq);
+  window.addEventListener("resize", top);
+  /* 나란히 볼 때 문항 번호를 누르면 접지 않고 그 문항으로 간다 */
+  sec.addEventListener("click", function (e) {
+    var q = e.target.closest && e.target.closest(".pg.two .qbtn"); if (!q || !mq.matches) return;
+    e.stopImmediatePropagation();
+    var d = null, l = q.closest(".pg").querySelectorAll(".detail"), i; for (i = 0; i < l.length; i++) if (l[i].getAttribute("data-key") === q.getAttribute("data-key")) d = l[i];
+    if (!d) return; d.hidden = false; q.classList.add("on"); q.setAttribute("aria-expanded", "true");
+    var bar = q.closest(".pg-qs"), off = (parseInt(getComputedStyle(document.documentElement).getPropertyValue("--ev-top"), 10) || 74) + (bar ? bar.getBoundingClientRect().height : 0) + 6;
+    window.scrollTo({ top: d.getBoundingClientRect().top + window.pageYOffset - off, behavior: "smooth" });
+  }, true);
+  if (!sec.hidden) wrap();
+})();
