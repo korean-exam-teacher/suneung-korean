@@ -44,6 +44,75 @@
   var ISADM = false, FB_VER = "10.12.5", FBP = null, AU = null, DB = null, ME = null, EV = null, TROWS = null;
   var IDRE = /^[0-9A-Za-z가-힣_.-]{2,12}$/;
   /* v121: 받지 못하면 1초·2.5초 뒤 다시(모두 3번) */
+  /* v125: 원본 문제지의 밑줄(U+FDD0…FDD1)·글자 상자(U+FDD2…FDD3) 표시를 태그로. 잘린 조각이어도 짝을 맞춘다(수능 화면 markHtml과 같은 규칙) */
+  var MKRE = /[\uFDD0-\uFDD3]/;
+  function mkh(s) {
+    var h = esc(s); if (!MKRE.test(h)) return h;
+    var out = "", u = false, b = false, i, c;
+    for (i = 0; i < h.length; i++) { c = h.charCodeAt(i);
+      if (c === 0xFDD0) { if (!u) { out += '<u class="ul">'; u = true; } }
+      else if (c === 0xFDD1) { if (u) { out += "</u>"; u = false; } }
+      else if (c === 0xFDD2) { if (!b) { out += '<span class="bx">'; b = true; } }
+      else if (c === 0xFDD3) { if (b) { if (u) { out += "</u>"; u = false; } out += "</span>"; b = false; } }
+      else out += h.charAt(i); }
+    return out + (u ? "</u>" : "") + (b ? "</span>" : "");
+  }
+  /* 표시 자리 파일(/suneung-korean/asg_sn_mark.js, 245KB): 자리 = 글자 위치×4 + (0 밑줄 시작·1 밑줄 끝·2 상자 시작·3 상자 끝) */
+  var SNMP = null;
+  function snm() { return SNMP || (SNMP = loadJs("/suneung-korean/asg_sn_mark.js?v=125b").catch(function () { SNMP = null; })); }
+  function insM(t, arr) {
+    t = String(t == null ? "" : t); if (!arr || !arr.length || !t || MKRE.test(t) || (arr[arr.length - 1] >> 2) > t.length) return t;   /* 이미 표시가 있거나 글이 잘려 자리가 안 맞으면 그대로 */
+    var out = "", p = 0, i, pos; for (i = 0; i < arr.length; i++) { pos = arr[i] >> 2; out += t.slice(p, pos) + String.fromCharCode(0xFDD0 + (arr[i] & 3)); p = pos; }
+    return out + t.slice(p);
+  }
+  function snPas(pk, t) { var M = window.ASG_SN_MARK; return M && pk && M.p[pk] ? insM(t, M.p[pk]) : String(t == null ? "" : t); }
+  function snApply(it) {
+    var M = window.ASG_SN_MARK, t = it && it.txt; if (!M || !t || !/^sn:/.test(it.k || "")) return it;
+    var e = M.i[it.k.slice(3)], pk = t.pk || it._pk;
+    if (e) { if (e.a && t.ask) t.ask = insM(t.ask, e.a); if (e.b && t.body) t.body = insM(t.body, e.b); if (e.c && t.ch) t.ch = t.ch.map(function (c, i) { return e.c[i] ? insM(c, e.c[i]) : c; }); }
+    if (t.pas && pk) t.pas = snPas(pk, t.pas);
+    return it;
+  }
+  /* v125: 꺾쇠 묶음([A]~[E]) — 수능 화면(brkPrep·brkInline)과 같은 규칙. 자리 파일의 b[지문 키] = [[표시, 쪽(L/R, X=네모 빈칸), 첫 줄 앞 글자, 끝 줄 뒤 글자]] */
+  function brkPrep(t, brs) {
+    brs = brs || [];
+    var labs = brs.filter(function (b) { return b[1] !== "X"; }).map(function (b) { return b[0]; });
+    brs.filter(function (b) { return b[1] === "X" && labs.indexOf(b[0]) < 0; }).forEach(function (b) { t = t.split("[" + b[0] + "]").join("\uE000" + (b[2] === "wide" ? "W" : "N") + b[0]); });
+    var list = brs.filter(function (b) { return b[1] !== "X"; }); if (!list.length) return t;
+    var masked = t.replace(/\[[A-E]\]/g, "\uE003\uE003\uE003"), map = [], buf = [], i;
+    for (i = 0; i < masked.length; i++) if (/[가-힣0-9A-Za-z]/.test(masked.charAt(i))) { buf.push(masked.charAt(i)); map.push(i); }
+    var N = buf.join(""), ranges = [];
+    list.forEach(function (b) {
+      var li = t.indexOf("[" + b[0] + "]"), best = -1, bd = 1e9, k = -1, dd;
+      while ((k = N.indexOf(b[2], k + 1)) >= 0) { dd = Math.abs(map[k] - li); if (dd < bd) { bd = dd; best = k; } }
+      if (best < 0) return;
+      var ib = N.indexOf(b[3], best); if (ib < 0) return;
+      var s = map[best], e = map[ib + b[3].length - 1] + 1;
+      while (s > 0 && !/\s/.test(t.charAt(s - 1))) s--;
+      while (e < t.length && !/\s/.test(t.charAt(e)) && t.charAt(e) !== "[") e++;
+      if (ranges.some(function (r) { return s < r.e && e > r.s; })) return;
+      ranges.push({ s: s, e: e, l: b[0], side: b[1] === "L" ? "L" : "R" });
+    });
+    ranges.sort(function (x, y) { return y.s - x.s; }).forEach(function (r) { t = t.slice(0, r.e) + "\uE002" + t.slice(r.e); t = t.slice(0, r.s) + "\uE001" + r.side + r.l + t.slice(r.s); });
+    ranges.forEach(function (r) { var lab = "[" + r.l + "]"; t = t.split("\n" + lab + "\n").join("\n").split(" " + lab + "\n").join("\n").split(lab).join(""); });
+    return t;
+  }
+  /* 지문·제시 자료의 HTML: 밑줄·글자 상자 + 꺾쇠 묶음. key = 지문 키, 제시 자료는 "보기:" + 문항 키 */
+  function pasH(t, key) {
+    var M = window.ASG_SN_MARK, brs = M && M.b && key ? M.b[key] : null;
+    if (!brs || !t) return mkh(t);
+    var x = brkPrep(String(t), brs); if (!/[\uE000-\uE002]/.test(x)) return mkh(t);
+    x = x.replace(/\n+(?=\uE001)/g, "").replace(/\uE002\n/g, "\uE002"); var st = [];
+    return mkh(x).replace(/\uE001([RL])([A-E])|\uE002/g, function (m, sd, l) {
+      if (sd) { st.push(l); return '<span class="kbr kbr-' + sd.toLowerCase() + '"><span class="kbr-t">'; }
+      return '</span><span class="kbr-lab">[' + (st.pop() || "") + "]</span></span>";
+    }).replace(/\uE000([WN])([A-E])/g, function (m, w, l) { return '<span class="kbl' + (w === "W" ? " wide" : "") + '">[' + l + "]</span>"; });
+  }
+  var BRKCSS = ".kbr{display:block;position:relative}.kbr-r{padding-right:2.4em}.kbr-l{padding-left:2.4em}.kbr::before,.kbr::after{content:\"\";position:absolute;width:.45em;border:1px solid currentColor}" +
+    ".kbr::before{top:.25em;bottom:calc(50% + .7em)}.kbr::after{bottom:.25em;top:calc(50% + .7em)}.kbr-r::before{right:.95em;border-left:0;border-bottom:0}.kbr-r::after{right:.95em;border-left:0;border-top:0}" +
+    ".kbr-l::before{left:.95em;border-right:0;border-bottom:0}.kbr-l::after{left:.95em;border-right:0;border-top:0}.kbr-t{display:block}" +
+    ".kbr-lab{position:absolute;top:50%;transform:translateY(-50%);font-size:.82em;line-height:1.2;width:2.9em;text-align:center;text-indent:0;font-weight:400;white-space:nowrap}.kbr-r>.kbr-lab{right:0}.kbr-l>.kbr-lab{left:0}" +
+    ".kbl{display:inline-block;border:1px solid currentColor;padding:0 .9em;margin:0 .2em;font-size:.88em;line-height:1.6;text-indent:0}.kbl.wide{display:block;text-align:center;margin:.4em 0;padding:.35em 0}";
   function loadJs(src, n) {
     n = n || 0;
     return new Promise(function (res, rej) {
@@ -123,7 +192,7 @@
       return { k: String(x.k).slice(0, 90), a: st(x.a, 30), title: st(x.title, 120), topic: st(x.topic, 160), src: st(x.src, 200), nc: Math.max(0, Math.min(5, +x.nc || 0)),
         q: (x.q || []).slice(0, 6).map(pic).filter(Boolean), p: x.p && x.p.imgs ? { lab: st(x.p.lab, 60), imgs: x.p.imgs.slice(0, 6).map(pic).filter(Boolean) } : null,
         gm: x.gm && /^[a-z]\w?\d?-20\d\d[a-z]?$/.test(String(x.gm.e || "")) ? { e: String(x.gm.e), n: +x.gm.n || 0 } : null,
-        txt: x.txt ? { pk: st(x.txt.pk, 80), pas: st(x.txt.pas, 6000), ask: st(x.txt.ask, 600), body: st(x.txt.body, 4000), ch: (x.txt.ch || []).slice(0, 5).map(function (c) { return st(c, 600); }) } : null };
+        txt: x.txt ? { pk: st(x.txt.pk, 80), pas: st(x.txt.pas, 7000), ask: st(x.txt.ask, 600), body: st(x.txt.body, 4000), ch: (x.txt.ch || []).slice(0, 5).map(function (c) { return st(c, 600); }) } : null };
     }).filter(Boolean);
   }
   function score(items, key, ans) { var sc = 0, n = 0; (items || []).forEach(function (it) { if (it.nc && key[it.k]) { n++; if (+ans[it.k] === key[it.k]) sc++; } }); return { sc: sc, n: n }; }
@@ -502,7 +571,8 @@
     liveAsg: function (aid, ratio) { liveAsg(aid, ratio); },
     name: function () { return (SUM && SUM.name) || ""; },
     record: record, assign: assign, open: function () { openPanel(); }, G: G, gate: false, logout: function () { logout(); },
-    gmExam: gmExam
+    gmExam: gmExam,
+    em: mkh, pasH: pasH, brkCss: BRKCSS, snm: snm, snApply: snApply, snPas: snPas   /* v125: 수능 글의 밑줄·글자 상자 */
   };
   /* v121: 그림을 받지 못했을 때 — 어느 화면이든 두 번 더 받아 보고(1초·3초 뒤), 과제의 공무원 문항 그림은 그래도 안 되면 회차 통째 파일에서 꺼내 온다 */
   document.addEventListener("error", function (ev) {
@@ -560,7 +630,9 @@
     ".kma-run .q{border-bottom:1px solid var(--k-line);padding:22px 0}.kma-run .qh{font-size:13px;color:var(--k-sub);margin-bottom:10px}.kma-run .qh b{color:var(--k-ink);font-size:15px;margin-right:6px}",
     ".kma-run img{display:block;max-width:100%;height:auto;margin:8px 0;border-radius:6px}",
     ".kma-run .pas{border:1px solid var(--k-line);border-radius:12px;padding:14px 16px;font-size:15px;line-height:1.85;white-space:pre-wrap;word-break:keep-all;margin-bottom:10px}",
+    BRKCSS,
     ".kma-run .ask{font-size:16px;font-weight:600;line-height:1.6;margin:8px 0;word-break:keep-all}",
+    ".kma u.ul,.kma-run u.ul{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.24em;text-decoration-skip-ink:none}.kma .bx,.kma-run .bx{border:1px solid currentColor;padding:0 .18em;margin:0 .06em;-webkit-box-decoration-break:clone;box-decoration-break:clone}",
     ".kma-run .chs{display:grid;gap:6px;margin-top:10px}.kma-run .ch{display:flex;gap:10px;text-align:left;border:1px solid var(--k-line);background:none;color:inherit;border-radius:10px;padding:10px 14px;font:inherit;font-size:15px;line-height:1.6;cursor:pointer;word-break:keep-all}",
     ".kma-run .nums{display:flex;gap:8px;margin-top:10px}.kma-run .nums .ch{width:46px;height:46px;justify-content:center;align-items:center;padding:0;font-size:18px;border-radius:50%}",
     ".kma-run .ch.sel{border-color:var(--k-brand);box-shadow:inset 0 0 0 1px var(--k-brand)}.kma-run .ch.ok{border-color:var(--k-ok);background:rgba(31,122,77,.08)}.kma-run .ch.no{border-color:var(--k-no);background:rgba(179,58,43,.07)}",
@@ -876,6 +948,12 @@
   }
   function pic(p) { return '<img src="' + esc(p.s) + '" width="' + p.w + '" height="' + p.h + '" loading="lazy" alt="">'; }
   function paintRun() {
+    /* v125: 수능 글의 밑줄·글자 상자 — 표시가 없는 글(전에 낸 과제)이면 자리 파일을 받아 끼운 뒤 다시 그린다 */
+    if (CUR && !CUR._snm && CUR.items.some(function (it) { return /^sn:/.test(it.k) && it.txt; })) {
+      CUR._snm = 1; var c0 = CUR;
+      if (window.ASG_SN_MARK) c0.items.forEach(snApply);
+      else snm().then(function () { if (!window.ASG_SN_MARK || CUR !== c0) return; c0.items.forEach(snApply); var y = run.scrollTop; paintRun(); run.scrollTop = y; });
+    }
     var a = CUR, tv = !!a.t, done = !!a.done, key = a.key || {}, exam = isExam(a), over = !tv && exam && !done && examLeft(a) <= 0, show = done || (tv && TSHOW);
     var lc = tv && window.Live && Live.code ? Live.code() : "";
     var h = '<div class="in"><div class="top"><div><b style="font-size:18px">' + esc(a.title) + '</b><div style="font-size:13px;color:var(--k-sub)">' + a.items.length + "문항" + (exam ? " · 모의고사 " + a.min + "분" : "") + (a.due ? " · 마감 " + esc(a.due) : "") +
@@ -888,8 +966,8 @@
       h += '<div class="q"><div class="qh"><b>' + (n + 1) + ".</b>" + esc(it.title || "") + "</div>";
       if (it.p && it.p.imgs && it.p.imgs.length) { var pk = JSON.stringify(it.p.imgs[0]); if (pk !== lastP) h += it.p.imgs.map(pic).join(""); lastP = pk; }
       if (it.txt) {
-        if (it.txt.pas) h += '<div class="pas">' + esc(it.txt.pas) + "</div>";
-        h += '<div class="ask">' + esc(it.txt.ask) + "</div>" + (it.txt.body ? '<div class="pas">' + esc(it.txt.body) + "</div>" : "");
+        if (it.txt.pas) h += '<div class="pas">' + pasH(it.txt.pas, it.txt.pk || it._pk) + "</div>";
+        h += '<div class="ask">' + mkh(it.txt.ask) + "</div>" + (it.txt.body ? '<div class="pas">' + pasH(it.txt.body, "보기:" + String(it.k || "").slice(3)) + "</div>" : "");
       }
       h += (it.q || []).map(pic).join("");
       if (it.gm) h += '<div data-gm="' + esc(it.gm.e) + '|' + it.gm.n + '"><span style="font-size:13px;color:var(--k-faint)">문항 그림을 불러오는 중…</span></div>';
@@ -898,7 +976,7 @@
         h += '<div class="' + (txtCh ? "chs" : "nums") + '" role="group" aria-label="' + (n + 1) + '번 답">';
         for (var c = 1; c <= it.nc; c++) {
           var cls = show && ans ? (c === ans ? " ok" : c === v ? " no" : "") : (c === v ? " sel" : "");
-          h += '<button type="button" class="ch' + cls + '" data-k="' + esc(it.k) + '" data-n="' + c + '"' + (done || over ? " disabled" : "") + ">" + CIR[c - 1] + (txtCh ? " " + esc(it.txt.ch[c - 1]) : "") + "</button>";
+          h += '<button type="button" class="ch' + cls + '" data-k="' + esc(it.k) + '" data-n="' + c + '"' + (done || over ? " disabled" : "") + ">" + CIR[c - 1] + (txtCh ? " " + mkh(it.txt.ch[c - 1]) : "") + "</button>";
         }
         h += "</div>";
         if (show && ans) h += v === ans ? '<div class="res ok">맞았어요</div>' : '<div class="res no">' + (v ? "아쉬워요 · " : "") + "정답 " + CIR[ans - 1] + "</div>";
