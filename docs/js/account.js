@@ -562,6 +562,30 @@
   function nextUrl() { try { var n = new URLSearchParams(location.search).get("next") || ""; return /^\/(suneung|middle|nonsul|advanced|seonsul)-korean\//.test(n) ? n : ""; } catch (e) { return ""; } }
   function enter() { var n = nextUrl(); if (n) location.replace(n); else location.reload(); }      /* 로그인한 뒤: 화면 다시 열기 */
   function lockOut() { S = null; ls(SKEY, null); ls("kma.role", null); try { sessionStorage.removeItem("kma.tpw"); } catch (e) {} if (location.pathname.replace(/index\.html$/, "") === HUB) location.reload(); else location.href = HUB; }
+  /* v130: 즐겨찾기 합치기 — 같은 열쇠는 더 나중 것(절댓값이 큰 시각)을 따른다. 뺀 표시(음수)는 90일 뒤에 지운다 */
+  function favMerge(a, b) {
+    var o = {}, k; for (k in (a || {})) o[k] = a[k];
+    Object.keys(b || {}).forEach(function (k) { var v = Number(b[k]) || 0; if (v && (!(k in o) || Math.abs(v) > Math.abs(o[k]))) o[k] = v; });
+    var cut = Date.now() - 90 * 864e5; Object.keys(o).forEach(function (k) { if (o[k] < 0 && -o[k] < cut) delete o[k]; });
+    return o;
+  }
+  function favSame(a, b) { var ka = Object.keys(a), kb = Object.keys(b); return ka.length === kb.length && ka.every(function (k) { return a[k] === b[k]; }); }
+  function favFresh(ns) { return need().then(function () { return uref().get(); }).then(function (d) { var f = (d.exists && d.data().fav) || {}; if (ME) { ME.fav = ME.fav || {}; ME.fav[ns] = f[ns] || {}; } return f[ns] || {}; }); }
+  function favApi(ns) {
+    return {
+      get: function () { return favFresh(ns).catch(function () { return null; }); },
+      /* 합쳐서 적고 true. merged()는 합친 결과 */
+      set: function (m) { return this.merge(m).then(function (r) { return !!r; }); },
+      merge: function (m) {
+        return favFresh(ns).then(function (srv) {
+          var out = favMerge(srv, m || {});
+          if (favSame(out, srv)) return out;
+          var up = {}; up["fav." + ns] = out;
+          return uref().update(up).then(function () { if (ME) { ME.fav = ME.fav || {}; ME.fav[ns] = out; } return out; });
+        }).catch(function () { return null; });
+      }
+    };
+  }
   window.KMA = {
     on: !!(FBCFG || KMA_URL), fb: !!FBCFG, url: KMA_URL, call: call, user: function () { return S && S.id; },
     teacher: function () { return ss("kma.tpw") || ""; },
@@ -571,11 +595,11 @@
     liveAsg: function (aid, ratio) { liveAsg(aid, ratio); },
     name: function () { return (SUM && SUM.name) || ""; },
     record: record, assign: assign, open: function () { openPanel(); }, G: G, gate: false, logout: function () { logout(); },
-    /* v129: 지문 즐겨찾기 — users/{uid}.fav.sn = { 지문 키: 넣은 시각(뺀 것은 음수) }. 수능 화면이 쓴다. 못 읽거나 못 쓰면 null/false(그때는 그 기기에만 남는다) */
-    fav: FBCFG ? {
-      get: function () { return need().then(function () { return (ME && ME.fav && ME.fav.sn) || {}; }).catch(function () { return null; }); },
-      set: function (m) { return need().then(function () { var up = {}; up["fav.sn"] = m || {}; return uref().update(up).then(function () { ME.fav = ME.fav || {}; ME.fav.sn = m || {}; return true; }); }).catch(function () { return false; }); }
-    } : null,
+    /* v129: 지문 즐겨찾기 — users/{uid}.fav.sn = { 지문 키: 넣은 시각(뺀 것은 음수) }. 수능 화면이 쓴다. 못 읽거나 못 쓰면 null/false(그때는 그 기기에만 남는다)
+       v130: 모든 단계로 — 갈래(ns: sn·hak·non·adv·gm)마다 users/{uid}.fav.<ns>. js/fav.js(KFAV)가 쓴다.
+             읽을 때마다 아이디에 적힌 것을 새로 읽고, 적을 때는 그것과 합쳐서 적는다(다른 기기·다른 화면에서 넣은 것을 덮어쓰지 않게). */
+    fav: FBCFG ? favApi("sn") : null,
+    favOf: FBCFG ? function (ns) { ns = String(ns || "").replace(/[^a-z0-9]/g, ""); return ns ? favApi(ns) : null; } : null,
     gmExam: gmExam,
     em: mkh, pasH: pasH, brkCss: BRKCSS, snm: snm, snApply: snApply, snPas: snPas   /* v125: 수능 글의 밑줄·글자 상자 */
   };
