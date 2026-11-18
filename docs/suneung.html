@@ -978,6 +978,7 @@ footer .guide details{border-color:var(--line)!important;background:none!importa
       <button class="gnb-link" type="button" data-mode="2028">2028 개편 예시문항</button>
       <button class="gnb-link" type="button" id="nbLink">오답 노트<span class="gnb-count" id="nbCount"></span></button>
       <button class="gnb-link" type="button" id="bkLink">담은 문제<span class="gnb-count bk" id="bkCount"></span></button>
+      <button class="gnb-link" type="button" id="favLink" title="즐겨찾기한 지문을 모아 봅니다">지문 즐겨찾기<span class="gnb-count fav" id="favCount"></span></button>
       <a class="gnb-link sub" href="#exams">회차별 보기</a>
       <a class="gnb-link sub" href="#guide">이용 안내</a>
       <a class="gnb-link sub" href="./">처음 화면</a>
@@ -1094,6 +1095,7 @@ footer .guide details{border-color:var(--line)!important;background:none!importa
     <section id="examView" hidden></section>
     <section id="notebook" hidden></section>
     <section id="basket" hidden></section>
+    <section id="favs" hidden></section>
   </div>
 </main>
 
@@ -1470,7 +1472,7 @@ function updateNbCount(){ const n = wrongKeys().length; document.getElementById(
 
 const state = {
   mode:'legacy', areas:new Set(), skills:new Set(), type:'', exam:'', reform:'',
-  q:'', unclassifiedOnly:false, examView:false, page:1, allYears:false, genres:new Set(), point:'', notebook:false, basket:false,
+  q:'', unclassifiedOnly:false, examView:false, page:1, allYears:false, genres:new Set(), point:'', notebook:false, basket:false, favs:false, only:'',   /* v129: favs = 지문 즐겨찾기 화면, only = 그 지문만 보기(지문 키) */
 };
 
 function currentItems(){ return state.mode === '2028' ? ITEMS_2028 : ITEMS; }
@@ -1591,6 +1593,7 @@ function detailHtml(it, withJump, num){
       ${conceptHtml(it)}
       <a class="btn-plain do-report" href="${reportUrl(it)}" target="_blank" rel="noopener" title="이 문항의 오탈자, 정답·해설 오류, 그림 문제 등을 알려 주세요. 새 창에서 신고 양식이 열리고 문항 위치가 자동으로 채워집니다.">오류 신고</a>
       ${it._h ? `<button type="button" class="btn-plain do-explain" data-key="${escapeHtml(itemKey(it))}" aria-expanded="false">해설 보기</button>` : ''}
+      ${favPk(it) ? favBtnHtml(favPk(it), '지문 즐겨찾기') : ''}
       ${withJump ? `<button type="button" class="btn-line goto-exam" data-exam="${escapeHtml(it.exam_id)}" data-key="${escapeHtml(itemKey(it))}">지문과 함께 보기 →</button>` : ''}
     </div>
     ${it._h ? `<div class="explain" hidden></div>` : ''}
@@ -1846,6 +1849,112 @@ function syncExamButtons(){
 }
 
 /* ---------- 모드(GNB) ---------- */
+/* ---------- v129 지문 즐겨찾기 ----------
+   지문 키(회차||영역||지문 범위) → 넣은 시각(양수) / 뺀 시각(음수: 다른 기기에도 뺀 것이 전해지도록 90일 남긴다).
+   이 기기에는 아이디마다 따로(localStorage), 로그인해 있으면 아이디에도(account.js KMA.fav → users/{uid}.fav.sn) 적어 다른 기기에서도 같게 보인다. */
+const favsSec = document.getElementById('favs');
+let favs = {}, favUser = null, favSort = 'new', favPushT = null, favSynced = false;
+function favKeyOfUser(u){ return 'suneung.fav.v1:' + (u || '_'); }
+function favPk(it){ return it.지문범위 && it.지문범위 !== '(독립 문항)' ? `${it.exam_id}||${it.영역}||${it.지문범위}` : ''; }
+let FAVMAP = null;
+function favItems(pk){ if(!FAVMAP){ FAVMAP = new Map(); allItems().forEach(i=>{ const k = favPk(i); if(k){ if(!FAVMAP.has(k)) FAVMAP.set(k, []); FAVMAP.get(k).push(i); } }); } return FAVMAP.get(pk) || []; }
+function isFav(pk){ return favs[pk] > 0; }
+function favList(){ return Object.keys(favs).filter(k=>favs[k] > 0 && favItems(k).length); }
+function favBtnHtml(pk, label){
+  const on = isFav(pk);
+  return `<button type="button" class="btn-plain fav-btn${on?' on':''}" data-pk="${escapeHtml(pk)}" data-label="${escapeHtml(label||'')}" aria-pressed="${on}" title="${on?'즐겨찾기에서 뺍니다':'이 지문을 즐겨찾기에 넣어 두고 위 메뉴의 ‘지문 즐겨찾기’에서 바로 엽니다'}">${on?'★':'☆'}${label?' '+escapeHtml(label):''}</button>`;
+}
+function favPaint(){
+  const n = favList().length; const c = document.getElementById('favCount'); if(c) c.textContent = n ? n : '';
+  document.querySelectorAll('.fav-btn[data-pk]').forEach(b=>{ const on = isFav(b.dataset.pk), lab = b.dataset.label || ''; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); b.textContent = (on?'★':'☆') + (lab ? ' ' + lab : ''); b.title = on ? '즐겨찾기에서 뺍니다' : '이 지문을 즐겨찾기에 넣어 두고 위 메뉴의 ‘지문 즐겨찾기’에서 바로 엽니다'; });
+}
+function favSame(a, b){ const ka = Object.keys(a), kb = Object.keys(b); return ka.length === kb.length && ka.every(k=>a[k] === b[k]); }
+function favMerge(a, b){
+  const o = Object.assign({}, a); Object.keys(b || {}).forEach(k=>{ const v = Number(b[k]) || 0; if(v && (!(k in o) || Math.abs(v) > Math.abs(o[k]))) o[k] = v; });
+  const cut = Date.now() - 90 * 864e5; Object.keys(o).forEach(k=>{ if(o[k] < 0 && -o[k] < cut) delete o[k]; });
+  return o;
+}
+function favToggle(pk){
+  if(!pk) return;
+  favs[pk] = isFav(pk) ? -Date.now() : Date.now();
+  saveJSON(favKeyOfUser(favUser), favs); favPaint();
+  if(state.favs) renderFavs();
+  clearTimeout(favPushT); favPushT = setTimeout(favPush, 700);
+}
+function favPush(){ if(window.KMA && KMA.fav && KMA.user && KMA.user() && KMA.user() === favUser) KMA.fav.set(favs).then(ok=>{ favSynced = !!ok; if(state.favs) favNote(); }); }
+/* 아이디가 정해지면(또는 바뀌면) 그 아이디의 즐겨찾기를 읽고, 아이디에 적힌 것과 합친다 */
+function favSync(){
+  const u = (window.KMA && KMA.user && KMA.user()) || '';
+  if(u !== favUser){ favUser = u; favs = loadJSON(favKeyOfUser(u)) || {}; favSynced = false; favPaint(); if(state.favs) renderFavs(); }
+  if(!u || !(window.KMA && KMA.fav) || favSynced) return;
+  KMA.fav.get().then(srv=>{
+    if(!srv || u !== favUser) return;
+    const m = favMerge(favs, srv); favSynced = true;
+    if(!favSame(m, favs)){ favs = m; saveJSON(favKeyOfUser(u), favs); favPaint(); }
+    if(!favSame(m, srv)) KMA.fav.set(m).then(ok=>{ if(!ok) favSynced = false; if(state.favs) favNote(); });
+    if(state.favs) renderFavs();
+  });
+}
+window.addEventListener('load', ()=>{ favSync(); let n = 0; const iv = setInterval(()=>{ favSync(); if(++n > 60) clearInterval(iv); }, 2000); });
+window.addEventListener('focus', ()=>{ favSynced = false; favSync(); });
+function favNote(){ const n = document.getElementById('favNote'); if(n) n.textContent = !favUser ? '로그인하면 즐겨찾기가 아이디에 저장되어 다른 기기에서도 보입니다.' : favSynced ? '즐겨찾기는 아이디에 저장되어 다른 기기에서도 같게 보입니다.' : '지금은 이 기기에만 저장되어 있습니다. 인터넷에 이어지면 아이디에도 저장합니다.'; }
+function openFavs(){
+  state.favs = true; state.notebook = false; state.basket = false; state.examView = false; state.only = '';
+  document.querySelectorAll('.gnb-link').forEach(x=>x.classList.toggle('active', x.id === 'favLink'));
+  render(); favsSec.scrollIntoView({behavior:'smooth', block:'start'});
+}
+/* 그 지문과 문항만 보기 */
+function openFav(pk){
+  const its = favItems(pk); if(!its.length) return;
+  const ex = its[0].exam_id, m = ex === '2028-예시' ? '2028' : 'legacy';
+  if(state.mode !== m) switchMode(m);
+  clearConditions(); state.q = ''; searchInput.value = '';
+  state.favs = false; state.notebook = false; state.basket = false;
+  state.exam = ex; state.examView = true; state.only = pk;
+  document.querySelectorAll('.gnb-link').forEach(x=>x.classList.toggle('active', x.id === 'favLink'));
+  render(); examViewSec.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function favAfterExamView(){
+  if(!state.only) return;
+  const x = document.getElementById('exitExamView');
+  if(x){ x.textContent = '← 즐겨찾기로'; const w = document.createElement('span'); w.className = 'fav-acts'; x.parentNode.insertBefore(w, x); w.innerHTML = '<button type="button" class="btn-plain" id="favWhole">이 회차 전체 보기</button>'; w.appendChild(x); }
+  const p = examViewSec.querySelector('.exam-title p'); if(p) p.textContent = '즐겨찾기한 지문과 그 문항만 보입니다.';
+  const c = examViewSec.querySelector('.crumb'); if(c) c.innerHTML = '<span>내 공부</span><span>지문 즐겨찾기</span><span>' + escapeHtml((favItems(state.only)[0] || {}).명칭 || '') + '</span>';
+}
+function renderFavs(){
+  const keys = favList();
+  const rk = k=>{ const it = favItems(k)[0]; return [examRank(it.exam_id), -it.문항번호]; };
+  const AO = ['독서','문학','화법과 작문','언어와 매체','화법과 언어','독서와 작문','문학'];
+  if(favSort === 'exam') keys.sort((a,b)=>{ const x = rk(a), y = rk(b); return y[0]-x[0] || y[1]-x[1]; });
+  else if(favSort === 'area') keys.sort((a,b)=>{ const x = favItems(a)[0], y = favItems(b)[0]; return (AO.indexOf(x.영역)-AO.indexOf(y.영역)) || (examRank(y.exam_id)-examRank(x.exam_id)) || (x.문항번호-y.문항번호); });
+  else keys.sort((a,b)=>favs[b]-favs[a]);
+  const row = k=>{ const its = favItems(k), it = its[0], ex = examShort(it), d = new Date(favs[k]);
+    return `<li class="fav-li">
+      <button type="button" class="result-row fav-open" data-pk="${escapeHtml(k)}" title="이 지문과 문항만 엽니다">
+        <span class="c-exam"><b>${ex.code}</b><small>${ex.kind}</small></span>
+        <span class="c-num">${escapeHtml(it.지문범위)}</span>
+        <span class="c-area">${areaBadge(it.영역)}</span>
+        <span class="c-main">
+          <span class="r-topic">${escapeHtml(it.소재||'')}</span>
+          ${(it.작품||[]).length ? `<span class="r-works">${escapeHtml(it.작품.join(' / '))}</span>` : ''}
+          <span class="r-meta"><span>${escapeHtml(it.분야||'')}</span><span>문항 ${its.length}개</span>${it.지문길이>0?`<span>지문 ${it.지문길이.toLocaleString()}자</span>`:''}<span>${d.getMonth()+1}.${d.getDate()}. 넣음</span></span>
+        </span>
+        <span class="c-ans"></span>
+      </button>
+      ${favBtnHtml(k, '')}
+    </li>`; };
+  favsSec.innerHTML = `
+    <div class="crumb"><span>내 공부</span><span>지문 즐겨찾기</span></div>
+    <div class="exam-title"><div><h2>지문 즐겨찾기</h2><p>${keys.length ? `지문 ${keys.length}개 · 줄을 누르면 그 지문과 문항만 열립니다.` : '자주 볼 지문을 모아 두는 곳입니다.'}</p></div>
+      ${keys.length > 1 ? `<label class="fav-sort">차례 <select id="favSortSel"><option value="new"${favSort==='new'?' selected':''}>넣은 순</option><option value="exam"${favSort==='exam'?' selected':''}>최신 시험 순</option><option value="area"${favSort==='area'?' selected':''}>영역별</option></select></label>` : ''}</div>
+    ${keys.length ? `<ul class="fav-list">${keys.map(row).join('')}</ul>` : `<div class="nb-empty" style="margin-top:16px"><b style="display:block;color:var(--text);font-size:16px;margin-bottom:4px">아직 즐겨찾기한 지문이 없습니다.</b>회차별 보기에서 지문 제목 줄의 ‘☆ 즐겨찾기’를 누르거나, 문항을 펼쳐 ‘☆ 지문 즐겨찾기’를 누르면 여기에 모입니다.</div>`}
+    <p class="fav-note" id="favNote"></p>`;
+  favNote();
+}
+favsSec.addEventListener('click', e=>{ const r = e.target.closest('.fav-open'); if(r) openFav(r.dataset.pk); });
+favsSec.addEventListener('change', e=>{ if(e.target.id === 'favSortSel'){ favSort = e.target.value; renderFavs(); } });
+document.addEventListener('click', e=>{ const b = e.target.closest('.fav-btn'); if(b){ e.preventDefault(); favToggle(b.dataset.pk); } });
+
 function switchMode(mode){
   state.mode = mode;
   document.querySelectorAll('.gnb-link[data-mode]').forEach(x=>x.classList.toggle('active', x.dataset.mode===mode && !state.notebook && !state.basket));
@@ -1856,6 +1965,7 @@ function switchMode(mode){
 }
 document.getElementById('gnbNav').addEventListener('click', e=>{
   if(e.target.closest('#bkLink')){ openBasket(); return; }
+  if(e.target.closest('#favLink')){ openFavs(); return; }   /* v129 */
   if(e.target.closest('#nbLink')){
     state.notebook = true; state.examView = false; state.basket = false;
     document.querySelectorAll('.gnb-link').forEach(x=>x.classList.toggle('active', x.id==='nbLink'));
@@ -1863,9 +1973,9 @@ document.getElementById('gnbNav').addEventListener('click', e=>{
     return;
   }
   const b = e.target.closest('button[data-mode]'); if(!b) return;
-  if(state.mode === b.dataset.mode && !state.examView && !state.notebook && !state.basket) return;
-  state.notebook = false; state.basket = false;
-  document.getElementById('nbLink').classList.remove('active'); document.getElementById('bkLink').classList.remove('active');
+  if(state.mode === b.dataset.mode && !state.examView && !state.notebook && !state.basket && !state.favs) return;
+  state.notebook = false; state.basket = false; state.favs = false; state.only = '';
+  document.getElementById('nbLink').classList.remove('active'); document.getElementById('bkLink').classList.remove('active'); document.getElementById('favLink').classList.remove('active');
   switchMode(b.dataset.mode);
   render();
 });
@@ -1926,19 +2036,27 @@ function render(){
   const filtered = items.filter(matches).sort(sorter);
   lastFiltered = filtered;
 
+  /* v129: 다른 화면(오답 노트·담은 문제·회차)으로 옮겼으면 즐겨찾기 화면에서 나온다. 그 지문만 보기는 그 회차를 보는 동안만 */
+  if(state.favs && (state.notebook || state.basket || state.examView)) state.favs = false;
+  if(state.only && (!state.examView || state.notebook || state.basket || state.only.split('||')[0] !== state.exam)) state.only = '';
   const inExam = state.examView && state.exam && !state.notebook && !state.basket;
-  examsSec.hidden = !!inExam || state.notebook || state.basket;
-  resultsSec.hidden = !!inExam || state.notebook || state.basket;
+  examsSec.hidden = !!inExam || state.notebook || state.basket || state.favs;
+  resultsSec.hidden = !!inExam || state.notebook || state.basket || state.favs;
   examViewSec.hidden = !inExam;
   notebookSec.hidden = !state.notebook;
   basketSec.hidden = !state.basket;
+  favsSec.hidden = !state.favs;
+  document.getElementById('favLink').classList.toggle('active', state.favs || !!(inExam && state.only));
+  document.querySelectorAll('.gnb-link[data-mode]').forEach(x=>x.classList.toggle('active', x.dataset.mode === state.mode && !state.notebook && !state.basket && !state.favs && !(inExam && state.only)));
+  favPaint();
   updateBkCount();
   syncExamButtons();
   updateNbCount();
   if(state.basket){ renderBasket(); return; }
   stopBkTimer();
   if(state.notebook){ renderNotebook(); return; }
-  if(inExam){ renderExamView(filtered); return; }
+  if(state.favs){ renderFavs(); return; }
+  if(inExam){ renderExamView(state.only ? filtered.filter(it=>favPk(it) === state.only) : filtered); return; }
 
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   state.page = Math.min(Math.max(1, state.page), pages);
@@ -2097,7 +2215,7 @@ document.addEventListener('click', e=>{
 
 function enterExamView(examId, focusKey){
   clearConditions(); state.q=''; searchInput.value='';
-  state.exam = examId; state.examView = true;
+  state.exam = examId; state.examView = true; state.only = '';
   render();
   /* v128: 자료를 받는 중이면 받은 뒤에 그 문항을 펼친다 */
   if(!snHas(examId)){ examViewSec.scrollIntoView({behavior:'smooth', block:'start'}); if(focusKey) snYear(snYearOf(examId)).then(ok=>{ if(ok && state.examView && state.exam === examId) enterExamView(examId, focusKey); }); return; }
@@ -2188,6 +2306,7 @@ function renderExamView(filtered){
           <span class="pg-topic">${escapeHtml(g.소재)}</span>
           <span class="pg-field">${escapeHtml(g.분야||'')}</span>
           ${g.작품.length ? `<span class="pg-works">${escapeHtml(g.작품.join(' / '))}</span>` : ''}
+          ${g.지문범위==='(독립 문항)' ? '' : favBtnHtml(state.exam+'||'+g.영역+'||'+g.지문범위, '즐겨찾기')}
           <button type="button" class="btn-plain bk-group ${g.items.every(it=>inBasket(itemKey(it)))?'on':''}" data-keys="${g.items.map(it=>encodeURIComponent(itemKey(it))).join(',')}">${bkGroupLabel(g.items.map(itemKey))}</button>
         </div>
         ${g.지문범위==='(독립 문항)' ? '' : `<div class="pg-body">${passageBlockHtml(state.exam, g)}</div>`}
@@ -2198,8 +2317,11 @@ function renderExamView(filtered){
         ${g.items.map(it=>`<div class="detail" data-key="${escapeHtml(itemKey(it))}" hidden>${detailHtml(it, false)}</div>`).join('')}
       </article>`).join('')}
   `;
+  favAfterExamView();   /* v129 */
 }
 examViewSec.addEventListener('click', e=>{
+  if(e.target.closest('#favWhole')){ const pk = state.only, first = favItems(pk)[0]; enterExamView(state.exam, first ? itemKey(first) : null); return; }   /* v129 */
+  if(e.target.closest('#exitExamView') && state.only){ openFavs(); return; }
   if(e.target.closest('#exitExamView')){
     state.examView=false; state.exam=''; render();
     examsSec.scrollIntoView({behavior:'smooth', block:'start'});
@@ -3511,6 +3633,22 @@ footer .guide details{border-color:var(--line)!important;background:none!importa
 <script src="/middle-korean/js/ink.js?v=111"></script>
 <script src="/middle-korean/js/live.js?v=93"></script>
 <script src="js/account.js?v=112"></script>
+<style id="v129-fav">
+.fav-btn{white-space:nowrap}
+.fav-btn.on{color:var(--brand);border-color:var(--brand);background:var(--brand-soft);font-weight:700}
+.pg-head .fav-btn{margin-left:auto;font-size:12.5px;padding:4px 10px}
+.pg-head .fav-btn + .bk-group{margin-left:0}
+.gnb-count.fav{background:var(--brand);color:#13171E}
+.fav-list{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--line)}
+.fav-li{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.fav-li .result-row{flex:1;min-width:0;cursor:pointer;color:inherit;font:inherit}
+.fav-li .result-row:hover{background:var(--bg-sub)}
+.fav-li .fav-btn{flex:none;font-size:16px;padding:6px 12px;margin-right:6px}
+.fav-sort{font-size:13px;color:var(--text-sub);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.fav-sort select{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.fav-note{margin:14px 2px 0;font-size:12.5px;color:var(--text-faint)}
+.fav-acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+</style>
 <style id="v128-wait">
 .sn-wait{color:var(--text-faint);font-size:14px;padding:6px 0}
 .sn-wait.big{padding:48px 0;text-align:center;font-size:15px}
