@@ -213,18 +213,25 @@
     }
     function place(b) {
       if (b.t === "text") return placeText(b);
-      if (b.t === "head") { var node = el(b.html); cur.appendChild(node); if (over() || used() + lineH * 4 > cap()) { cur.removeChild(node); if (cur.lastElementChild) nextCol(); cur.appendChild(el(b.html)); } return; }
+      if (b.t === "head") {
+        /* v133 인쇄 배치 원칙(선생님 지시): 지문은 새 쪽 왼쪽 단 맨 위에서 시작. 다만 오른쪽 단이 절반 이상 남았으면 거기에서
+           (앞 문항이 왼쪽 단에서 끝났으면 오른쪽 단 맨 위, 오른쪽 단 위쪽 절반 안에서 끝났으면 그 아래). 가운데를 넘었으면 새 쪽 */
+        if (cur === cols[0] && !cur.lastElementChild) { /* 새 쪽 왼쪽 단 맨 위 */ }
+        else if (cur === cols[0]) cur = cols[1];
+        else if (used() <= cap() * 0.5) { /* 그 아래 */ }
+        else newSheet();
+        var node = el(b.html); cur.appendChild(node); if (over() || used() + lineH * 4 > cap()) { cur.removeChild(node); if (cur.lastElementChild) nextCol(); cur.appendChild(el(b.html)); } return; }
       if (tryPut(el(b.html))) return;
       if (cur.lastElementChild) { nextCol(); if (tryPut(el(b.html))) return; }
-      /* 한 단보다 긴 문항: 쪼개지 않고 그 단에 들어가게 줄인다 */
+      /* 한 단보다 긴 문항: 쪼개지 않고, 그 단에 꽉 차도록 가장 조금만 줄인다(v133: 선생님 지시) */
       var nd = el(b.html); cur.appendChild(nd);
-      var byW = !!nd.querySelector(".pimg"), z = Math.max(0.4, (cap() - 2) / nd.getBoundingClientRect().height * 0.985);
+      var byW = !!nd.querySelector(".pimg"), lo = 0.3, hi = 1, mid, k;
       /* 그림 문항은 너비를 줄이면 높이도 같이 줄고, 글 문항은 통째로 축소한다 */
-      var shrink = function () { if (byW) { nd.style.width = (z * 100).toFixed(1) + "%"; nd.style.marginLeft = nd.style.marginRight = "auto"; } else nd.style.zoom = z; };
-      nd.classList.add("fit"); shrink();
-      for (var k = 0; k < 14 && over() && z > 0.4; k++) { z *= 0.97; shrink(); }
+      var shrink = function (z) { if (byW) { nd.style.width = (z * 100).toFixed(1) + "%"; nd.style.marginLeft = nd.style.marginRight = "auto"; } else nd.style.zoom = z; };
+      nd.classList.add("fit");
+      for (k = 0; k < 12; k++) { mid = (lo + hi) / 2; shrink(mid); if (over()) hi = mid; else lo = mid; }
+      shrink(lo);
       if (over()) forced++;
-      nextCol();
     }
     newSheet(); B.forEach(place);
     while (sheets.length > 1 && !sheets[sheets.length - 1].querySelector(".sh-col > *")) sheets.pop().remove();
