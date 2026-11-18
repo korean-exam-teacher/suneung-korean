@@ -571,6 +571,11 @@
     liveAsg: function (aid, ratio) { liveAsg(aid, ratio); },
     name: function () { return (SUM && SUM.name) || ""; },
     record: record, assign: assign, open: function () { openPanel(); }, G: G, gate: false, logout: function () { logout(); },
+    /* v129: 지문 즐겨찾기 — users/{uid}.fav.sn = { 지문 키: 넣은 시각(뺀 것은 음수) }. 수능 화면이 쓴다. 못 읽거나 못 쓰면 null/false(그때는 그 기기에만 남는다) */
+    fav: FBCFG ? {
+      get: function () { return need().then(function () { return (ME && ME.fav && ME.fav.sn) || {}; }).catch(function () { return null; }); },
+      set: function (m) { return need().then(function () { var up = {}; up["fav.sn"] = m || {}; return uref().update(up).then(function () { ME.fav = ME.fav || {}; ME.fav.sn = m || {}; return true; }); }).catch(function () { return false; }); }
+    } : null,
     gmExam: gmExam,
     em: mkh, pasH: pasH, brkCss: BRKCSS, snm: snm, snApply: snApply, snPas: snPas   /* v125: 수능 글의 밑줄·글자 상자 */
   };
