@@ -2975,6 +2975,14 @@ function bkLayoutSync(pt){
   };
   const tryPut = (node, box)=>{ const undo = put(node, box); if(!over()) return true; undo(); return false; };
   newSheet();
+  /* ── v133: 인쇄 배치 원칙(선생님 지시, 2026-11-18) ─────────────────────────────
+     ① 지문은 새 쪽, 왼쪽 단 맨 위에서 시작하는 것이 원칙.
+     ② 다만 오른쪽 단이 절반 이상 남아 있으면 거기에서 시작해도 된다:
+        앞 문항이 왼쪽 단에서 끝났으면 오른쪽 단 맨 위에서, 오른쪽 단의 위쪽 절반 안에서 끝났으면 그 아래에서.
+        앞 문항이 오른쪽 단의 가운데를 넘어 끝났으면 새 쪽 왼쪽 단 맨 위에서.
+     ③ 문항(발문·<보기>·조건·선택지)은 반드시 한 단 안에 통째로. 쪼개지 않는다.
+        한 단보다 긴 문항만, 그 단에 꽉 차도록 가장 조금만 줄인다(내용은 그대로, 크기만).
+     ④ 한 쪽보다 긴 지문은 줄이지 않고 다음 쪽으로 넘어가게 둔다. */
   function placeText(b){
     let i = 0, cont = false; const n = b.tok.length;
     while(i < n){
@@ -2990,7 +2998,8 @@ function bkLayoutSync(pt){
       else nextCol();
     }
   }
-  function place(b){
+  /* 지문 조각(머리 줄·글·그림·각주): 줄 사이에서 끊어 다음 단·쪽으로 이어 싣는다 */
+  function placePas(b){
     if(b.t === 'text'){ placeText(b); return; }
     if(b.t === 'head'){
       const node = bkEl(b.html); cur.appendChild(node);
@@ -2999,10 +3008,29 @@ function bkLayoutSync(pt){
     }
     if(tryPut(bkEl(b.html), b.box)) return;
     if(cur.lastElementChild){ nextCol(); if(tryPut(bkEl(b.html), b.box)) return; }
-    if(b.parts){ b.parts.forEach(place); return; }
     put(bkEl(b.html), b.box); forced++; nextCol();
   }
-  bkBlocks(groups, num, g, pt).forEach(place);
+  /* 문항: 한 단 안에 통째로. 빈 단에도 안 들어가는 긴 문항만 그 단에 꽉 차는 가장 큰 크기로 줄인다 */
+  function placeQ(b){
+    if(tryPut(bkEl(b.html))) return;
+    if(cur.lastElementChild){ nextCol(); if(tryPut(bkEl(b.html))) return; }
+    const nd = bkEl(b.html); cur.appendChild(nd);
+    let lo = 0.3, hi = 1;
+    for(let k = 0; k < 12; k++){ const mid = (lo+hi)/2; nd.style.zoom = mid; if(over()) hi = mid; else lo = mid; }
+    nd.style.zoom = lo; nd.classList.add('fit');
+    if(over()) forced++;
+  }
+  groups.forEach(gr=>{
+    const bl = bkBlocks([gr], num, g, pt), pas = bl.filter(b=>!b.parts), qs = bl.filter(b=>b.parts);
+    if(pas.length){
+      if(cur === cols[0] && !cur.lastElementChild){ /* 새 쪽 왼쪽 단 맨 위 */ }
+      else if(cur === cols[0]) cur = cols[1];                     /* 앞 문항이 왼쪽 단에서 끝남 → 오른쪽 단 맨 위 */
+      else if(used() <= cap() * 0.5){ /* 오른쪽 단이 절반 이상 남음 → 그 아래 */ }
+      else newSheet();                                            /* 오른쪽 단 가운데를 넘음 → 새 쪽 왼쪽 단 맨 위 */
+      pas.forEach(placePas);
+    }
+    qs.forEach(placeQ);
+  });
   while(sheets.length > 1 && !sheets[sheets.length-1].querySelector('.sh-col > *')){ sheets.pop().remove(); }
   /* 맨 끝: 오른쪽 단 아래의 "확인 사항" 상자 */
   const lastSh = sheets[sheets.length-1];
@@ -3012,7 +3040,7 @@ function bkLayoutSync(pt){
   cur.appendChild(chk);
   const room = cur.getBoundingClientRect().height - before - chk.getBoundingClientRect().height;
   if(room < lineH*0.8){                     // 오른쪽 단에 자리가 없으면 새 쪽(오른쪽 단 아래)에 싣는다
-    cur.removeChild(chk); newSheet(); cur = cols[1]; cur.appendChild(chk);
+    cur.removeChild(chk);                    // v133: 상자만 있는 쪽을 따로 만들지 않는다(자리가 없으면 싣지 않음)
   }
   /* 단 채우기: 평가원 문제지처럼 단에 남는 빈칸을 문항 사이와 마지막 문항 아래에 똑같이 나눈다.
      (원본 실측: 짧은 두 문항이면 둘째 문항이 단 가운데쯤에서 시작하고, 문항 아래 빈칸이 서로 같다.)
