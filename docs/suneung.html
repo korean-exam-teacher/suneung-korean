@@ -1876,6 +1876,7 @@ function favMerge(a, b){
 }
 function favToggle(pk){
   if(!pk) return;
+  favs = favMerge(favs, loadJSON(favKeyOfUser(favUser)) || {});   /* v130: 다른 화면(1단계 등)에서 넣은 것을 덮어쓰지 않게 */
   favs[pk] = isFav(pk) ? -Date.now() : Date.now();
   saveJSON(favKeyOfUser(favUser), favs); favPaint();
   if(state.favs) renderFavs();
@@ -1886,6 +1887,7 @@ function favPush(){ if(window.KMA && KMA.fav && KMA.user && KMA.user() && KMA.us
 function favSync(){
   const u = (window.KMA && KMA.user && KMA.user()) || '';
   if(u !== favUser){ favUser = u; favs = loadJSON(favKeyOfUser(u)) || {}; favSynced = false; favPaint(); if(state.favs) renderFavs(); }
+  else { const m0 = favMerge(favs, loadJSON(favKeyOfUser(u)) || {}); if(!favSame(m0, favs)){ favs = m0; favPaint(); if(state.favs) renderFavs(); } }   /* v130: 이 기기의 다른 화면에서 바뀐 것 */
   if(!u || !(window.KMA && KMA.fav) || favSynced) return;
   KMA.fav.get().then(srv=>{
     if(!srv || u !== favUser) return;
@@ -1897,6 +1899,7 @@ function favSync(){
 }
 window.addEventListener('load', ()=>{ favSync(); let n = 0; const iv = setInterval(()=>{ favSync(); if(++n > 60) clearInterval(iv); }, 2000); });
 window.addEventListener('focus', ()=>{ favSynced = false; favSync(); });
+window.addEventListener('storage', e=>{ if(e.key === favKeyOfUser(favUser)) favSync(); });   /* v130 */
 function favNote(){ const n = document.getElementById('favNote'); if(n) n.textContent = !favUser ? '로그인하면 즐겨찾기가 아이디에 저장되어 다른 기기에서도 보입니다.' : favSynced ? '즐겨찾기는 아이디에 저장되어 다른 기기에서도 같게 보입니다.' : '지금은 이 기기에만 저장되어 있습니다. 인터넷에 이어지면 아이디에도 저장합니다.'; }
 function openFavs(){
   state.favs = true; state.notebook = false; state.basket = false; state.examView = false; state.only = '';
@@ -3632,7 +3635,7 @@ footer .guide details{border-color:var(--line)!important;background:none!importa
 <script src="/middle-korean/js/config.js?v=93"></script>
 <script src="/middle-korean/js/ink.js?v=111"></script>
 <script src="/middle-korean/js/live.js?v=93"></script>
-<script src="js/account.js?v=112"></script>
+<script src="js/account.js?v=130"></script>
 <style id="v129-fav">
 .fav-btn{white-space:nowrap}
 .fav-btn.on{color:var(--brand);border-color:var(--brand);background:var(--brand-soft);font-weight:700}
