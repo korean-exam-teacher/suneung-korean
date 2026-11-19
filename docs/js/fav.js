@@ -5,6 +5,7 @@
  *   sn  수능·모의평가 지문 (3단계 수능 화면이 v129부터 쓰는 자리와 같다. 1단계의 평가원 기출 지문도 여기)
  *   hak 학력평가·기초학력 지문 (1단계)      non 대학 논술 문항 (4단계)
  *   adv PSAT·LEET·임용 지문 묶음·문항 (5단계)   gm  공무원 국어 지문·문항 (5단계)
+ * v135: 담은 문항(advbk·gmbk·…)과 오답 노트(advwr·gmwr)도 같은 틀로 아이디에 저장한다 — put·putMany·clear·list·order.
  * 저장: 이 기기에는 아이디마다 따로(localStorage), 로그인해 있으면 아이디에도(account.js KMA.favOf → users/{uid}.fav.<ns>) 적어 다른 기기에서도 같게 보인다.
  *
  * 별 단추 = KFAV.btn(ns, 열쇠, 글자) 가 만들어 주는 <button class="kfav" data-kfav="ns|열쇠">. 그리기와 누름은 이 틀이 맡는다.
@@ -121,5 +122,37 @@
     ".kfav-note{margin:14px 2px 0;font-size:12.5px;opacity:.62}" +
     "@media print{.kfav{display:none!important}}";
   (document.head || document.documentElement).appendChild(css);
-  window.KFAV = { use: use, has: has, keys: keys, count: count, at: function (ns, key) { return st(ns).m[key] || 0; }, toggle: toggle, btn: btn, paint: paint, sync: sync, note: note, valid: function (ns, f) { OK[ns] = f; paint(); }, user: function () { return user; } };
+  /* v135: 즐겨찾기 말고도 '아이디에 저장하는 목록'으로 쓴다 — 담은 문항(…bk), 오답 노트(…wr: 틀린 것은 +시각, 맞힌 것은 −시각).
+     put(ns, 열쇠, 넣음?, 시각) · putMany(ns, [[열쇠, 넣음?, 시각], …]) · clear(ns) · list(ns) = 넣은 차례(시각이 이른 것부터) */
+  function now(ns) { var s = st(ns), t = Date.now(), k; for (k in s.m) if (Math.abs(s.m[k]) >= t) t = Math.abs(s.m[k]) + 1; return t; }
+  function putMany(ns, l) {
+    var s = st(ns), ch = false, base; s.m = merge(s.m, rd(lkey(ns, user)));
+    (l || []).forEach(function (x) {
+      var key = x && x[0], on = !!x[1], t = +x[2] || 0; if (!key) return;
+      var cur = s.m[key] || 0;
+      if (t) { if (Math.abs(cur) >= t) return; }                     /* 시각을 주면 더 나중 것만 받는다(옮겨 올 때) */
+      else { if ((cur > 0) === on && cur) return; t = base = base ? base + 1 : now(ns); }
+      s.m[key] = on ? t : -t; ch = true;
+    });
+    if (!ch) return false;
+    s.ok = false; wr(lkey(ns, user), s.m); tell(ns);
+    clearTimeout(pushT[ns]); pushT[ns] = setTimeout(function () { sv(ns); }, 700);
+    return true;
+  }
+  function put(ns, key, on, t) { return putMany(ns, [[key, on, t]]); }
+  function clear(ns) { return putMany(ns, keys(ns).map(function (k) { return [k, false]; })); }
+  function list(ns) { var m = st(ns).m; return keys(ns).sort(function (a, b) { return m[a] - m[b]; }); }
+  /* 차례를 통째로 정한다(↑↓로 옮겼을 때): 뺀 것은 빼고, 남은 것은 새 시각으로 차례대로 */
+  function order(ns, ids) {
+    var cur = list(ns), want = (ids || []).filter(function (k, i, a) { return k && a.indexOf(k) === i; }), l = [];
+    cur.forEach(function (k) { if (want.indexOf(k) < 0) l.push([k, false]); });
+    var keep = cur.filter(function (k) { return want.indexOf(k) >= 0; }), add = want.filter(function (k) { return cur.indexOf(k) < 0; });
+    var same = keep.every(function (k, i) { return want[i] === k; });          /* 앞은 그대로, 뒤에만 더함 → 더한 것만 적는다 */
+    (same ? add : want).forEach(function (k) { l.push([k, true]); });
+    if (!same) { var s = st(ns); l.forEach(function (x) { if (x[1]) { var c = s.m[x[0]] || 0; if (c > 0) s.m[x[0]] = -c; } }); }   /* 다시 매기려고 잠깐 뺀 표시 */
+    return putMany(ns, l);
+  }
+  function synced(ns) { return !!(st(ns).ok); }
+  window.KFAV = { use: use, has: has, keys: keys, count: count, at: function (ns, key) { return st(ns).m[key] || 0; }, toggle: toggle, btn: btn, paint: paint, sync: sync, note: note, valid: function (ns, f) { OK[ns] = f; paint(); }, user: function () { return user; },
+    put: put, putMany: putMany, clear: clear, list: list, order: order, synced: synced };
 })();

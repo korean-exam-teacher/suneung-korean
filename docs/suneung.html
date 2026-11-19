@@ -1252,6 +1252,7 @@ footer .guide details{border-color:var(--line)!important;background:none!importa
 })();
 </script>
 
+<script src="/suneung-korean/js/fav.js?v=135"></script>
 <script src="data/sn-idx-a.js?v=134"></script>
 <script src="data/sn-idx-b.js?v=134"></script>
 <script>
@@ -1462,11 +1463,30 @@ const SKILL_CATEGORIES = [
 const REFORM_ORDER = ["화법과 언어","독서와 작문","문학","매체-경과","매체-경과(확인 필요)","화법과 언어/독서와 작문(확인 필요)","확인 필요"];
 
 /* ---------- 풀이 기록·설정 (이 브라우저에만 저장) ---------- */
-const REC_KEY = 'kbank-records-v1', PREF_KEY = 'kbank-prefs-v1';
+/* v135: 풀이 기록을 아이디마다 따로 둔다(전에는 이 브라우저 하나에 하나 — 같은 기기를 쓰는 학생끼리 섞였다). 예전 기록은 처음 연 아이디로 옮긴다 */
+const SN_U = (()=>{ try{ return (JSON.parse(localStorage.getItem('kma.s')||'null')||{}).id||''; }catch(e){ return ''; } })();
+const REC_KEY0 = 'kbank-records-v1', REC_KEY = REC_KEY0 + (SN_U ? ':' + SN_U : ''), PREF_KEY = 'kbank-prefs-v1';
+try{ if(SN_U && !localStorage.getItem(REC_KEY) && localStorage.getItem(REC_KEY0)){ localStorage.setItem(REC_KEY, localStorage.getItem(REC_KEY0)); localStorage.removeItem(REC_KEY0); } }catch(e){}
 let storageOK = true;
 function loadJSON(k){ try{ return JSON.parse(localStorage.getItem(k) || '{}') || {}; }catch(e){ storageOK = false; return {}; } }
 function saveJSON(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){ storageOK = false; } }
 const records = loadJSON(REC_KEY);   // key -> {r:'O'|'X', n:시도 수, w:틀린 수, c:고른 번호, t:시각}
+/* v135: 오답 노트를 아이디에도 — users/{uid}.fav.snwr { 문항 키: 틀린 시각(+) / 맞힌 시각(−) } (js/fav.js 틀).
+   처음 열 때 이 기기의 기록을 옮기고(더 나중 것만), 아이디에 적힌 것 가운데 더 나중 것은 이 기기의 풀이 기록에 들여온다 */
+const SNKF = window.KFAV || null, SNWR = 'snwr', SNBK = 'snbk';
+function snOnId(){ return !!(SNKF && SNKF.user() && SNKF.put); }
+function snWrSync(){
+  if(!snOnId()) return false;
+  let ch = false; SNKF.use(SNWR);
+  SNKF.putMany(SNWR, Object.keys(records).filter(k=>records[k] && records[k].t).map(k=>[k, records[k].r==='X', records[k].t]));
+  SNKF.keys(SNWR).concat(Object.keys(records)).forEach(k=>{
+    const v = SNKF.at(SNWR, k), t = Math.abs(v); if(!v || (records[k] && (records[k].t||0) >= t)) return;
+    const r = records[k] || {n:0, w:0}; r.r = v < 0 ? 'O' : 'X'; r.t = t; if(!r.n) r.n = 1; if(v > 0 && !r.w) r.w = 1; records[k] = r; ch = true;
+  });
+  if(ch) saveJSON(REC_KEY, records);
+  return ch;
+}
+snWrSync();
 const prefs = Object.assign({rs:1, lines:false, showAns:false, sort:'recent'}, loadJSON(PREF_KEY));
 function savePrefs(){ saveJSON(PREF_KEY, prefs); }
 function applyPrefs(){ document.documentElement.style.setProperty('--rs', prefs.rs); }
@@ -2181,7 +2201,7 @@ document.addEventListener('click', e=>{
     const n = Number(picked.dataset.n); const ok = n === it.정답;
     const r = records[key] || {n:0, w:0};
     r.n += 1; if(!ok) r.w += 1; r.r = ok ? 'O' : 'X'; r.c = n; r.t = Date.now();
-    records[key] = r; saveJSON(REC_KEY, records);
+    records[key] = r; saveJSON(REC_KEY, records); if(snOnId()) SNKF.put(SNWR, key, !ok, r.t);
     if(window.KMA) KMA.record('sn:'+key, ok, it.영역, n);
     revealIn(bar.parentElement, it, n);
     const msg = bar.querySelector('.solve-msg');
@@ -2384,7 +2404,7 @@ function renderNotebook(){
 notebookSec.addEventListener('click', e=>{
   if(e.target.closest('#nbClear')){ nbConfirm = true; renderNotebook(); return; }
   if(e.target.closest('#nbClearNo')){ nbConfirm = false; renderNotebook(); return; }
-  if(e.target.closest('#nbClearYes')){ Object.keys(records).forEach(k=>delete records[k]); saveJSON(REC_KEY, records); nbConfirm = false; updateNbCount(); renderNotebook(); return; }
+  if(e.target.closest('#nbClearYes')){ Object.keys(records).forEach(k=>delete records[k]); saveJSON(REC_KEY, records); if(snOnId()) SNKF.clear(SNWR); nbConfirm = false; updateNbCount(); renderNotebook(); return; }
 });
 
 /* ---------- 현황 ---------- */
@@ -2410,7 +2430,14 @@ let bkSolveStart = 0, bkTimerId = null;
 let bkLayout = null, bkLayoutSig = '', bkLayoutRun = 0, bkLayoutTimer = null, bkLayoutBusy = null;
 let bkDownloads = null;
 
-function saveBasket(){ saveJSON(BK_KEY, basket); }
+/* v135: 담은 문제를 아이디에 — users/{uid}.fav.snbk(차례 = 담은 차례, 순서를 바꾸면 다시 매김). 인쇄 설정(제목·용지 등)은 이 기기에 그대로. 이 기기에 담아 둔 것은 처음 열 때 아이디로 옮긴다 */
+if(snOnId()){ SNKF.use(SNBK); if(basket.keys.length) SNKF.order(SNBK, SNKF.list(SNBK).concat(basket.keys.filter(k=>!SNKF.has(SNBK, k)))); basket.keys = SNKF.list(SNBK); saveJSON(BK_KEY, Object.assign({}, basket, {keys:[]})); }
+function saveBasket(){ if(snOnId()){ saveJSON(BK_KEY, Object.assign({}, basket, {keys:[]})); SNKF.order(SNBK, basket.keys); } else saveJSON(BK_KEY, basket); }
+document.addEventListener('kfav:change', e=>{
+  const ns = (e.detail && e.detail.ns) || '';
+  if((!ns || ns === SNWR) && snWrSync()){ updateNbCount(); if(state.notebook) renderNotebook(); }
+  if((!ns || ns === SNBK) && snOnId()){ const nb = SNKF.list(SNBK); if(nb.join('|') !== basket.keys.join('|')){ basket.keys = nb; updateBkCount(); syncBasketMarks(); if(state.basket && bkView === 'list') renderBasket(); } }
+});
 function inBasket(k){ return basket.keys.includes(k); }
 function bkValidKeys(){ return basket.keys.filter(k=>itemByKey(k)); }
 function bkBtnLabel(on){ return on ? '✓ 담음 · 빼기' : '＋ 문제 담기'; }
