@@ -467,12 +467,12 @@ var SRCS=[
 var MK={src:'gm',q:'',a:{},t:'',from:null,g:'',y:'',e:'',page:1,open:null,bk:[],it:{},step:1,hide:true,n:10,even:false,am:'',kind:'',min:0,open2:null,cls:''}, LOADED={}, GMQ={}, NRM={}, USED={};
 function script(src){ if(LOADED[src]) return LOADED[src]; LOADED[src]=new Promise(function(res,rej){ var a=document.createElement('script'); a.src=src; a.onload=res; a.onerror=function(){ delete LOADED[src]; rej(); }; document.head.appendChild(a); }); return LOADED[src]; }
 /* v134: 수능 목록(asg_sn.js 7.5MB)은 통째로 다시 올리기 어려워, 새 회차는 덧붙임 파일(asg_sn_add.js)에 둔다 — 수능 목록을 받으면 이어서 받는다(못 받아도 예전 회차는 그대로 쓴다) */
-var script0=script; script=function(src){ if(!/\/asg_sn\.js(\?|$)/.test(src)) return script0(src); var k='+'+src; return LOADED[k]||(LOADED[k]=script0(src).then(function(){ return script0('/suneung-korean/asg_sn_add.js?v=134').catch(function(){}); })); };
+var script0=script; script=function(src){ if(!/\/asg_sn\.js(\?|$)/.test(src)) return script0(src); var k='+'+src; return LOADED[k]||(LOADED[k]=script0(src).then(function(){ return script0('/suneung-korean/asg_sn_add.js?v=136').catch(function(){}); })); };
 function srcLoad(k){
   if(k==='gm') return script('/advanced-korean/gm/index.js?v=102').then(function(){ return script('/advanced-korean/gm/gmfind.js?v=102'); }).then(function(){ return GMFind.load(); });
   var ld=script(SRCS.filter(function(x){return x.k===k;})[0].f);
   /* v119: 수능은 유형 묶음·갈래 표를 함께 불러온다(못 불러와도 과제 만들기는 된다) */
-  return k==='sn'?ld.then(function(){ return script('/suneung-korean/asg_sn_type.js?v=134').catch(function(){}); }).then(function(){ return window.KMA&&KMA.snm?KMA.snm():null; }):ld;
+  return k==='sn'?ld.then(function(){ return script('/suneung-korean/asg_sn_type.js?v=136').catch(function(){}); }).then(function(){ return window.KMA&&KMA.snm?KMA.snm():null; }):ld;
 }
 /* v121: 받지 못하면 다시 받는다(account.js KMA.gmExam — 3번까지). 실패는 기억하지 않아 다음에 열면 또 받아 본다 */
 function gmQ(eid){ if(window.KMA&&KMA.gmExam) return KMA.gmExam(eid);
