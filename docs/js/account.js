@@ -496,7 +496,9 @@
       }).then(function (list) { return { ok: true, list: list }; }).catch(function (e) { if (e && e.code === "noteacher") return { ok: true, list: [] }; throw e; });
     },
     teacherList: function () {
-      return DB.collection("teachers").get().then(function (q) { var l = []; q.forEach(function (d) { var x = d.data() || {}; l.push({ uid: d.id, id: x.id || "?", at: x.at || 0 }); }); return { ok: true, list: l }; });
+      /* v139: 선생님 본명도 함께(users/{uid}.name) — 관리 화면에 '본명 (아이디)'로 보인다 */
+      return DB.collection("teachers").get().then(function (q) { var l = []; q.forEach(function (d) { var x = d.data() || {}; l.push({ uid: d.id, id: x.id || "?", at: x.at || 0, name: "" }); });
+        return Promise.all(l.map(function (t) { return uref(t.uid).get().then(function (u) { t.name = ((u.data() || {}).name || "").trim(); }).catch(function () { return null; }); })).then(function () { return { ok: true, list: l }; }); });
     },
     teacherAdd: function (pw, id) {
       id = String(id || "").trim();
