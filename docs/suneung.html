@@ -35,7 +35,8 @@
 @media (max-width:480px){.crumb{gap:6px}.logo .crumb a{font-size:13.5px}.logo .crumb a.here{font-size:18px}}
 </style>
 <style>/* v140: 글줄은 어절 단위로 나뉜다 */html{word-break:keep-all;overflow-wrap:break-word}</style>
-<style>/* v141: 원본 문제지의 굵은 글씨·고딕 */b.bd{font-weight:700}.gt{font-family:"OldHangulSans","Pretendard Variable","Pretendard","Noto Sans KR","Noto Sans TC","Noto Sans CJK KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-weight:500;letter-spacing:-.01em}.gt b.bd{font-weight:700}.sheet .gt{font-family:"OldHangulSans","Noto Sans KR","Noto Sans TC","Noto Sans CJK KR","Malgun Gothic",sans-serif;font-weight:500}.sheet .gt b.bd{font-weight:700}</style><style>/* v142 */img.inl{display:inline!important;width:auto!important;max-width:none!important;height:.92em!important;vertical-align:-.1em;margin:0 .06em;border:0!important;box-shadow:none!important;background:none!important}</style></head>
+<link rel="stylesheet" href="/suneung-korean/fonts/kma/kma.css?v=145">
+<style>/* v141: 원본 문제지의 굵은 글씨·고딕 */b.bd{font-weight:700}.gt{font-family:"KMA Sans","OldHangulSans","Pretendard Variable","Pretendard","Noto Sans KR","Noto Sans TC","Noto Sans CJK KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-weight:500;letter-spacing:-.01em}.gt b.bd{font-weight:700}.sheet .gt{font-family:"OldHangulSans","Noto Sans KR","Noto Sans TC","Noto Sans CJK KR","Malgun Gothic",sans-serif;font-weight:500}.sheet .gt b.bd{font-weight:700}</style><style>/* v142 */img.inl{display:inline!important;width:auto!important;max-width:none!important;height:.92em!important;vertical-align:-.1em;margin:0 .06em;border:0!important;box-shadow:none!important;background:none!important}</style></head>
 <body>
 <style>
 @font-face{font-family:"OldHangulTitle";font-weight:400 800;font-display:swap;src:url(fonts/oh-nanum.woff) format("woff")}
@@ -81,7 +82,7 @@
   --radius:14px;
   --shadow:0 1px 2px rgba(16,24,40,.04),0 4px 16px rgba(16,24,40,.06);
   --font-sans:"OldHangulSans","Pretendard Variable","Pretendard","Noto Sans KR","Noto Sans TC","Noto Sans CJK KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-  --font-paper:"OldHangulSerif","Noto Serif KR","Noto Serif TC","Batang","AppleMyungjo",serif;
+  --font-paper:"KMA Serif","OldHangulSerif","Noto Serif KR","Noto Serif TC","Batang","AppleMyungjo",serif;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -2718,34 +2719,34 @@ function bkAutoSteps(paper){ const p = BK_PAPER[paper] || BK_PAPER.A4; const t =
   return [1, .95, .9, .85].map(k=>Math.round(t*k*10)/10); }
 const SHEET_CSS = `
 .sheet{position:relative;box-sizing:border-box;background:#fff;color:#000;overflow:hidden;
-  font-family:"OldHangulSerif",var(--pfam,"Noto Serif KR"),"Noto Serif KR","Noto Serif TC","Noto Serif CJK KR","Batang","AppleMyungjo",serif;font-size:var(--pf,10pt);line-height:1.6;
+  font-family:var(--pfam,"KMA Serif"),"KMA Serif","Noto Serif KR","Noto Serif CJK KR",serif;font-size:var(--pf,10pt);line-height:1.6;
   letter-spacing:-.04em;word-break:keep-all;overflow-wrap:anywhere;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .sheet *{box-sizing:border-box}
 #printArea .sheet{contain:strict}
-.sheet .hf{font-family:"HY헤드라인M","HYHeadLine-Medium","OldHangulSans","Noto Sans KR","Noto Sans CJK KR","Malgun Gothic",sans-serif;font-weight:800;font-synthesis:none;letter-spacing:0;line-height:1}
-.sheet .pnum{font-family:"Times New Roman",Times,"Noto Serif","Noto Serif KR","Noto Serif CJK KR",serif;font-weight:700;letter-spacing:0;line-height:1}
+.sheet .hf{font-family:"KMA Sans","Noto Sans KR","Noto Sans CJK KR",sans-serif;font-weight:800;font-synthesis:none;letter-spacing:0;line-height:1}
+.sheet .pnum{font-family:"KMA Serif","Noto Serif KR","Noto Serif CJK KR",serif;font-weight:700;letter-spacing:0;line-height:1}
 .sh-hd{position:absolute;border-bottom:var(--rw) solid #000}
 .sh-hd .hf{position:absolute;left:0;right:0;bottom:var(--hb);text-align:center}
 .sh-hd .pnum{position:absolute;bottom:var(--pb)}
 .sh-hd.odd .pnum{right:0} .sh-hd.even .pnum{left:0}
 .sh-hd1{position:absolute;border-bottom:var(--rw) solid #000}
-.sh-hd1 .t-s{position:absolute;left:0;right:0;text-align:center;font-family:"OldHangulSans","Noto Sans KR","Noto Sans CJK KR","Malgun Gothic",sans-serif;font-weight:500;letter-spacing:-.02em;line-height:1}
+.sh-hd1 .t-s{position:absolute;left:0;right:0;text-align:center;font-family:"KMA Sans","Noto Sans KR","Noto Sans CJK KR",sans-serif;font-weight:500;letter-spacing:-.02em;line-height:1}
 .sh-hd1 .pnum{position:absolute;right:0}
 .sh-hd1 .gyosi{position:absolute;left:0;display:flex;align-items:center;justify-content:center;border:var(--tw) solid #000;border-radius:999px;
-  font-family:"Noto Serif KR","Noto Serif CJK KR",serif;font-weight:700;letter-spacing:0;line-height:1;white-space:nowrap}
-.sh-hd1 .gyosi b{font-family:"Times New Roman",Times,serif;margin:0 .18em}
+  font-family:"KMA Serif","Noto Serif KR","Noto Serif CJK KR",serif;font-weight:700;letter-spacing:0;line-height:1;white-space:nowrap}
+.sh-hd1 .gyosi b{font-family:"KMA Serif","Noto Serif KR","Noto Serif CJK KR",serif;margin:0 .18em}
 .sh-hd1 .hf{position:absolute;left:0;right:0;text-align:center}
 .sh-cols{position:absolute;display:flex}
 .sh-col{position:relative;flex:none;height:100%;overflow:hidden}
 .sh-rule{flex:none;width:0;border-left:var(--cw) solid #000;margin:0 auto}
 .sh-col > :first-child{margin-top:0!important}
-.sh-ft{position:absolute;border:var(--tw) solid #000;font-family:"Times New Roman",Times,serif;letter-spacing:0;line-height:1;
+.sh-ft{position:absolute;border:var(--tw) solid #000;font-family:"KMA Serif","Noto Serif KR","Noto Serif CJK KR",serif;letter-spacing:0;line-height:1;
   background:linear-gradient(to bottom right,transparent calc(50% - var(--tw)/2),#000 calc(50% - var(--tw)/2),#000 calc(50% + var(--tw)/2),transparent calc(50% + var(--tw)/2))}
 .sh-ft .a{position:absolute;left:.18em;top:.08em}
 .sh-ft .b{position:absolute;right:.18em;bottom:.06em}
 .gh{margin-top:2.2em;text-align:justify}
 .gh .rg{margin-right:.25em;letter-spacing:0}
-.src{font-family:"OldHangulSans","Noto Sans KR","Noto Sans CJK KR","Malgun Gothic",sans-serif;font-size:.74em;color:#555;font-weight:400;letter-spacing:0}
+.src{font-family:"KMA Sans","Noto Sans KR","Noto Sans CJK KR",sans-serif;font-size:.74em;color:#555;font-weight:400;letter-spacing:0}
 .gh + .pbox, .gh + .pimg{margin-top:.45em}
 .pbox{border:var(--tw) solid #000;padding:.3em .5em .35em}
 .pbox + .pbox{margin-top:0}
@@ -2760,7 +2761,7 @@ const SHEET_CSS = `
 .q{margin-top:2.4em}
 .pbox + .q, .pimg + .q, .pnote + .q{margin-top:1.9em}
 .qs{text-align:justify;padding-left:1.5em;text-indent:-1.5em}
-.qs .qn{font-family:"Times New Roman",Times,"Noto Serif KR","Noto Serif CJK KR",serif;font-weight:700;font-size:1.13em;display:inline-block;min-width:1.33em;text-indent:0;letter-spacing:0}
+.qs .qn{font-family:"KMA Serif","Noto Serif KR","Noto Serif CJK KR",serif;font-weight:700;font-size:1.13em;display:inline-block;min-width:1.33em;text-indent:0;letter-spacing:0}
 .qb{position:relative;border:var(--tw) solid #000;padding:.35em .55em .4em;margin:.6em 0 .35em}
 .qb.lab{margin-top:1.1em;padding-top:.75em}
 .qb.cont{border-top-style:dashed;margin-top:0;padding-top:.35em}
@@ -2775,13 +2776,13 @@ const SHEET_CSS = `
 .pimg img{display:block;width:100%;height:auto}
 .pimg + .pimg{margin-top:0}
 .qs + .pimg{margin-top:.45em}
-.chk{position:absolute;left:0;right:0;bottom:0;border:var(--tw) solid #000;padding:.5em .7em;font-family:"OldHangulSans","Noto Sans KR","Noto Sans CJK KR","Malgun Gothic",sans-serif;font-size:.86em;line-height:1.5;letter-spacing:-.02em}
+.chk{position:absolute;left:0;right:0;bottom:0;border:var(--tw) solid #000;padding:.5em .7em;font-family:"KMA Sans","Noto Sans KR","Noto Sans CJK KR",sans-serif;font-size:.86em;line-height:1.5;letter-spacing:-.02em}
 .chk b{display:block;margin-bottom:.2em}
 .chk p{margin:0;padding-left:.9em;text-indent:-.9em}
 /* 표지 */
-.cv{position:absolute;font-family:"OldHangulSans","Noto Sans KR","Noto Sans CJK KR","Malgun Gothic",sans-serif;letter-spacing:-.02em;line-height:1.35}
-.cv-gyosi{display:flex;align-items:center;justify-content:center;border:var(--tw) solid #000;border-radius:999px;font-family:"Noto Serif KR","Noto Serif CJK KR",serif;font-weight:700;letter-spacing:0;line-height:1}
-.cv-gyosi b{font-family:"Times New Roman",Times,serif;margin:0 .18em}
+.cv{position:absolute;font-family:"KMA Sans","Noto Sans KR","Noto Sans CJK KR",sans-serif;letter-spacing:-.02em;line-height:1.35}
+.cv-gyosi{display:flex;align-items:center;justify-content:center;border:var(--tw) solid #000;border-radius:999px;font-family:"KMA Serif","Noto Serif KR","Noto Serif CJK KR",serif;font-weight:700;letter-spacing:0;line-height:1}
+.cv-gyosi b{font-family:"KMA Serif","Noto Serif KR","Noto Serif CJK KR",serif;margin:0 .18em}
 .cv-title{text-align:center;font-weight:500}
 .cv-big{text-align:center}
 .cv-id{display:flex;justify-content:space-between}
@@ -2795,7 +2796,7 @@ const SHEET_CSS = `
 .cv-row{display:flex;align-items:baseline;gap:.3em}
 .cv-row .dots{flex:1;border-bottom:.35mm dotted #000;transform:translateY(-.25em)}
 .cv-bar{background:#d9d9d9;border:var(--tw) solid #000;display:flex;align-items:center;justify-content:center;font-weight:700}
-.sh-key{position:absolute;font-family:"OldHangulSans","Noto Sans KR","Noto Sans CJK KR","Malgun Gothic",sans-serif;font-size:9.5pt;line-height:1.35;letter-spacing:0}
+.sh-key{position:absolute;font-family:"KMA Sans","Noto Sans KR","Noto Sans CJK KR",sans-serif;font-size:9.5pt;line-height:1.35;letter-spacing:0}
 .sh-key h3{margin:0 0 3mm;font-size:13pt;text-align:center}
 .sh-key .kc{display:flex;gap:6mm;align-items:flex-start}
 .sh-key table{flex:1;border-collapse:collapse}
@@ -2808,7 +2809,7 @@ const SHEET_CSS = `
 (function injectSheetCss(){ const st = document.createElement('style'); st.id = 'sheetCss'; st.textContent = SHEET_CSS; document.head.appendChild(st); })();
 /* 인쇄 글꼴: 웹 글꼴(Noto Serif KR) 또는 이 컴퓨터에 설치된 글꼴 */
 const BK_FACES = [
-  {v:'noto', label:'Noto Serif KR (기본 웹 글꼴)', names:['Noto Serif KR']},
+  {v:'noto', label:'본명조 (사이트 글꼴 · 기본)', names:['KMA Serif']},
   {v:'shin', label:'신명 중명조 (설치된 경우)', names:['신명 중명조','신명중명조','SM중명조','신명 신명조','신명신명조','SM신명조']},
   {v:'hy', label:'HY신명조', names:['HY신명조','HYSinMyeongJo-Medium']},
   {v:'hcr', label:'함초롬바탕', names:['함초롬바탕','HCR Batang']},
@@ -2832,18 +2833,18 @@ function bkFontInstalled(name){
 /* 고른 글꼴 중 실제로 쓸 이름. 웹 글꼴은 늘 쓸 수 있다고 본다. 못 찾으면 null */
 function bkFaceName(){
   const f = BK_FACES.find(x=>x.v===basket.face) || BK_FACES[0];
-  if(f.v === 'noto') return 'Noto Serif KR';
+  if(f.v === 'noto') return 'KMA Serif';
   const names = f.v === 'custom' ? [basket.faceCustom.trim()].filter(Boolean) : f.names;
   return names.find(bkFontInstalled) || null;
 }
-function bkFaceCss(){ const n = bkFaceName(); return n ? `"${n.replace(/"/g,'')}"` : '"Noto Serif KR"'; }
+function bkFaceCss(){ const n = bkFaceName(); return n ? `"${n.replace(/"/g,'')}"` : '"KMA Serif"'; }
 function bkFaceInfo(){
   const f = BK_FACES.find(x=>x.v===basket.face) || BK_FACES[0];
   if(f.v === 'noto') return '';
   const n = bkFaceName();
   if(f.v === 'custom' && !basket.faceCustom.trim()) return '<span class="warn">글꼴 이름을 한글·워드의 글꼴 목록에 보이는 대로 적어 주세요.</span>';
   return n ? `<span class="ok">✓ 이 컴퓨터에서 "${escapeHtml(n)}" 글꼴을 찾았습니다.</span>`
-           : `<span class="no">이 컴퓨터에서 ${escapeHtml(f.v === 'custom' ? '"'+basket.faceCustom.trim()+'"' : f.label.replace(/ \(.*\)$/,''))} 글꼴을 찾지 못해 기본 글꼴(Noto Serif KR)로 짭니다.</span>`;
+           : `<span class="no">이 컴퓨터에서 ${escapeHtml(f.v === 'custom' ? '"'+basket.faceCustom.trim()+'"' : f.label.replace(/ \(.*\)$/,''))} 글꼴을 찾지 못해 기본 글꼴(본명조)로 짭니다.</span>`;
 }
 function bkGeom(paper){
   const p = BK_PAPER[paper] || BK_PAPER.A4; const s = p.w/210;   // 양식을 A4로 줄인 값 × 비율
@@ -3132,6 +3133,11 @@ function bkAnswerSheets(area, g, groups, num, startIdx){
 function bkSig(){ return JSON.stringify([bkValidKeys(), basket.paper, basket.font, basket.title.trim(), basket.ansKey, basket.src, basket.cover, bkFaceCss()]); }
 async function bkLayoutAt(pt){
   let r = bkLayoutSync(pt);
+  /* v145: 쪽에 쓰인 글자가 든 글꼴 조각(본명조·본고딕)을 다 받은 뒤 다시 잰다 — 받는 중의 다른 글꼴로 재고 찍지 않게 */
+  if(document.fonts && document.fonts.load){
+    const a = document.getElementById('printArea'), u = [...new Set(a ? a.textContent : '')].join('');
+    if(u){ await Promise.race([Promise.all(['400 16px "KMA Serif"','700 16px "KMA Serif"','500 16px "KMA Sans"','700 16px "KMA Sans"'].map(f=>document.fonts.load(f,u).catch(()=>{}))), new Promise(res=>setTimeout(res,20000))]); r = bkLayoutSync(pt); }
+  }
   for(let i = 0; i < 3 && document.fonts && document.fonts.status === 'loading'; i++){
     await document.fonts.ready; r = bkLayoutSync(pt);
   }
@@ -3266,7 +3272,7 @@ async function bkStandaloneHtml(){
   const title = basket.title.trim() || '담은 문제 모음';
   const ohCss = await bkOldHangulCss(clone);
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} — 국어 영역</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&family=Noto+Serif+KR:wght@400;600&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&amp;family=Noto+Sans+TC:wght@400;500;700&amp;text=%E5%8C%8A%E7%8D%A7%E5%96%83%E8%82%93%E5%B9%83%E8%BA%91%E8%BA%85%E6%AC%B8%E7%AF%9B%E9%A9%84%E7%B0%B7%E5%8F%9F%E8%9F%8A%E5%84%88%E7%B0%91%E9%B7%B0%E9%B8%9B%E9%B6%BB%E8%AC%A1%E9%AC%9F%E5%B9%9E%E9%85%86%E8%A9%81%E9%9A%B4%E9%AC%AF%E6%AC%B9%E6%85%9A%E9%B4%88%E8%AE%8E%E7%B6%A6%E9%A8%85%E8%90%87%E9%86%AA%E7%B4%9C%E9%9C%8D%E9%AB%91%E9%AB%8F%E7%AC%88%E7%8D%8E%E6%85%B5%E6%98%82%E8%87%99%E6%88%B2%E5%90%81%E8%9F%8B%E8%9F%80%E7%95%AB%E6%BC%AA%E9%96%BD%E6%91%9B%E6%A8%85%E6%86%92%E9%A0%A1%E6%92%90&amp;display=swap">
+<link rel="stylesheet" href="${new URL('/suneung-korean/fonts/kma/kma.css?v=145', location.href).href}">
 <style>${ohCss}${SHEET_CSS}
 ${bkPageCss()}
 html,body{margin:0;padding:0}
@@ -3708,7 +3714,7 @@ footer .guide details{border-color:var(--line)!important;background:none!importa
 <script src="/middle-korean/js/config.js?v=93"></script>
 <script src="/middle-korean/js/ink.js?v=111"></script>
 <script src="/middle-korean/js/live.js?v=93"></script>
-<script src="js/account.js?v=144"></script>
+<script src="js/account.js?v=145"></script>
 <style id="v129-fav">
 .fav-btn{white-space:nowrap}
 .fav-btn.on{color:var(--brand);border-color:var(--brand);background:var(--brand-soft);font-weight:700}
