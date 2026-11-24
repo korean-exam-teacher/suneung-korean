@@ -5,6 +5,7 @@
  *  · 문항(발문+선택지)은 쪼개지 않는다. 남은 칸에 안 들어가면 다음 단으로, 한 단보다 길면 그 단에 들어가게 줄인다.
  *  · 지문(글·그림)은 줄 사이 흰 곳에서 끊어 다음 단·쪽으로 이어 싣는다.
  *  · 수능 문항만 있는 과제는 수능 문제지 양식(suneung.html 시험지와 같은 값), 그 밖은 넓은 2단.
+ * v144(2026-11-24): 공무원 문항을 글자로 옮긴 자료(gm/t)가 있으면 글자로 찍는다 — 수능 문제지 양식, 번호는 1번부터. 글자로 못 옮긴 문항은 원래 번호를 지운 그림 위에 새 번호.
  * v143(2026-11-24): 공무원 지문 그림 — 단·쪽에서 끊긴 조각은 끊긴 쪽에 상자 가로선을 그어 닫고, 그림 맨 위의 원래 머리말(※ 다음 글을 읽고…[문7~문9])은 뗀다(gm/phd.json).
  */
 (function () {
@@ -37,6 +38,7 @@
     ".qh2{font-family:'OldHangulSans','Noto Sans KR','Noto Sans CJK KR','Malgun Gothic',sans-serif;font-size:.82em;color:#333;letter-spacing:-.02em;line-height:1.3;margin-bottom:.25em;display:flex;gap:.5em;align-items:baseline}",
     ".qh2 b{font-family:'Times New Roman',Times,serif;font-size:1.5em;color:#000;letter-spacing:0}",
     ".q .pimg{margin-top:.2em}.q.fit{transform-origin:top left}",
+    ".gmimg .pimg{margin:0}.gmimg .gmn{position:absolute;font-family:'Times New Roman',Times,'Noto Serif KR',serif;font-weight:700;font-size:1.13em;line-height:1;background:#fff;letter-spacing:0}",
     ".wr{margin-top:.6em;border:var(--tw) solid #000;height:22mm;position:relative}.wr:before{content:'답';position:absolute;left:1.2mm;top:.6mm;font-size:.8em;color:#555}",
     ".ansg{margin-top:2em;border:var(--tw) solid #000;padding:.5em .6em .6em;font-family:'OldHangulSans','Noto Sans KR','Noto Sans CJK KR','Malgun Gothic',sans-serif;font-size:.86em;letter-spacing:0;line-height:1.3}",
     ".ansg b{display:block;margin-bottom:.4em}.ansg .g{display:grid;grid-template-columns:repeat(5,1fr);border-top:.2mm solid #000;border-left:.2mm solid #000}",
@@ -48,7 +50,7 @@
   ].join("\n");
 
   /* ---------- 자료 불러오기 ---------- */
-  var IMG = {}, GMQ = {}, CUT = {};
+  var IMG = {}, GMQ = {}, CUT = {}, GMT = "/advanced-korean/gm/t/";
   function loadImg(src) {
     return IMG[src] || (IMG[src] = new Promise(function (res) { var im = new Image(); im.onload = function () { res({ ok: true, src: src, w: im.naturalWidth, h: im.naturalHeight, im: im }); }; im.onerror = function () { res({ ok: false, src: src, w: 760, h: 200 }); }; im.src = src; }));
   }
@@ -147,8 +149,19 @@
       (it.q || []).forEach(function (p, i) { need.push(loadImg(p.s).then(function (r) { o.qimgs[i] = r; })); });
       if (it.gm) need.push(gmQ(it.gm.e).then(function (d) {
         if (!d || !d.q) { o.gmNote = "이 문항은 시험지 쪽 그림으로만 있어요. 화면에서 ‘시험지에서 보기’로 확인하세요."; return null; }
+        /* v144: 글자로 옮긴 공무원 문항(gm/t) — 글자 크기를 시험지 글자에 맞춘 배율 */
+        var T = A._gmt && A._gmt[it.gm.e], tq = T && T.q && T.q[String(it.gm.n)], sc = T && T.pt ? g.pt / T.pt : 1;
         var q = d.q.filter(function (x) { return x.n === it.gm.n; })[0], jobs = [];
-        (d.p || []).forEach(function (p, i) { if (p.rng[0] <= it.gm.n && it.gm.n <= p.rng[1]) { o.key = "g|" + it.gm.e + "|" + i; jobs.push(Promise.all([loadImg(p.img), gmHd()]).then(function (v) { var r = v[0], H = v[1][it.gm.e]; r.dpi = 150; if (H && H[i]) r.hd = H[i]; o.pimgs.push(r); })); } });
+        (d.p || []).forEach(function (p, i) { if (p.rng[0] <= it.gm.n && it.gm.n <= p.rng[1]) { o.key = "g|" + it.gm.e + "|" + i;
+          var tp = T && T.p && T.p[String(i)];
+          if (tp && tp.pas) { o.gpas = tp.pas; return; }
+          jobs.push(Promise.all([loadImg(p.img), gmHd()]).then(function (v) { var r = v[0], H = v[1][it.gm.e]; r.dpi = 150 / (T ? sc : 1); if (H && H[i]) r.hd = H[i]; o.pimgs.push(r); })); } });
+        if (tq && tq.ask) {
+          o.gt = tq;
+          if (tq.fig) jobs.push(loadImg(GMT + "i/" + tq.fig[0]).then(function (r) { r.mmpp = 25.4 / T.dpi * sc; o.qimgs[0] = r; }));
+          return Promise.all(jobs);
+        }
+        if (tq && tq.img) { jobs.push(loadImg(GMT + "i/" + tq.img[0]).then(function (r) { r.mmpp = 25.4 / T.dpi * sc; r.nx = tq.nx; o.gimg = r; })); return Promise.all(jobs); }
         if (q) jobs.push(loadImg(q.img).then(function (r) { r.dpi = 150; o.qimgs[0] = r; })); else o.gmNote = "문항 그림을 찾지 못했어요.";
         return Promise.all(jobs);
       }));
@@ -164,7 +177,7 @@
       });
       P.forEach(function (o) { if (o.key) (groups[o.key] = groups[o.key] || []).push(o.n); });
       P.forEach(function (o) {
-        var it = o.it, t = it.txt, pas = t && t.pas ? String(t.pas) : "", gk = o.key || (pas ? "x|" + o.n : "");
+        var it = o.it, t = it.txt || o.gt, pas = t && t.pas ? String(t.pas) : (o.gpas || ""), gk = o.key || (pas ? "x|" + o.n : "");
         var hasPas = (pas || o.pimgs.length) && !(gk && shown[gk]);
         if (hasPas) {
           if (gk) shown[gk] = 1;
@@ -183,14 +196,19 @@
         var h = "";
         if (t && t.ask) {
           h += '<div class="qs"><span class="qn">' + o.n + ".</span>" + em(t.ask) + "</div>";
-          o.qimgs.forEach(function (r) { if (r && r.ok) h += wholeImg(r, 0.127); });
-          if (t.body) {
-            var m = /^<\s*([^<>]{1,12}?)\s*>\s*/.exec(t.body), lab = m ? m[1].replace(/\s+/g, "") : "", body = m ? t.body.slice(m[0].length) : t.body;
-            h += '<div class="qb' + (lab ? " lab" : "") + '">' + (lab ? '<div class="qbl">&lt;' + esc(lab.length <= 2 ? Array.from(lab).join(" ") : lab) + "&gt;</div>" : "") + '<div class="qbt">' + em(body) + "</div></div>";
-          }
+          o.qimgs.forEach(function (r) { if (r && r.ok) h += wholeImg(r, r.mmpp || 0.127); });
+          (Array.isArray(t.body) ? t.body : (t.body ? [t.body] : [])).forEach(function (tb) {   /* v144: 상자가 여럿이면 차례로 */
+            var m = /^<\s*([^<>]{1,24}?)\s*>\s*/.exec(String(tb).replace(/[\uFDD0-\uFDD7]/g, "")), raw = String(tb), lab = m ? m[1].replace(/\s+/g, "") : "", body = raw;
+            if (m) { var k = 0, j = 0; while (j < m[0].length && k < raw.length) { if (!/[\uFDD0-\uFDD7]/.test(raw[k])) j++; k++; } body = raw.slice(k); }
+            h += '<div class="qb' + (lab ? " lab" : "") + '">' + (lab ? '<div class="qbl">&lt;' + esc(lab.length <= 2 ? Array.from(lab).join(" ") : m[1].replace(/\s+/g, " ").trim()) + "&gt;</div>" : "") + '<div class="qbt">' + em(body) + "</div></div>";
+          });
           var ch = (t.ch || []).filter(Boolean);
           if (it.nc && ch.length === it.nc) h += '<div class="qc" style="grid-template-columns:repeat(' + choiceCols(ch, g) + ',minmax(0,1fr))">' + ch.map(function (c, i) { return "<div>" + CIR[i] + " " + em(c) + "</div>"; }).join("") + "</div>";
           else if (!it.nc) h += '<div class="wr"></div>';
+        } else if (o.gimg && o.gimg.ok) {
+          /* v144: 글자로 옮기지 못한 공무원 문항 — 원래 번호를 지운 그림 위에 시험지 번호를 얹는다 */
+          var gi = o.gimg, nx = gi.nx || [0, 0];
+          h += '<div class="gmimg" style="position:relative">' + wholeImg(gi, gi.mmpp) + '<span class="qn gmn" style="left:' + (nx[0] / gi.w * 100).toFixed(2) + "%;top:" + (nx[1] / gi.h * 100).toFixed(2) + '%">' + o.n + ".</span></div>";
         } else {
           h += '<div class="qh2"><b>' + o.n + ".</b><span>" + esc(it.title || "") + "</span></div>";
           o.qimgs.forEach(function (r) { if (r && r.ok) h += wholeImg(r, r.dpi ? 25.4 / r.dpi : 0.127); });
@@ -276,15 +294,24 @@
       if (!window.ASG_SN_MARK && !A._snw) { A._snw = 1; KMA.snm().then(function () { open(A, opt); }, function () { open(A, opt); }); return; }
       (A.items || []).forEach(KMA.snApply);
     }
+    /* v144: 공무원 문항이 있으면 글자 자료(gm/t/<회차>.json)를 먼저 받는다 */
+    var gms = [], seenE = {};
+    (A.items || []).forEach(function (it) { if (it.gm && !seenE[it.gm.e]) { seenE[it.gm.e] = 1; gms.push(it.gm.e); } });
+    if (gms.length && !A._gmt && !A._gmOff) {
+      A._gmt = {};
+      Promise.all(gms.map(function (e) { return fetch(GMT + e + ".json?v=144").then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) { A._gmt[e] = d; }, function () {}); })).then(function () { open(A, opt); });
+      return;
+    }
     opt = opt || {}; close();
     if (!document.getElementById("kp-css")) { var st = document.createElement("style"); st.id = "kp-css"; st.textContent = SHEET_CSS + "\n" + EXTRA; document.head.appendChild(st); }
     if (!document.getElementById("kp-font") && !/Noto\+Serif\+KR/.test(document.head.innerHTML)) { var lk = document.createElement("link"); lk.id = "kp-font"; lk.rel = "stylesheet"; lk.href = "https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&family=Noto+Serif+KR:wght@400;600;700&display=swap"; document.head.appendChild(lk); }
     if (!document.getElementById("kp-font-tc")) { var lt = document.createElement("link"); lt.id = "kp-font-tc"; lt.rel = "stylesheet"; lt.href = "https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&text=%E5%8C%8A%E7%8D%A7%E5%96%83%E8%82%93%E5%B9%83%E8%BA%91%E8%BA%85%E6%AC%B8%E7%AF%9B%E9%A9%84%E7%B0%B7%E5%8F%9F%E8%9F%8A%E5%84%88%E7%B0%91%E9%B7%B0%E9%B8%9B%E9%B6%BB%E8%AC%A1%E9%AC%9F%E5%B9%9E%E9%85%86%E8%A9%81%E9%9A%B4%E9%AC%AF%E6%AC%B9%E6%85%9A%E9%B4%88%E8%AE%8E%E7%B6%A6%E9%A8%85%E8%90%87%E9%86%AA%E7%B4%9C%E9%9C%8D%E9%AB%91%E9%AB%8F%E7%AC%88%E7%8D%8E%E6%85%B5%E6%98%82%E8%87%99%E6%88%B2%E5%90%81%E8%9F%8B%E8%9F%80%E7%95%AB%E6%BC%AA%E9%96%BD%E6%91%9B%E6%A8%85%E6%86%92%E9%A0%A1%E6%92%90&display=swap"; document.head.appendChild(lt); }   /* v142: 본문 글꼴에 없는 한자 */
-    var items = A.items || [], sn = items.length > 0 && items.every(function (it) { return /^sn:/.test(it.k) && it.txt && it.txt.ask; }), g = geom(sn), key = opt.key || null;
+    var items = A.items || [], sn = items.length > 0 && items.every(function (it) { if (it.gm) { var T = A._gmt && A._gmt[it.gm.e], q = T && T.q && T.q[String(it.gm.n)]; return !!(q && (q.ask || q.img)); } return /^sn:/.test(it.k) && it.txt && it.txt.ask; }), g = geom(sn), key = opt.key || null;
     var info = items.length + "문항" + (A.mode === "exam" && A.min ? " · 모의고사 " + A.min + "분" : "") + (A.due ? " · 마감 " + A.due : "");
     root = document.createElement("div"); root.className = "kma kp-root"; root.setAttribute("role", "dialog"); root.setAttribute("aria-label", "인쇄 미리 보기");
     root.innerHTML = '<div class="kp-bar"><span><b>' + esc(A.title) + "</b> <small id=\"kpInfo\">" + esc(info) + '</small></span>' +
       (key ? '<label><input type="checkbox" id="kpKey"> 정답표 붙이기</label>' : "") +
+      (gms.length ? '<label title="글자로 옮긴 문항 대신 원본 시험지 그림으로 찍습니다"><input type="checkbox" id="kpGmImg"' + (A._gmOff ? " checked" : "") + '> 공무원 문항 원본 그림으로</label>' : "") +
       '<button type="button" id="kpGo" disabled>인쇄하기</button><button type="button" class="sub" id="kpX">닫기</button><small style="flex-basis:100%;text-align:center">인쇄 창에서 용지 A4 · 배율 100%(기본값) · 머리글/바닥글 끄기로 맞춰 주세요.</small></div>' +
       '<div class="kp-msg" id="kpMsg">문제지를 만드는 중…</div><div class="kp-pages" id="kpPages" hidden></div>';
     document.body.appendChild(root); prevOverflow = document.documentElement.style.overflow; document.documentElement.style.overflow = "hidden";
@@ -304,6 +331,7 @@
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (root && R) { var y = root.scrollTop; render(); root.scrollTop = y; } });
     }).catch(function () { var m = root && root.querySelector("#kpMsg"); if (m) m.textContent = "문제지를 만들지 못했어요. 인터넷 연결을 확인하고 다시 해 보세요."; });
     var kk = root.querySelector("#kpKey"); if (kk) kk.onchange = function () { if (BL) render(); };
+    var gi = root.querySelector("#kpGmImg"); if (gi) gi.onchange = function () { A._gmOff = gi.checked; A._gmt = gi.checked ? {} : null; open(A, opt); };   /* v144 */
     root.querySelector("#kpGo").onclick = function () {
       var imgs = Array.prototype.slice.call(area.querySelectorAll("img"));
       var all = Promise.all(imgs.map(function (i) { return i.complete && i.naturalWidth ? null : new Promise(function (res) { i.addEventListener("load", res, { once: true }); i.addEventListener("error", res, { once: true }); }); }));
