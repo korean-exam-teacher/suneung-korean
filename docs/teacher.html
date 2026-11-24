@@ -94,11 +94,11 @@ select.cadd{width:92px;padding:4px 6px;font-size:13px;color:var(--sub)}
 @media (max-width:480px){.crumb{gap:6px}.top .crumb a{font-size:13.5px}.top .crumb a.here{font-size:18px}}
 @media (max-width:760px){.top{flex-wrap:wrap;gap:0 16px;padding-block:8px}.top nav{margin-left:-8px}}
 </style>
-</head>
+<style>/* v140: 글줄은 어절 단위로 나뉜다 */html{word-break:keep-all;overflow-wrap:break-word}</style></head>
 <body>
 <header class="top"><span class="crumb"><a class="brand" href="/suneung-korean/">국어의 모든 것</a><i aria-hidden="true">›</i><a class="brand here" href="teacher.html" aria-current="page">선생님 화면</a></span><nav id="nav" hidden><a class="home" href="/suneung-korean/">처음 화면</a><button type="button" data-v="st" class="on">학생 현황</button><button type="button" data-v="asg">과제</button><button type="button" data-v="rs">응답률</button><button type="button" data-v="nt">공지</button><button type="button" data-v="adm" id="admTab" hidden>선생님 관리</button><button type="button" id="out">로그아웃</button></nav></header>
 <main class="wrap" id="main"></main>
-<script src="js/account.js?v=139" data-noui></script>
+<script src="js/account.js?v=140" data-noui></script>
 <script>
 (function(){
 /* account.js 와 같은 서버 주소를 쓴다 */
@@ -278,7 +278,7 @@ function evItem(k){ var m=/^adv:gm:(.+)-(\d+)$/.exec(k);
   var key=k.replace(/^(sn|hak):/,'');
   if(/^basic:/.test(key)) return basicItem(key);
   if(/^\d{4}-\d{2}-고\d\|\|/.test(key)) return hpItem(key);
-  if(/^(sn|hak):/.test(k)) return fromSrc('sn','/suneung-korean/asg_sn.js?v=103','sn:'+key);
+  if(/^(sn|hak):/.test(k)) return fromSrc('sn','/suneung-korean/asg_sn.js?v=140','sn:'+key);
   return Promise.resolve(null);
 }
 function evToggle(li){
@@ -318,7 +318,7 @@ function asgView(){
   M.querySelectorAll('.asg > .tw:not(.rs) tbody tr').forEach(function(tr){ tr.onclick=function(){ VIEW='st'; OPEN=tr.dataset.id; paint(); }; });
 }
 /* v107: 인쇄(미리 보기) — 학생 화면과 같은 /suneung-korean/js/asgprint.js */
-function printAsg(a,key){ script('/suneung-korean/js/asgprint.js?v=121').then(function(){ KMAPrint.open(a,{key:key||{}}); }).catch(function(){ alertMsg('인쇄 화면을 불러오지 못했어요.'); }); }
+function printAsg(a,key){ script('/suneung-korean/js/asgprint.js?v=140').then(function(){ KMAPrint.open(a,{key:key||{}}); }).catch(function(){ alertMsg('인쇄 화면을 불러오지 못했어요.'); }); }
 function alertMsg(t){ var m=$('mkMsg'); if(m) m.textContent=t; }
 /* ---------- 응답률 (v106) — 학생들이 과제·모의고사에서 고른 답을 문항·선택지별로 모은다. 선생님만 본다 ---------- */
 var RSOPEN=null, RS={src:'',sort:'n',open:null,mode:'all',busy:false,fit:true}, CIRC='①②③④⑤';
@@ -459,7 +459,7 @@ function showItem(it,el){
 /* ---------- 기출 골라 과제 만들기 (v103: 공무원·수능·PSAT·LEET·임용·대학 논술) ---------- */
 var SRCS=[
   {k:'gm',  n:'공무원 국어', f:'/advanced-korean/gm/index.js?v=102'},
-  {k:'sn',  n:'수능·모의평가', f:'/suneung-korean/asg_sn.js?v=103'},
+  {k:'sn',  n:'수능·모의평가', f:'/suneung-korean/asg_sn.js?v=140'},
   {k:'psat',n:'PSAT 언어논리', f:'/advanced-korean/asg_adv.js?v=103'},
   {k:'leet',n:'LEET', f:'/advanced-korean/asg_adv.js?v=103'},
   {k:'im',  n:'중등임용', f:'/advanced-korean/asg_adv.js?v=103'},
@@ -467,7 +467,7 @@ var SRCS=[
 var MK={src:'gm',q:'',a:{},t:'',from:null,g:'',y:'',e:'',page:1,open:null,bk:[],it:{},step:1,hide:true,n:10,even:false,am:'',kind:'',min:0,open2:null,cls:''}, LOADED={}, GMQ={}, NRM={}, USED={};
 function script(src){ if(LOADED[src]) return LOADED[src]; LOADED[src]=new Promise(function(res,rej){ var a=document.createElement('script'); a.src=src; a.onload=res; a.onerror=function(){ delete LOADED[src]; rej(); }; document.head.appendChild(a); }); return LOADED[src]; }
 /* v134: 수능 목록(asg_sn.js 7.5MB)은 통째로 다시 올리기 어려워, 새 회차는 덧붙임 파일(asg_sn_add.js)에 둔다 — 수능 목록을 받으면 이어서 받는다(못 받아도 예전 회차는 그대로 쓴다) */
-var script0=script; script=function(src){ if(!/\/asg_sn\.js(\?|$)/.test(src)) return script0(src); var k='+'+src; return LOADED[k]||(LOADED[k]=script0(src).then(function(){ return script0('/suneung-korean/asg_sn_add.js?v=139').catch(function(){}); })); };
+var script0=script; script=function(src){ if(!/\/asg_sn\.js(\?|$)/.test(src)) return script0(src); var k='+'+src; return LOADED[k]||(LOADED[k]=script0(src).then(function(){ return script0('/suneung-korean/asg_sn_add.js?v=140').catch(function(){}); })); };
 function srcLoad(k){
   if(k==='gm') return script('/advanced-korean/gm/index.js?v=102').then(function(){ return script('/advanced-korean/gm/gmfind.js?v=102'); }).then(function(){ return GMFind.load(); });
   var ld=script(SRCS.filter(function(x){return x.k===k;})[0].f);
