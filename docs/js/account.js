@@ -967,7 +967,7 @@
   var printP = null;
   function printRun() {
     var a = CUR; if (!a) return;
-    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=142"));
+    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=143"));
     printP.then(function () { window.KMAPrint.open(a, {}); }).catch(function () { printP = null; var m = document.getElementById("kmaRM"); if (m) m.textContent = "인쇄 화면을 불러오지 못했어요."; });
   }
   function closeRun(quiet) { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; document.body.classList.remove("kma-running"); CUR = null; LIVEOPEN = ""; liveTell(); if (quiet !== true) openPanel(); }
@@ -1119,13 +1119,13 @@
   /* 회차 통째 파일(1~2MB) — 그림을 따로 받지 못했을 때, 선생님 화면, 인쇄에서 쓴다 */
   function gmExam(e) {
     if (GMD[e]) return Promise.resolve(GMD[e]);
-    if (!GMC[e]) GMC[e] = slot(function () { return getJson("/advanced-korean/gm/q/" + e + ".json?v=106", 3); }).then(function (d) { delete GMC[e]; if (d) GMD[e] = d; return d; });
+    if (!GMC[e]) GMC[e] = slot(function () { return getJson("/advanced-korean/gm/q/" + e + ".json?v=143", 3); }).then(function (d) { delete GMC[e]; if (d) GMD[e] = d; return d; });
     return GMC[e];
   }
   /* 문항 그림 목록(크기·지문 범위·필기 열쇠) */
   function gmMap() {
     if (GMAP) return Promise.resolve(GMAP);
-    if (!GMAPP) GMAPP = getJson("/advanced-korean/gm/imap.json?v=121", 3).then(function (d) { GMAPP = null; if (d && d.e) GMAP = d; return GMAP; });
+    if (!GMAPP) GMAPP = getJson("/advanced-korean/gm/imap.json?v=143", 3).then(function (d) { GMAPP = null; if (d && d.e) GMAP = d; return GMAP; });
     return GMAPP;
   }
   function gmTag(e, kind, id, m, alt) {   /* m = [너비, 높이, 필기 열쇠, (확장자)] */
