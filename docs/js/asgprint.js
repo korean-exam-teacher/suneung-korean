@@ -12,11 +12,11 @@
   var CIR = "①②③④⑤", PXMM = 96 / 25.4;
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   /* v125: 수능 글의 밑줄·글자 상자 — account.js의 KMA.em(없으면 표시 글자만 뺀다) */
-  function em(s) { return window.KMA && KMA.em ? KMA.em(s) : esc(String(s == null ? "" : s).replace(/[\uFDD0-\uFDD3]/g, "")); }
+  function em(s) { return window.KMA && KMA.em ? KMA.em(s) : esc(String(s == null ? "" : s).replace(/[\uFDD0-\uFDD7]/g, "")); }
   function el(html) { var t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; }
   function mm(v) { return (Math.round(v * 100) / 100) + "mm"; }
   var EXTRA = [
-    ".sheet u.ul{text-decoration:underline;text-decoration-thickness:.2mm;text-underline-offset:.22em;text-decoration-skip-ink:none}.sheet .bx{border:.2mm solid #000;padding:0 .15em;margin:0 .05em;-webkit-box-decoration-break:clone;box-decoration-break:clone}",   /* v125: 밑줄·글자 상자 */
+    ".sheet .gt{font-family:\"OldHangulSans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",\"Malgun Gothic\",sans-serif;font-weight:500}.sheet b.bd{font-weight:700}.sheet u.ul{text-decoration:underline;text-decoration-thickness:.2mm;text-underline-offset:.22em;text-decoration-skip-ink:none}.sheet .bx{border:.2mm solid #000;padding:0 .15em;margin:0 .05em;-webkit-box-decoration-break:clone;box-decoration-break:clone}",   /* v125: 밑줄·글자 상자 */
     '@font-face{font-family:"OldHangulSerif";font-weight:400;font-display:swap;src:url(/suneung-korean/fonts/oh-nanum.woff) format("woff");unicode-range:U+1100-11FF,U+A960-A97F,U+D7B0-D7FF,U+302E-302F,U+3165-318E}',
     '@font-face{font-family:"OldHangulSans";font-weight:400;font-display:swap;src:url(/suneung-korean/fonts/oh-sans.woff) format("woff");unicode-range:U+1100-11FF,U+A960-A97F,U+D7B0-D7FF,U+302E-302F,U+3165-318E}',
     ".kp-root{position:fixed;inset:0;z-index:200;background:#8a8f98;overflow:auto;-webkit-overflow-scrolling:touch}",
@@ -151,7 +151,7 @@
           if (pas) {
             if (isPoem(pas)) { var L = pas.replace(/^\n+|\s+$/g, "").split("\n"); B.push({ t: "text", tok: L, box: gk, make: function (i, j) { return '<div class="poem">' + em(L.slice(i, j).join("\n")) + "</div>"; } }); }
             else pas.trim().split(/\n+/).map(function (x) { return x.trim(); }).filter(Boolean).forEach(function (x) {
-              var head = /^\((가|나|다|라|마)\)$|^\[[A-Z]\]$|^<[^>]+>$|^\[(앞부분|중략|뒷부분)/.test(x) || x.length < 8, tok = x.split(" ");
+              var xp = x.replace(/[\uFDD0-\uFDD7]/g, ""), head = /^\((가|나|다|라|마)\)$|^\[[A-Z]\]$|^<[^>]+>$|^\[(앞부분|중략|뒷부분)/.test(xp) || xp.length < 8, tok = x.split(" ");
               B.push({ t: "text", tok: tok, box: gk, make: function (i, j, cont, brk) { return '<div class="pp' + (head ? " ph" : "") + (cont ? " cont" : "") + (brk ? " pbrk" : "") + '">' + em(tok.slice(i, j).join(" ")) + "</div>"; } });
             });
           }

@@ -45,36 +45,50 @@
   var IDRE = /^[0-9A-Za-z가-힣_.-]{2,12}$/;
   /* v121: 받지 못하면 1초·2.5초 뒤 다시(모두 3번) */
   /* v125: 원본 문제지의 밑줄(U+FDD0…FDD1)·글자 상자(U+FDD2…FDD3) 표시를 태그로. 잘린 조각이어도 짝을 맞춘다(수능 화면 markHtml과 같은 규칙) */
-  var MKRE = /[\uFDD0-\uFDD3]/;
+  var MKRE = /[\uFDD0-\uFDD7]/;
   function mkh(s) {
     var h = esc(s); if (!MKRE.test(h)) return h;
-    var out = "", u = false, b = false, i, c;
-    for (i = 0; i < h.length; i++) { c = h.charCodeAt(i);
-      if (c === 0xFDD0) { if (!u) { out += '<u class="ul">'; u = true; } }
-      else if (c === 0xFDD1) { if (u) { out += "</u>"; u = false; } }
-      else if (c === 0xFDD2) { if (!b) { out += '<span class="bx">'; b = true; } }
-      else if (c === 0xFDD3) { if (b) { if (u) { out += "</u>"; u = false; } out += "</span>"; b = false; } }
-      else out += h.charAt(i); }
-    return out + (u ? "</u>" : "") + (b ? "</span>" : "");
+    return mkRender(h);
   }
+  var mkRender = function (h) {
+    var out = "", u = 0, d = 0, g = 0, box = 0, i, k, nu, nd, ng;
+    function op() { return (g ? '<span class="gt">' : "") + (d ? '<b class="bd">' : "") + (u ? '<u class="ul">' : ""); }
+    function cl() { return (u ? "</u>" : "") + (d ? "</b>" : "") + (g ? "</span>" : ""); }
+    for (i = 0; i < h.length; i++) { k = h.charCodeAt(i);
+      if (k < 0xFDD0 || k > 0xFDD7) { out += h.charAt(i); continue; }
+      if (k === 0xFDD2 || k === 0xFDD3) { if ((k === 0xFDD2) === !!box) continue; out += cl() + (k === 0xFDD2 ? '<span class="bx">' : "</span>") + op(); box = k === 0xFDD2 ? 1 : 0; continue; }
+      nu = k === 0xFDD0 ? 1 : k === 0xFDD1 ? 0 : u; nd = k === 0xFDD4 ? 1 : k === 0xFDD5 ? 0 : d; ng = k === 0xFDD6 ? 1 : k === 0xFDD7 ? 0 : g;
+      if (nu === u && nd === d && ng === g) continue;
+      out += cl(); u = nu; d = nd; g = ng; out += op(); }
+    out += cl() + (box ? "</span>" : "");
+    for (i = 0; i < 3; i++) out = out.replace(/<span class="gt"><\/span>|<b class="bd"><\/b>|<u class="ul"><\/u>/g, "");
+    return out;
+  };
+
   /* 표시 자리 파일(/suneung-korean/asg_sn_mark.js, 245KB): 자리 = 글자 위치×4 + (0 밑줄 시작·1 밑줄 끝·2 상자 시작·3 상자 끝) */
   var SNMP = null;
-  function snm() { return SNMP || (SNMP = loadJs("/suneung-korean/asg_sn_mark.js?v=140").catch(function () { SNMP = null; })); }
-  function insM(t, arr) {
-    t = String(t == null ? "" : t); if (!arr || !arr.length || !t || MKRE.test(t) || (arr[arr.length - 1] >> 2) > t.length) return t;   /* 이미 표시가 있거나 글이 잘려 자리가 안 맞으면 그대로 */
-    var out = "", p = 0, i, pos; for (i = 0; i < arr.length; i++) { pos = arr[i] >> 2; out += t.slice(p, pos) + String.fromCharCode(0xFDD0 + (arr[i] & 3)); p = pos; }
+  function snm() { return SNMP || (SNMP = loadJs("/suneung-korean/asg_sn_mark.js?v=141").catch(function () { SNMP = null; })); }
+  /* v141: 굵은 글씨·고딕 자리(q: 자리×4 + 0 굵게 시작·1 굵게 끝·2 고딕 시작·3 고딕 끝)를 밑줄·상자 자리와 합쳐 끼운다 */
+  function insM(t, arr, q) {
+    t = String(t == null ? "" : t); arr = arr || []; q = q || [];
+    if ((!arr.length && !q.length) || !t || MKRE.test(t)) return t;
+    if ((arr.length && (arr[arr.length - 1] >> 2) > t.length) || (q.length && (q[q.length - 1] >> 2) > t.length)) return t;   /* 글이 잘려 자리가 안 맞으면 그대로 */
+    var all = [], i; for (i = 0; i < arr.length; i++) all.push([arr[i] >> 2, 0xFDD0 + (arr[i] & 3), i]); for (i = 0; i < q.length; i++) all.push([q[i] >> 2, 0xFDD4 + (q[i] & 3), arr.length + i]);
+    all.sort(function (x, y) { return x[0] - y[0] || x[2] - y[2]; });
+    var out = "", p = 0; for (i = 0; i < all.length; i++) { out += t.slice(p, all[i][0]) + String.fromCharCode(all[i][1]); p = all[i][0]; }
     return out + t.slice(p);
   }
   /* v140: 글을 고친 곳 — 예전에 낸 과제에 저장된 옛 글(길이로 가려냄)에는 옛 자리(M.o)를 쓴다 */
   function oldH(t) { for (var h = 0, i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) % 1000003; return h; }
-  function oldM(o, t, arr) { t = String(t == null ? "" : t); return o && t.length === o[0] && (o[2] == null || oldH(t) === o[2]) ? o[1] : arr; }
-  function snPas(pk, t) { var M = window.ASG_SN_MARK, a = M && pk ? oldM(M.o && M.o.p[pk], t, M.p[pk]) : null; return a && a.length ? insM(t, a) : String(t == null ? "" : t); }
+  function isOld(o, t) { t = String(t == null ? "" : t); return !!o && t.length === o[0] && (o[2] == null || oldH(t) === o[2]); }
+  function oldM(o, t, arr) { return isOld(o, t) ? o[1] : arr; }
+  function snPas(pk, t) { var M = window.ASG_SN_MARK; if (!M || !pk) return String(t == null ? "" : t); var o = M.o && M.o.p[pk], old = isOld(o, t); return insM(t, old ? o[1] : M.p[pk], old ? null : M.q && M.q[pk]); }
   function snApply(it) {
     var M = window.ASG_SN_MARK, t = it && it.txt; if (!M || !t || !/^sn:/.test(it.k || "")) return it;
-    var key = it.k.slice(3), e = M.i[key] || {}, o = (M.o && M.o.i[key]) || {}, pk = t.pk || it._pk, a;
-    if (t.ask && (a = oldM(o.a, t.ask, e.a))) t.ask = insM(t.ask, a);
-    if (t.body && (a = oldM(o.b, t.body, e.b))) t.body = insM(t.body, a);
-    if (t.ch && (e.c || o.c)) t.ch = t.ch.map(function (c, i) { var m = oldM(o.c && o.c[i], c, e.c && e.c[i]); return m ? insM(c, m) : c; });
+    var key = it.k.slice(3), e = M.i[key] || {}, o = (M.o && M.o.i[key]) || {}, pk = t.pk || it._pk;
+    if (t.ask) t.ask = isOld(o.a, t.ask) ? insM(t.ask, o.a[1]) : insM(t.ask, e.a, e.qa);
+    if (t.body) t.body = isOld(o.b, t.body) ? insM(t.body, o.b[1]) : insM(t.body, e.b, e.qb);
+    if (t.ch && (e.c || o.c || e.qc)) t.ch = t.ch.map(function (c, i) { var oc = o.c && o.c[i]; return isOld(oc, c) ? insM(c, oc[1]) : insM(c, e.c && e.c[i], e.qc && e.qc[i]); });
     if (t.pas && pk) t.pas = snPas(pk, t.pas);
     return it;
   }
@@ -674,7 +688,7 @@
     ".kma-run .set{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,1fr);column-gap:28px;align-items:start}" +
     ".kma-run .set-p{position:sticky;top:var(--kr-top,76px);max-height:calc(100vh - var(--kr-top,76px) - var(--kr-bot,72px));max-height:calc(100dvh - var(--kr-top,76px) - var(--kr-bot,72px));overflow:auto;-webkit-overflow-scrolling:touch;padding:16px 6px 16px 0;box-sizing:border-box}" +
     ".kma-run .set-p img:first-child{margin-top:0}.kma-run .set-q{min-width:0}.kma-run .set-q .q:first-child{padding-top:16px}}",
-    ".kma u.ul,.kma-run u.ul{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.24em;text-decoration-skip-ink:none}.kma .bx,.kma-run .bx{border:1px solid currentColor;padding:0 .18em;margin:0 .06em;-webkit-box-decoration-break:clone;box-decoration-break:clone}",
+    ".kma .gt,.kma-run .gt{font-family:\"OldHangulSans\",\"Pretendard Variable\",\"Pretendard\",\"Noto Sans KR\",\"Noto Sans CJK KR\",\"Malgun Gothic\",\"Apple SD Gothic Neo\",sans-serif;font-weight:500}.kma b.bd,.kma-run b.bd{font-weight:700}.kma u.ul,.kma-run u.ul{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.24em;text-decoration-skip-ink:none}.kma .bx,.kma-run .bx{border:1px solid currentColor;padding:0 .18em;margin:0 .06em;-webkit-box-decoration-break:clone;box-decoration-break:clone}",
     ".kma-run .chs{display:grid;gap:6px;margin-top:10px}.kma-run .ch{display:flex;gap:10px;text-align:left;border:1px solid var(--k-line);background:none;color:inherit;border-radius:10px;padding:10px 14px;font:inherit;font-size:15px;line-height:1.6;cursor:pointer;word-break:keep-all}",
     ".kma-run .nums{display:flex;gap:8px;margin-top:10px}.kma-run .nums .ch{width:46px;height:46px;justify-content:center;align-items:center;padding:0;font-size:18px;border-radius:50%}",
     ".kma-run .ch.sel{border-color:var(--k-brand);box-shadow:inset 0 0 0 1px var(--k-brand)}.kma-run .ch.ok{border-color:var(--k-ok);background:rgba(31,122,77,.08)}.kma-run .ch.no{border-color:var(--k-no);background:rgba(179,58,43,.07)}",
@@ -953,7 +967,7 @@
   var printP = null;
   function printRun() {
     var a = CUR; if (!a) return;
-    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=140"));
+    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=141"));
     printP.then(function () { window.KMAPrint.open(a, {}); }).catch(function () { printP = null; var m = document.getElementById("kmaRM"); if (m) m.textContent = "인쇄 화면을 불러오지 못했어요."; });
   }
   function closeRun(quiet) { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; document.body.classList.remove("kma-running"); CUR = null; LIVEOPEN = ""; liveTell(); if (quiet !== true) openPanel(); }
