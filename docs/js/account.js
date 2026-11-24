@@ -59,17 +59,22 @@
   }
   /* 표시 자리 파일(/suneung-korean/asg_sn_mark.js, 245KB): 자리 = 글자 위치×4 + (0 밑줄 시작·1 밑줄 끝·2 상자 시작·3 상자 끝) */
   var SNMP = null;
-  function snm() { return SNMP || (SNMP = loadJs("/suneung-korean/asg_sn_mark.js?v=125b").catch(function () { SNMP = null; })); }
+  function snm() { return SNMP || (SNMP = loadJs("/suneung-korean/asg_sn_mark.js?v=140").catch(function () { SNMP = null; })); }
   function insM(t, arr) {
     t = String(t == null ? "" : t); if (!arr || !arr.length || !t || MKRE.test(t) || (arr[arr.length - 1] >> 2) > t.length) return t;   /* 이미 표시가 있거나 글이 잘려 자리가 안 맞으면 그대로 */
     var out = "", p = 0, i, pos; for (i = 0; i < arr.length; i++) { pos = arr[i] >> 2; out += t.slice(p, pos) + String.fromCharCode(0xFDD0 + (arr[i] & 3)); p = pos; }
     return out + t.slice(p);
   }
-  function snPas(pk, t) { var M = window.ASG_SN_MARK; return M && pk && M.p[pk] ? insM(t, M.p[pk]) : String(t == null ? "" : t); }
+  /* v140: 글을 고친 곳 — 예전에 낸 과제에 저장된 옛 글(길이로 가려냄)에는 옛 자리(M.o)를 쓴다 */
+  function oldH(t) { for (var h = 0, i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) % 1000003; return h; }
+  function oldM(o, t, arr) { t = String(t == null ? "" : t); return o && t.length === o[0] && (o[2] == null || oldH(t) === o[2]) ? o[1] : arr; }
+  function snPas(pk, t) { var M = window.ASG_SN_MARK, a = M && pk ? oldM(M.o && M.o.p[pk], t, M.p[pk]) : null; return a && a.length ? insM(t, a) : String(t == null ? "" : t); }
   function snApply(it) {
     var M = window.ASG_SN_MARK, t = it && it.txt; if (!M || !t || !/^sn:/.test(it.k || "")) return it;
-    var e = M.i[it.k.slice(3)], pk = t.pk || it._pk;
-    if (e) { if (e.a && t.ask) t.ask = insM(t.ask, e.a); if (e.b && t.body) t.body = insM(t.body, e.b); if (e.c && t.ch) t.ch = t.ch.map(function (c, i) { return e.c[i] ? insM(c, e.c[i]) : c; }); }
+    var key = it.k.slice(3), e = M.i[key] || {}, o = (M.o && M.o.i[key]) || {}, pk = t.pk || it._pk, a;
+    if (t.ask && (a = oldM(o.a, t.ask, e.a))) t.ask = insM(t.ask, a);
+    if (t.body && (a = oldM(o.b, t.body, e.b))) t.body = insM(t.body, a);
+    if (t.ch && (e.c || o.c)) t.ch = t.ch.map(function (c, i) { var m = oldM(o.c && o.c[i], c, e.c && e.c[i]); return m ? insM(c, m) : c; });
     if (t.pas && pk) t.pas = snPas(pk, t.pas);
     return it;
   }
@@ -948,7 +953,7 @@
   var printP = null;
   function printRun() {
     var a = CUR; if (!a) return;
-    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=121"));
+    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=140"));
     printP.then(function () { window.KMAPrint.open(a, {}); }).catch(function () { printP = null; var m = document.getElementById("kmaRM"); if (m) m.textContent = "인쇄 화면을 불러오지 못했어요."; });
   }
   function closeRun(quiet) { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; document.body.classList.remove("kma-running"); CUR = null; LIVEOPEN = ""; liveTell(); if (quiet !== true) openPanel(); }
