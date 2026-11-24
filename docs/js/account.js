@@ -47,8 +47,8 @@
   /* v125: 원본 문제지의 밑줄(U+FDD0…FDD1)·글자 상자(U+FDD2…FDD3) 표시를 태그로. 잘린 조각이어도 짝을 맞춘다(수능 화면 markHtml과 같은 규칙) */
   var MKRE = /[\uFDD0-\uFDD7]/;
   function mkh(s) {
-    var h = esc(s); if (!MKRE.test(h)) return h;
-    return mkRender(h);
+    var h = esc(s); if (MKRE.test(h)) h = mkRender(h);
+    return h.indexOf("■◤") < 0 ? h : h.split("■◤").join('<img class="inl" src="/suneung-korean/fig/inl_shape01.png" alt="■◤">');   /* v142: 2014-09-A 21번 도형은 원본 그림 */
   }
   var mkRender = function (h) {
     var out = "", u = 0, d = 0, g = 0, box = 0, i, k, nu, nd, ng;
@@ -67,7 +67,7 @@
 
   /* 표시 자리 파일(/suneung-korean/asg_sn_mark.js, 245KB): 자리 = 글자 위치×4 + (0 밑줄 시작·1 밑줄 끝·2 상자 시작·3 상자 끝) */
   var SNMP = null;
-  function snm() { return SNMP || (SNMP = loadJs("/suneung-korean/asg_sn_mark.js?v=141").catch(function () { SNMP = null; })); }
+  function snm() { return SNMP || (SNMP = loadJs("/suneung-korean/asg_sn_mark.js?v=142").catch(function () { SNMP = null; })); }
   /* v141: 굵은 글씨·고딕 자리(q: 자리×4 + 0 굵게 시작·1 굵게 끝·2 고딕 시작·3 고딕 끝)를 밑줄·상자 자리와 합쳐 끼운다 */
   function insM(t, arr, q) {
     t = String(t == null ? "" : t); arr = arr || []; q = q || [];
@@ -688,7 +688,7 @@
     ".kma-run .set{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,1fr);column-gap:28px;align-items:start}" +
     ".kma-run .set-p{position:sticky;top:var(--kr-top,76px);max-height:calc(100vh - var(--kr-top,76px) - var(--kr-bot,72px));max-height:calc(100dvh - var(--kr-top,76px) - var(--kr-bot,72px));overflow:auto;-webkit-overflow-scrolling:touch;padding:16px 6px 16px 0;box-sizing:border-box}" +
     ".kma-run .set-p img:first-child{margin-top:0}.kma-run .set-q{min-width:0}.kma-run .set-q .q:first-child{padding-top:16px}}",
-    ".kma .gt,.kma-run .gt{font-family:\"OldHangulSans\",\"Pretendard Variable\",\"Pretendard\",\"Noto Sans KR\",\"Noto Sans CJK KR\",\"Malgun Gothic\",\"Apple SD Gothic Neo\",sans-serif;font-weight:500}.kma b.bd,.kma-run b.bd{font-weight:700}.kma u.ul,.kma-run u.ul{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.24em;text-decoration-skip-ink:none}.kma .bx,.kma-run .bx{border:1px solid currentColor;padding:0 .18em;margin:0 .06em;-webkit-box-decoration-break:clone;box-decoration-break:clone}",
+    ".kma img.inl,.kma-run img.inl{display:inline!important;width:auto!important;max-width:none!important;height:.92em!important;vertical-align:-.1em;margin:0 .06em;border:0!important;box-shadow:none!important;background:none!important}.kma .gt,.kma-run .gt{font-family:\"OldHangulSans\",\"Pretendard Variable\",\"Pretendard\",\"Noto Sans KR\",\"Noto Sans TC\",\"Noto Sans CJK KR\",\"Malgun Gothic\",\"Apple SD Gothic Neo\",sans-serif;font-weight:500}.kma b.bd,.kma-run b.bd{font-weight:700}.kma u.ul,.kma-run u.ul{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.24em;text-decoration-skip-ink:none}.kma .bx,.kma-run .bx{border:1px solid currentColor;padding:0 .18em;margin:0 .06em;-webkit-box-decoration-break:clone;box-decoration-break:clone}",
     ".kma-run .chs{display:grid;gap:6px;margin-top:10px}.kma-run .ch{display:flex;gap:10px;text-align:left;border:1px solid var(--k-line);background:none;color:inherit;border-radius:10px;padding:10px 14px;font:inherit;font-size:15px;line-height:1.6;cursor:pointer;word-break:keep-all}",
     ".kma-run .nums{display:flex;gap:8px;margin-top:10px}.kma-run .nums .ch{width:46px;height:46px;justify-content:center;align-items:center;padding:0;font-size:18px;border-radius:50%}",
     ".kma-run .ch.sel{border-color:var(--k-brand);box-shadow:inset 0 0 0 1px var(--k-brand)}.kma-run .ch.ok{border-color:var(--k-ok);background:rgba(31,122,77,.08)}.kma-run .ch.no{border-color:var(--k-no);background:rgba(179,58,43,.07)}",
@@ -967,7 +967,7 @@
   var printP = null;
   function printRun() {
     var a = CUR; if (!a) return;
-    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=141"));
+    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=142"));
     printP.then(function () { window.KMAPrint.open(a, {}); }).catch(function () { printP = null; var m = document.getElementById("kmaRM"); if (m) m.textContent = "인쇄 화면을 불러오지 못했어요."; });
   }
   function closeRun(quiet) { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; document.body.classList.remove("kma-running"); CUR = null; LIVEOPEN = ""; liveTell(); if (quiet !== true) openPanel(); }
