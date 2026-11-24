@@ -7,6 +7,7 @@
  *
  * 각 갈래에서 쓰는 법
  *   KMA.record('adv:psat:PS2024a-12', true, 'PSAT', 3)   // 학생이 채점한 순간 한 번 부르면 됨(로그인 안 했으면 무시). 끝의 3은 고른 번호(없으면 생략)
+ * v145(2026-11-25): 과제 화면의 공무원 문항을 인쇄와 같은 글(gm/t, gmtext.js)로 보여 준다(글자로 못 옮긴 문항만 그림). 문제 글꼴은 인쇄와 같은 KMA Serif.
  * v121(2026-11-17): 과제 화면의 공무원 문항 그림을 문항마다 따로 받는다(/advanced-korean/gm/i/…, 크기·지문 범위는 gm/imap.json). 받지 못하면 스스로 다시 받고(그림 3번·회차 파일 3번), 끝내 안 되면 '다시 불러오기' 단추. 실패를 기억해 두지 않는다. KMA.gmExam(회차) — 선생님 화면·인쇄도 함께 씀. 모든 화면의 그림: 받지 못하면 두 번 더 받아 본다.
  * v117(2026-11-12): 관리자가 학급의 담임을 바꾼다 — classOwner(학급 id, 선생님 uid). teacherSite 가 관리자에게 선생님 목록(tch)을 함께 준다
  * v110(2026-11-11): 혼자 푼 문제도 고른 번호를 남긴다 — KMA.record(열쇠, 맞았나, 영역, 고른 번호). ev 기록 [첫, 마지막, 횟수, 시각, 영역, 첫 번호, 마지막 번호]
@@ -714,9 +715,14 @@
     ".kma .tl{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:0 0 4px}.kma .tl a{display:block;text-align:center;text-decoration:none;border:1px solid var(--k-line);border-radius:12px;padding:14px 8px;font-size:15px;font-weight:700;color:var(--k-ink)}.kma .tl a:hover{border-color:var(--k-brand);color:var(--k-brand)}",
     ".kma .nm{display:flex;gap:8px;align-items:center;background:var(--k-soft);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:13.5px}.kma .nm input{flex:1;min-width:0;padding:8px 10px!important;font-size:14px!important;background:var(--k-bg)!important}",
     "[data-kma-tnav]{display:contents}[data-kma-tnav] a{font-weight:700}",
-    "@media print{.kma-pill,.kma-dim{display:none!important}}"
+    "@media print{.kma-pill,.kma-dim{display:none!important}}",
+    /* v145: 문제 글은 인쇄와 같은 글꼴(KMA Serif = 본명조) — 화면과 인쇄가 같게 */
+    ".kma-run .pas,.kma-run .ask,.kma-run .chs .ch{font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;letter-spacing:-.02em}.kma-run .ask{font-weight:400;font-size:16.5px}",
+    ".kma-run .gt{font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif!important}",
+    ".kma-run .kgq{font-size:16.5px;margin:8px 0}.kma-run .kgq img{margin:8px auto}.kma-run .kgp{white-space:normal;font-size:15.5px}.kma-run .kgp .gmx-poem{white-space:pre-wrap}.kma-run .gmx-qbl{--gmx-bg:var(--k-bg)}"
   ].join("\n");
   document.head.appendChild(css);
+  if (!document.getElementById("kma-font")) { var kf = document.createElement("link"); kf.id = "kma-font"; kf.rel = "stylesheet"; kf.href = "/suneung-korean/fonts/kma/kma.css?v=145"; document.head.appendChild(kf); }
 
   var pill = document.createElement("button"); pill.type = "button"; pill.className = "kma kma-pill";
   var dim = document.createElement("div"); dim.className = "kma kma-dim"; dim.hidden = true;
@@ -967,7 +973,7 @@
   var printP = null;
   function printRun() {
     var a = CUR; if (!a) return;
-    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=144"));
+    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=145"));
     printP.then(function () { window.KMAPrint.open(a, {}); }).catch(function () { printP = null; var m = document.getElementById("kmaRM"); if (m) m.textContent = "인쇄 화면을 불러오지 못했어요."; });
   }
   function closeRun(quiet) { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; document.body.classList.remove("kma-running"); CUR = null; LIVEOPEN = ""; liveTell(); if (quiet !== true) openPanel(); }
@@ -1014,6 +1020,15 @@
       CUR._gmw = 1; var c1 = CUR;
       gmMap().then(function (M) { if (!M || CUR !== c1 || run.hidden) return; var y = run.scrollTop; paintRun(); keepY(y); });
     }
+    /* v145: 공무원 문항은 글자 자료(gm/t)로 — 인쇄와 같은 글·글꼴. 받기 전에는 '불러오는 중' */
+    if (CUR && !CUR._gmt && CUR.items.some(function (it) { return it.gm; })) {
+      var c2 = CUR; c2._gmt = 1;
+      gmText().then(function (G) {
+        var es = []; c2.items.forEach(function (it) { if (it.gm && es.indexOf(it.gm.e) < 0) es.push(it.gm.e); });
+        return G ? Promise.all(es.map(function (e) { return G.load(e); })) : null;
+      }).then(function () { c2._gmt = 2; if (CUR !== c2 || run.hidden) return; var y = run.scrollTop; paintRun(); keepY(y); });
+    }
+    if (CUR && CUR._gmt === 1) { run.innerHTML = '<div class="in"><p style="padding:60px 0;text-align:center;color:var(--k-sub)">문제를 불러오는 중…</p></div>'; return; }
     var a = CUR, tv = !!a.t, done = !!a.done, key = a.key || {}, exam = isExam(a), over = !tv && exam && !done && examLeft(a) <= 0, show = done || (tv && TSHOW);
     var lc = tv && window.Live && Live.code ? Live.code() : "";
     var h = '<div class="in"><div class="top"><div><b style="font-size:18px">' + esc(a.title) + '</b><div style="font-size:13px;color:var(--k-sub)">' + a.items.length + "문항" + (exam ? " · 모의고사 " + a.min + "분" : "") + (a.due ? " · 마감 " + esc(a.due) : "") +
@@ -1028,13 +1043,16 @@
         h += '<div class="ask">' + mkh(it.txt.ask) + "</div>" + (it.txt.body ? '<div class="pas">' + pasH(it.txt.body, "보기:" + String(it.k || "").slice(3)) + "</div>" : "");
       }
       h += (it.q || []).map(pic).join("");
-      if (it.gm) h += '<div data-gm="' + esc(it.gm.e) + '|' + it.gm.n + '"><span style="font-size:13px;color:var(--k-faint)">문항 그림을 불러오는 중…</span></div>';
+      var gq = gmQ(it), gch = gq && gq.ch && gq.ch.length === it.nc && gq.ch.every(Boolean) ? gq.ch : null;   /* v145 */
+      if (gq) h += '<div class="gmx-q kgq"><div class="gmx-ask">' + gq.ask + "</div>" + gq.fig + gq.body + "</div>";
+      else if (it.gm) h += '<div data-gm="' + esc(it.gm.e) + '|' + it.gm.n + '"><span style="font-size:13px;color:var(--k-faint)">문항 그림을 불러오는 중…</span></div>';
       if (it.nc) {
-        var txtCh = it.txt && it.txt.ch && it.txt.ch.length === it.nc && it.txt.ch.every(Boolean);
+        var txtCh = (it.txt && it.txt.ch && it.txt.ch.length === it.nc && it.txt.ch.every(Boolean)) || !!gch;
         h += '<div class="' + (txtCh ? "chs" : "nums") + '" role="group" aria-label="' + (n + 1) + '번 답">';
+        if (gch && gq.chh) h += gq.chh;
         for (var c = 1; c <= it.nc; c++) {
           var cls = show && ans ? (c === ans ? " ok" : c === v ? " no" : "") : (c === v ? " sel" : "");
-          h += '<button type="button" class="ch' + cls + '" data-k="' + esc(it.k) + '" data-n="' + c + '"' + (done || over ? " disabled" : "") + ">" + CIR[c - 1] + (txtCh ? " " + mkh(it.txt.ch[c - 1]) : "") + "</button>";
+          h += '<button type="button" class="ch' + cls + '" data-k="' + esc(it.k) + '" data-n="' + c + '"' + (done || over ? " disabled" : "") + ">" + CIR[c - 1] + (txtCh ? (gch ? "<span style=\"flex:1;min-width:0\">" + gch[c - 1] + "</span>" : " " + mkh(it.txt.ch[c - 1])) : "") + "</button>";
         }
         h += "</div>";
         if (show && ans) h += v === ans ? '<div class="res ok">맞았어요</div>' : '<div class="res no">' + (v ? "아쉬워요 · " : "") + "정답 " + CIR[ans - 1] + "</div>";
@@ -1061,7 +1079,8 @@
       else if (c === "T" || c === "S") { wp = s.n.map(function (n) { return a.items[n]; }).filter(function (x) { return x.txt && x.txt.pas; })[0];
         if (!wp && c === "T") wp = a.items.filter(function (x) { return x.txt && x.txt.pas && "T" + (x.txt.pk || x._pk) === s.k; })[0];   /* 같은 지문의 문항이 떨어져 담겼으면 그 지문을 다시 보여 준다 */
         if (wp) ph = '<div class="pas">' + pasH(wp.txt.pas, wp.txt.pk || wp._pk) + "</div>"; }
-      else if (c === "G") ph = '<div data-gmp="' + esc(s.k.slice(1)) + '"><span style="font-size:13px;color:var(--k-faint)">지문 그림을 불러오는 중…</span></div>';
+      else if (c === "G") { var gp = s.k.slice(1).split("|"), GT = window.GMText && GMText.get(gp[0]), gx = GT ? GMText.pas(GT, +gp[1]) : "";   /* v145: 글자로 옮긴 지문 */
+        ph = gx ? '<div class="pas kgp">' + gx + "</div>" : '<div data-gmp="' + esc(s.k.slice(1)) + '"><span style="font-size:13px;color:var(--k-faint)">지문 그림을 불러오는 중…</span></div>'; }
       var qs = s.n.map(function (n) { return qHtml(a.items[n], n); }).join("");
       h += ph ? '<div class="set"><div class="set-p" data-ls="' + si + '">' + ph + '</div><div class="set-q">' + qs + "</div></div>" : qs;
     });
@@ -1088,6 +1107,10 @@
       doSubmit(false);
     };
   }
+  /* v145: 공무원 문항 글자 자료 — gmtext.js(화면·인쇄 같은 글) */
+  var GMTP = null;
+  function gmText() { if (window.GMText) return Promise.resolve(window.GMText); return GMTP || (GMTP = loadJs("/suneung-korean/js/gmtext.js?v=145").then(function () { return window.GMText || null; }, function () { GMTP = null; return null; })); }
+  function gmQ(it) { if (!it.gm || !window.GMText) return null; var T = GMText.get(it.gm.e), q = T && GMText.q(T, it.gm.n); return q && q.ask !== undefined ? q : null; }
   /* 공무원 문항: /advanced-korean/gm/q/<회차>.json 에서 그림을 가져와 채운다(같은 지문은 처음 한 번만) */
   var KEEPY = 0, KEEPT = 0;
   /* 다시 그린 뒤 보던 자리 지키기: 그림이 늦게 들어와 높이가 바뀌어도 1.5초 동안은 그 자리로 되돌린다(손으로 움직이면 그만둔다) */
