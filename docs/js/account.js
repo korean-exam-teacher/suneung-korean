@@ -689,6 +689,7 @@
     ".kma-run .set{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,1fr);column-gap:28px;align-items:start}" +
     ".kma-run .set-p{position:sticky;top:var(--kr-top,76px);max-height:calc(100vh - var(--kr-top,76px) - var(--kr-bot,72px));max-height:calc(100dvh - var(--kr-top,76px) - var(--kr-bot,72px));overflow:auto;-webkit-overflow-scrolling:touch;padding:16px 6px 16px 0;box-sizing:border-box}" +
     ".kma-run .set-p img:first-child{margin-top:0}.kma-run .set-q{min-width:0}.kma-run .set-q .q:first-child{padding-top:16px}}",
+    ".kma,.kma-run{text-justify:inter-word}",   /* v147: 양쪽 맞춤에서 한자 앞뒤가 벌어지지 않게(구( 句 )) — 띄어쓰기에서만 벌린다 */
     ".kma img.inl,.kma-run img.inl{display:inline!important;width:auto!important;max-width:none!important;height:.92em!important;vertical-align:-.1em;margin:0 .06em;border:0!important;box-shadow:none!important;background:none!important}.kma .gt,.kma-run .gt{font-family:\"OldHangulSans\",\"Pretendard Variable\",\"Pretendard\",\"Noto Sans KR\",\"Noto Sans TC\",\"Noto Sans CJK KR\",\"Malgun Gothic\",\"Apple SD Gothic Neo\",sans-serif;font-weight:500}.kma b.bd,.kma-run b.bd{font-weight:700}.kma u.ul,.kma-run u.ul{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.24em;text-decoration-skip-ink:none}.kma .bx,.kma-run .bx{border:1px solid currentColor;padding:0 .18em;margin:0 .06em;-webkit-box-decoration-break:clone;box-decoration-break:clone}",
     ".kma-run .chs{display:grid;gap:6px;margin-top:10px}.kma-run .ch{display:flex;gap:10px;text-align:left;border:1px solid var(--k-line);background:none;color:inherit;border-radius:10px;padding:10px 14px;font:inherit;font-size:15px;line-height:1.6;cursor:pointer;word-break:keep-all}",
     ".kma-run .nums{display:flex;gap:8px;margin-top:10px}.kma-run .nums .ch{width:46px;height:46px;justify-content:center;align-items:center;padding:0;font-size:18px;border-radius:50%}",
@@ -722,7 +723,7 @@
     ".kma-run .kgq{font-size:16.5px;margin:8px 0}.kma-run .kgq img{margin:8px auto}.kma-run .kgp{white-space:normal;font-size:15.5px}.kma-run .kgp .gmx-poem{white-space:pre-wrap}.kma-run .gmx-qbl{--gmx-bg:var(--k-bg)}"
   ].join("\n");
   document.head.appendChild(css);
-  if (!document.getElementById("kma-font")) { var kf = document.createElement("link"); kf.id = "kma-font"; kf.rel = "stylesheet"; kf.href = "/suneung-korean/fonts/kma/kma.css?v=145"; document.head.appendChild(kf); }
+  if (!document.getElementById("kma-font")) { var kf = document.createElement("link"); kf.id = "kma-font"; kf.rel = "stylesheet"; kf.href = "/suneung-korean/fonts/kma/kma.css?v=147"; document.head.appendChild(kf); }
 
   var pill = document.createElement("button"); pill.type = "button"; pill.className = "kma kma-pill";
   var dim = document.createElement("div"); dim.className = "kma kma-dim"; dim.hidden = true;
@@ -973,7 +974,7 @@
   var printP = null;
   function printRun() {
     var a = CUR; if (!a) return;
-    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=145"));
+    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=147"));
     printP.then(function () { window.KMAPrint.open(a, {}); }).catch(function () { printP = null; var m = document.getElementById("kmaRM"); if (m) m.textContent = "인쇄 화면을 불러오지 못했어요."; });
   }
   function closeRun(quiet) { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; document.body.classList.remove("kma-running"); CUR = null; LIVEOPEN = ""; liveTell(); if (quiet !== true) openPanel(); }
@@ -1021,11 +1022,11 @@
       gmMap().then(function (M) { if (!M || CUR !== c1 || run.hidden) return; var y = run.scrollTop; paintRun(); keepY(y); });
     }
     /* v145: 공무원 문항은 글자 자료(gm/t)로 — 인쇄와 같은 글·글꼴. 받기 전에는 '불러오는 중' */
-    if (CUR && !CUR._gmt && CUR.items.some(function (it) { return it.gm; })) {
+    if (CUR && !CUR._gmt && CUR.items.some(function (it) { return it.gm || txOf(it); })) {   /* v147: PSAT 도 글자 자료(tx/psat) */
       var c2 = CUR; c2._gmt = 1;
       gmText().then(function (G) {
-        var es = []; c2.items.forEach(function (it) { if (it.gm && es.indexOf(it.gm.e) < 0) es.push(it.gm.e); });
-        return G ? Promise.all(es.map(function (e) { return G.load(e); })) : null;
+        var es = [], ts = []; c2.items.forEach(function (it) { var t = txOf(it); if (it.gm && es.indexOf(it.gm.e) < 0) es.push(it.gm.e); if (t && ts.indexOf(t.kind + ":" + t.e) < 0) ts.push(t.kind + ":" + t.e); });
+        return G ? Promise.all(es.map(function (e) { return G.load(e); }).concat(ts.map(function (k) { var q = k.split(":"); return G.load(q[1], q[0]); }))) : null;
       }).then(function () { c2._gmt = 2; if (CUR !== c2 || run.hidden) return; var y = run.scrollTop; paintRun(); keepY(y); });
     }
     if (CUR && CUR._gmt === 1) { run.innerHTML = '<div class="in"><p style="padding:60px 0;text-align:center;color:var(--k-sub)">문제를 불러오는 중…</p></div>'; return; }
@@ -1042,8 +1043,10 @@
       if (it.txt) {
         h += '<div class="ask">' + mkh(it.txt.ask) + "</div>" + (it.txt.body ? '<div class="pas">' + pasH(it.txt.body, "보기:" + String(it.k || "").slice(3)) + "</div>" : "");
       }
-      h += (it.q || []).map(pic).join("");
       var gq = gmQ(it), gch = gq && gq.ch && gq.ch.length === it.nc && gq.ch.every(Boolean) ? gq.ch : null;   /* v145 */
+      var gi = !gq && txOf(it) && window.GMText ? (function () { var t = txOf(it), T = GMText.get(t.e, t.kind), q = T && GMText.q(T, t.n); return q && q.img ? q.img : ""; })() : "";   /* v147: 글자로 못 옮긴 PSAT 문항 — 원래 번호를 지운 그림(시험지 글자 크기에 맞춤) */
+      if (gi) h += '<div class="gmx-q kgq">' + gi + "</div>";
+      else if (!gq) h += (it.q || []).map(pic).join("");
       if (gq) h += '<div class="gmx-q kgq"><div class="gmx-ask">' + gq.ask + "</div>" + gq.fig + gq.body + "</div>";
       else if (it.gm) h += '<div data-gm="' + esc(it.gm.e) + '|' + it.gm.n + '"><span style="font-size:13px;color:var(--k-faint)">문항 그림을 불러오는 중…</span></div>';
       if (it.nc) {
@@ -1075,7 +1078,8 @@
     a.items.forEach(function (it, n) { var k = setKey(it, n); if (k && cur && cur.k === k) cur.n.push(n); else { cur = { k: k, n: [n] }; sets.push(cur); } });
     sets.forEach(function (s, si) {
       var it0 = a.items[s.n[0]], ph = "", c = s.k.charAt(0), wp;
-      if (c === "P") ph = it0.p.imgs.map(pic).join("");
+      if (c === "P") { var t0 = txOf(it0), T0 = t0 && t0.set && window.GMText && GMText.get(t0.e, t0.kind), px = T0 ? GMText.pas(T0, t0.set) : "";   /* v147: PSAT 지문 글자 */
+        ph = px ? '<div class="pas kgp">' + px + "</div>" : it0.p.imgs.map(pic).join(""); }
       else if (c === "T" || c === "S") { wp = s.n.map(function (n) { return a.items[n]; }).filter(function (x) { return x.txt && x.txt.pas; })[0];
         if (!wp && c === "T") wp = a.items.filter(function (x) { return x.txt && x.txt.pas && "T" + (x.txt.pk || x._pk) === s.k; })[0];   /* 같은 지문의 문항이 떨어져 담겼으면 그 지문을 다시 보여 준다 */
         if (wp) ph = '<div class="pas">' + pasH(wp.txt.pas, wp.txt.pk || wp._pk) + "</div>"; }
@@ -1109,8 +1113,11 @@
   }
   /* v145: 공무원 문항 글자 자료 — gmtext.js(화면·인쇄 같은 글) */
   var GMTP = null;
-  function gmText() { if (window.GMText) return Promise.resolve(window.GMText); return GMTP || (GMTP = loadJs("/suneung-korean/js/gmtext.js?v=145").then(function () { return window.GMText || null; }, function () { GMTP = null; return null; })); }
-  function gmQ(it) { if (!it.gm || !window.GMText) return null; var T = GMText.get(it.gm.e), q = T && GMText.q(T, it.gm.n); return q && q.ask !== undefined ? q : null; }
+  function gmText() { if (window.GMText) return Promise.resolve(window.GMText); return GMTP || (GMTP = loadJs("/suneung-korean/js/gmtext.js?v=147").then(function () { return window.GMText || null; }, function () { GMTP = null; return null; })); }
+  function gmQ(it) { if (!window.GMText) return null; var t = txOf(it), T = t ? GMText.get(t.e, t.kind) : it.gm ? GMText.get(it.gm.e) : null, q = T && GMText.q(T, t ? t.n : it.gm.n); return q && q.ask !== undefined ? q : null; }
+  /* v147: PSAT 문항 열쇠 adv:psat:PS2025A-07 → {회차, 번호, 묶음} */
+  /* 화면(과제 풀기)에서 글자로 보이는 것은 PSAT만 — LEET·임용 화면은 원본 그림(선생님 방침 2026-11-25). 인쇄(asgprint)는 LEET 2024~2026도 글자 */
+  function txOf(it) { var m = /^adv:(psat):((?:PS|LEET)\d{4}[A-Z])-(\d+)$/.exec(it && it.k || ""); if (!m) return null; var p = it.p && it.p.imgs && it.p.imgs[0], s = p && /-p(\d+-\d+)\.webp/.exec(p.s || ""); return { kind: m[1], e: m[2], n: +m[3], set: s ? s[1] : "" }; }
   /* 공무원 문항: /advanced-korean/gm/q/<회차>.json 에서 그림을 가져와 채운다(같은 지문은 처음 한 번만) */
   var KEEPY = 0, KEEPT = 0;
   /* 다시 그린 뒤 보던 자리 지키기: 그림이 늦게 들어와 높이가 바뀌어도 1.5초 동안은 그 자리로 되돌린다(손으로 움직이면 그만둔다) */
