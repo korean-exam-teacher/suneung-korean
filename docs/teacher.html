@@ -469,7 +469,7 @@ function script(src){ if(LOADED[src]) return LOADED[src]; LOADED[src]=new Promis
 /* v134: 수능 목록(asg_sn.js 7.5MB)은 통째로 다시 올리기 어려워, 새 회차는 덧붙임 파일(asg_sn_add.js)에 둔다 — 수능 목록을 받으면 이어서 받는다(못 받아도 예전 회차는 그대로 쓴다) */
 var script0=script; script=function(src){ if(!/\/asg_sn\.js(\?|$)/.test(src)) return script0(src); var k='+'+src; return LOADED[k]||(LOADED[k]=script0(src).then(function(){ return script0('/suneung-korean/asg_sn_add.js?v=142').catch(function(){}); })); };
 function srcLoad(k){
-  if(k==='gm') return script('/advanced-korean/gm/index.js?v=102').then(function(){ return script('/advanced-korean/gm/gmfind.js?v=102'); }).then(function(){ return GMFind.load(); });
+  if(k==='gm') return script('/advanced-korean/gm/index.js?v=102').then(function(){ return script('/advanced-korean/gm/gmfind.js?v=149'); }).then(function(){ return GMFind.load(); });
   var ld=script(SRCS.filter(function(x){return x.k===k;})[0].f);
   /* v119: 수능은 유형 묶음·갈래 표를 함께 불러온다(못 불러와도 과제 만들기는 된다) */
   return k==='sn'?ld.then(function(){ return script('/suneung-korean/asg_sn_type.js?v=139').catch(function(){}); }).then(function(){ return window.KMA&&KMA.snm?KMA.snm():null; }):ld;
@@ -541,7 +541,7 @@ var REMS=[['adv:gm:','gm'],['sn:','sn'],['adv:psat:','psat'],['adv:leet:','leet'
 function remSrc(k){ for(var i=0;i<REMS.length;i++) if(k.indexOf(REMS[i][0])===0) return {src:REMS[i][1],id:k.slice(REMS[i][0].length)}; return null; }
 function remedy(k,title){ var r=remSrc(k); if(!r||!can('asg')) return;
   M.innerHTML='<p class="sub">같은 유형의 문항을 찾는 중…</p>'; USED=usedMap(); MK.src=r.src;
-  srcLoad(r.src).then(function(){ return script('/advanced-korean/gm/index.js?v=102'); }).then(function(){ return script('/advanced-korean/gm/gmfind.js?v=102'); }).then(function(){
+  srcLoad(r.src).then(function(){ return script('/advanced-korean/gm/index.js?v=102'); }).then(function(){ return script('/advanced-korean/gm/gmfind.js?v=149'); }).then(function(){
     var gm=r.src==='gm', has=gm?!!window.GM_DATA.items[r.id]:!!byId(r.id), name=SRCS.filter(function(x){ return x.k===r.src; })[0].n;
     MK.q=''; MK.a={}; MK.t=''; MK.g=''; MK.y=''; MK.e=''; MK.page=1; MK.open=null; MK.hide=true; MK.step=1; MK.am='';
     MK.from={title:title||nice(k),lab:name,got:0,miss:!has,area:!gm};
@@ -558,7 +558,7 @@ function remedy(k,title){ var r=remSrc(k); if(!r||!can('asg')) return;
 function makeView(){
   USED=usedMap();
   M.innerHTML='<p class="sub">문항 목록을 불러오는 중…</p>';
-  srcLoad(MK.src).then(function(){ return script('/advanced-korean/gm/index.js?v=102'); }).then(function(){ return script('/advanced-korean/gm/gmfind.js?v=102'); })
+  srcLoad(MK.src).then(function(){ return script('/advanced-korean/gm/index.js?v=102'); }).then(function(){ return script('/advanced-korean/gm/gmfind.js?v=149'); })
     .then(function(){ if(MK.step===2) return mkForm(); mkList(); })
     .catch(function(){ M.innerHTML='<p class="msg">문항 목록을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</p>'; });
 }
