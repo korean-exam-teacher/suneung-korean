@@ -35,7 +35,7 @@
 @media (max-width:480px){.crumb{gap:6px}.logo .crumb a{font-size:13.5px}.logo .crumb a.here{font-size:18px}}
 </style>
 <style>/* v140: 글줄은 어절 단위로 나뉜다 */html{word-break:keep-all;overflow-wrap:break-word}</style>
-<link rel="stylesheet" href="/suneung-korean/fonts/kma/kma.css?v=145">
+<link rel="stylesheet" href="/suneung-korean/fonts/kma/kma.css?v=147">
 <style>/* v141: 원본 문제지의 굵은 글씨·고딕 */b.bd{font-weight:700}.gt{font-family:"KMA Sans","OldHangulSans","Pretendard Variable","Pretendard","Noto Sans KR","Noto Sans TC","Noto Sans CJK KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-weight:500;letter-spacing:-.01em}.gt b.bd{font-weight:700}.sheet .gt{font-family:"OldHangulSans","Noto Sans KR","Noto Sans TC","Noto Sans CJK KR","Malgun Gothic",sans-serif;font-weight:500}.sheet .gt b.bd{font-weight:700}</style><style>/* v142 */img.inl{display:inline!important;width:auto!important;max-width:none!important;height:.92em!important;vertical-align:-.1em;margin:0 .06em;border:0!important;box-shadow:none!important;background:none!important}</style></head>
 <body>
 <style>
@@ -653,6 +653,7 @@ img.fig{display:block;max-width:min(100%,640px);height:auto;margin:6px auto 0;ba
 
 /* 원본 문제지의 밑줄·글자 상자 */
 u.ul{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.24em;text-decoration-skip-ink:none}
+html{text-justify:inter-word}   /* v147: 양쪽 맞춤에서 한자 앞뒤가 벌어지지 않게(구( 句 )) — 띄어쓰기에서만 벌린다 */
 .bx{border:1px solid currentColor;padding:0 .18em;margin:0 .06em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 @media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
 </style>
@@ -3272,10 +3273,10 @@ async function bkStandaloneHtml(){
   const title = basket.title.trim() || '담은 문제 모음';
   const ohCss = await bkOldHangulCss(clone);
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} — 국어 영역</title>
-<link rel="stylesheet" href="${new URL('/suneung-korean/fonts/kma/kma.css?v=145', location.href).href}">
+<link rel="stylesheet" href="${new URL('/suneung-korean/fonts/kma/kma.css?v=147', location.href).href}">
 <style>${ohCss}${SHEET_CSS}
 ${bkPageCss()}
-html,body{margin:0;padding:0}
+html,body{margin:0;padding:0}html{text-justify:inter-word}
 @media screen{body{background:#8a8f98}.bar{position:sticky;top:0;z-index:2;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;padding:10px 16px;background:#1f2530;color:#fff;font:14px "Noto Sans KR",sans-serif}
 .bar button{font:inherit;font-weight:700;padding:7px 18px;border:0;border-radius:3px;background:#6FA0E6;color:#13171E;cursor:pointer}
 #printArea{padding:12px 0}.sheet{margin:0 auto 12px;box-shadow:0 2px 10px rgba(0,0,0,.35)}}
@@ -3714,7 +3715,7 @@ footer .guide details{border-color:var(--line)!important;background:none!importa
 <script src="/middle-korean/js/config.js?v=93"></script>
 <script src="/middle-korean/js/ink.js?v=111"></script>
 <script src="/middle-korean/js/live.js?v=93"></script>
-<script src="js/account.js?v=145"></script>
+<script src="js/account.js?v=147"></script>
 <style id="v129-fav">
 .fav-btn{white-space:nowrap}
 .fav-btn.on{color:var(--brand);border-color:var(--brand);background:var(--brand-soft);font-weight:700}
