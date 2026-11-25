@@ -75,7 +75,9 @@
       x.fillStyle = "#fff"; x.fillRect(0, 0, w, h); x.drawImage(o.im, 0, 0, w, h);
       var d = x.getImageData(0, 0, w, h).data, col = new Uint32Array(w), dark = new Uint8Array(w * h), i, j;
       for (j = 0; j < h; j++) for (i = 0; i < w; i++) { var p = (j * w + i) * 4; if (d[p] + d[p + 1] + d[p + 2] < 560) { dark[j * w + i] = 1; col[i]++; } }
-      var skip = new Uint8Array(w); for (i = 0; i < w; i++) if (col[i] > h * 0.5) { skip[i] = 1; if (i) skip[i - 1] = 1; if (i + 1 < w) skip[i + 1] = 1; }
+      /* v148: 상자 옆선 같은 긴 세로줄 — 전체의 절반을 넘거나, 한 번에 이어진 길이가 그림 높이의 35%를 넘는 세로줄 */
+      var lrun = new Uint32Array(w); for (i = 0; i < w; i++) { var cr = 0, gp = 0; for (j = 0; j < h; j++) { if (dark[j * w + i]) { cr += 1 + gp; gp = 0; } else if (cr && gp < 2) gp++; else { cr = 0; gp = 0; } if (cr > lrun[i]) lrun[i] = cr; } }
+      var skip = new Uint8Array(w); for (i = 0; i < w; i++) if (col[i] > h * 0.5 || lrun[i] > h * 0.35) { skip[i] = 1; if (i) skip[i - 1] = 1; if (i + 1 < w) skip[i + 1] = 1; }
       var run = 0;
       for (j = 0; j <= h; j++) {
         var blank = false;
@@ -369,7 +371,7 @@
     (A.items || []).forEach(function (it) { var t = txOf(it); if (t && !seenT[t.kind + ":" + t.e]) { seenT[t.kind + ":" + t.e] = 1; txs.push(t); } });
     if (txs.length && !A._txt && !A._gmOff) {
       A._txt = {};
-      Promise.all(txs.map(function (t) { return fetch(TXB + t.kind + "/" + t.e + ".json?v=147").then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) { A._txt[t.kind + ":" + t.e] = d; }, function () {}); })).then(function () { open(A, opt); });
+      Promise.all(txs.map(function (t) { return fetch(TXB + t.kind + "/" + t.e + ".json?v=148").then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) { A._txt[t.kind + ":" + t.e] = d; }, function () {}); })).then(function () { open(A, opt); });
       return;
     }
     if (gms.length && !A._gmt && !A._gmOff) {
