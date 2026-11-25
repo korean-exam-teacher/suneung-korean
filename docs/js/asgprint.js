@@ -12,7 +12,7 @@
  */
 (function () {
   if (window.KMAPrint) return;
-  var SHEET_CSS = "\n.sheet{position:relative;box-sizing:border-box;background:#fff;color:#000;overflow:hidden;\n  font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;font-size:var(--pf,10pt);line-height:1.6;\n  letter-spacing:-.04em;word-break:keep-all;overflow-wrap:anywhere;-webkit-print-color-adjust:exact;print-color-adjust:exact}\n.sheet *{box-sizing:border-box}\n.sheet .hf{font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif;font-weight:800;font-synthesis:none;letter-spacing:0;line-height:1}\n.sheet .pnum{font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;font-weight:700;letter-spacing:0;line-height:1}\n.sh-hd{position:absolute;border-bottom:var(--rw) solid #000}\n.sh-hd .hf{position:absolute;left:0;right:0;bottom:var(--hb);text-align:center}\n.sh-hd .pnum{position:absolute;bottom:var(--pb)}\n.sh-hd.odd .pnum{right:0} .sh-hd.even .pnum{left:0}\n.sh-hd1{position:absolute;border-bottom:var(--rw) solid #000}\n.sh-hd1 .t-s{position:absolute;left:0;right:0;text-align:center;font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif;font-weight:500;letter-spacing:-.02em;line-height:1}\n.sh-hd1 .pnum{position:absolute;right:0}\n.sh-hd1 .gyosi{position:absolute;left:0;display:flex;align-items:center;justify-content:center;border:var(--tw) solid #000;border-radius:999px;\n  font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;font-weight:700;letter-spacing:0;line-height:1;white-space:nowrap}\n.sh-hd1 .gyosi b{font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;margin:0 .18em}\n.sh-hd1 .hf{position:absolute;left:0;right:0;text-align:center}\n.sh-cols{position:absolute;display:flex}\n.sh-col{position:relative;flex:none;height:100%;overflow:hidden}\n.sh-rule{flex:none;width:0;border-left:var(--cw) solid #000;margin:0 auto}\n.sh-col > :first-child{margin-top:0!important}\n.sh-ft{position:absolute;border:var(--tw) solid #000;font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;letter-spacing:0;line-height:1;\n  background:linear-gradient(to bottom right,transparent calc(50% - var(--tw)/2),#000 calc(50% - var(--tw)/2),#000 calc(50% + var(--tw)/2),transparent calc(50% + var(--tw)/2))}\n.sh-ft .a{position:absolute;left:.18em;top:.08em}\n.sh-ft .b{position:absolute;right:.18em;bottom:.06em}\n.gh{margin-top:2.2em;text-align:justify;font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif;font-weight:500;letter-spacing:-.02em}\n.gh .rg{margin-right:.25em;letter-spacing:0}\n.src{font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif;font-size:.74em;color:#555;font-weight:400;letter-spacing:0}\n.gh + .pbox, .gh + .pimg{margin-top:.45em}\n.pbox{border:var(--tw) solid #000;padding:.3em .5em .35em}\n.pbox + .pbox{margin-top:0}\n.pbox > :first-child{margin-top:0!important}\n.pbox.ot{border-top:0}\n.pbox.ob{border-bottom:0}\n.pp{text-align:justify;text-indent:.6em}\n.pp.cont{text-indent:0}\n.pp.pbrk{text-align-last:justify}\n.pp.ph{text-indent:0;font-weight:600}\n.poem{white-space:pre-wrap;text-indent:0;text-align:left}\n.pnote{font-size:.84em;line-height:1.5;text-indent:0;margin-top:.12em;padding-left:.8em}\n.pp + .pnote, .poem + .pnote{margin-top:.5em}\n.q{margin-top:2.4em}\n.pbox + .q, .pimg + .q, .pnote + .q{margin-top:1.9em}\n.qs{text-align:justify;padding-left:1.5em;text-indent:-1.5em}\n.qs .qn{font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;font-weight:700;font-size:1.13em;display:inline-block;min-width:1.33em;text-indent:0;letter-spacing:0}\n.qb{position:relative;border:var(--tw) solid #000;padding:.35em .55em .4em;margin:.6em 0 .35em}\n.qb.lab{margin-top:1.1em;padding-top:.75em}\n.qb.cont{border-top-style:dashed;margin-top:0;padding-top:.35em}\n.qb.pbrk{border-bottom-style:dashed;margin-bottom:0}\n.qbl{position:absolute;left:50%;top:0;transform:translate(-50%,-52%);background:#fff;padding:0 .45em;white-space:nowrap;letter-spacing:0;line-height:1.2}\n.qbt{white-space:pre-wrap;text-align:justify}.qb.par .qbt{white-space:normal}.qbt .pp.ni{text-indent:0}.qfree{margin:.35em 0 .1em;text-align:justify}\n.qc{display:grid;gap:0 1.2em;margin-top:.7em;padding-left:.3em}\n.qc > div{padding-left:1.25em;text-indent:-1.25em}\n.qna{margin-top:.35em;font-size:.88em;color:#444}\n.qt{display:grid;gap:0 .8em;margin-top:.7em;padding-left:.3em;text-align:center}\n.qt .qtn{text-align:left}\n.qt.tl{text-align:left}\n.q.part{margin-top:.25em}\n.pimg{position:relative;overflow:hidden;margin:.35em auto 0;break-inside:avoid;container-type:inline-size}\n.pimg .bxl{position:absolute;background:#000}\n.pimg img{display:block;width:100%;height:auto}\n.pimg + .pimg{margin-top:0}\n.qs + .pimg{margin-top:.45em}\n.chk{position:absolute;left:0;right:0;bottom:0;border:var(--tw) solid #000;padding:.5em .7em;font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif;font-size:.86em;line-height:1.5;letter-spacing:-.02em}\n.chk b{display:block;margin-bottom:.2em}\n.chk p{margin:0;padding-left:.9em;text-indent:-.9em}\n.sh-key{position:absolute;font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif;font-size:9.5pt;line-height:1.35;letter-spacing:0}\n.sh-key h3{margin:0 0 3mm;font-size:13pt;text-align:center}\n.sh-key .kc{display:flex;gap:6mm;align-items:flex-start}\n.sh-key table{flex:1;border-collapse:collapse}\n.sh-key th,.sh-key td{border:.25mm solid #333;padding:1mm 1.5mm;text-align:center}\n.sh-key th{background:#eee;font-weight:700}\n.sh-key td.l{text-align:left;font-size:.88em}\n.sheet u.ul{text-decoration:underline;text-decoration-thickness:.2mm;text-underline-offset:.22em;text-decoration-skip-ink:none}\n.sheet .bx{border:.2mm solid #000;padding:0 .15em;margin:0 .05em;-webkit-box-decoration-break:clone;box-decoration-break:clone}\n";
+  var SHEET_CSS = "\n.sheet{position:relative;box-sizing:border-box;background:#fff;color:#000;overflow:hidden;\n  font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;font-size:var(--pf,10pt);line-height:1.6;\n  letter-spacing:-.04em;word-break:keep-all;overflow-wrap:anywhere;-webkit-print-color-adjust:exact;print-color-adjust:exact}\n.sheet *{box-sizing:border-box}\n.sheet .hf{font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif;font-weight:800;font-synthesis:none;letter-spacing:0;line-height:1}\n.sheet .pnum{font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;font-weight:700;letter-spacing:0;line-height:1}\n.sh-hd{position:absolute;border-bottom:var(--rw) solid #000}\n.sh-hd .hf{position:absolute;left:0;right:0;bottom:var(--hb);text-align:center}\n.sh-hd .pnum{position:absolute;bottom:var(--pb)}\n.sh-hd.odd .pnum{right:0} .sh-hd.even .pnum{left:0}\n.sh-hd1{position:absolute;border-bottom:var(--rw) solid #000}\n.sh-hd1 .t-s{position:absolute;left:0;right:0;text-align:center;font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif;font-weight:500;letter-spacing:-.02em;line-height:1}\n.sh-hd1 .pnum{position:absolute;right:0}\n.sh-hd1 .gyosi{position:absolute;left:0;display:flex;align-items:center;justify-content:center;border:var(--tw) solid #000;border-radius:999px;\n  font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;font-weight:700;letter-spacing:0;line-height:1;white-space:nowrap}\n.sh-hd1 .gyosi b{font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;margin:0 .18em}\n.sh-hd1 .hf{position:absolute;left:0;right:0;text-align:center}\n.sh-cols{position:absolute;display:flex}\n.sh-col{position:relative;flex:none;height:100%;overflow:hidden}\n.sh-rule{flex:none;width:0;border-left:var(--cw) solid #000;margin:0 auto}\n.sh-col > :first-child{margin-top:0!important}\n.sh-ft{position:absolute;border:var(--tw) solid #000;font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;letter-spacing:0;line-height:1;\n  background:linear-gradient(to bottom right,transparent calc(50% - var(--tw)/2),#000 calc(50% - var(--tw)/2),#000 calc(50% + var(--tw)/2),transparent calc(50% + var(--tw)/2))}\n.sh-ft .a{position:absolute;left:.18em;top:.08em}\n.sh-ft .b{position:absolute;right:.18em;bottom:.06em}\n.gh{margin-top:2.2em;text-align:justify;font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif;font-weight:500;letter-spacing:-.02em}\n.gh .rg{margin-right:.25em;letter-spacing:0}\n.src{font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif;font-size:.74em;color:#555;font-weight:400;letter-spacing:0}\n.gh + .pbox, .gh + .pimg{margin-top:.45em}\n.pbox{border:var(--tw) solid #000;padding:.3em .5em .35em}\n.pbox + .pbox{margin-top:0}\n.pbox > :first-child{margin-top:0!important}\n.pbox.ot{border-top:0}\n.pbox.ob{border-bottom:0}\n.pp{text-align:justify;text-indent:.6em}\n.pp.cont{text-indent:0}\n.pp.pbrk{text-align-last:justify}\n.pp.ph{text-indent:0;font-weight:600}\n.poem{white-space:pre-wrap;text-indent:0;text-align:left}\n.pnote{font-size:.84em;line-height:1.5;text-indent:0;margin-top:.12em;padding-left:.8em}\n.pp + .pnote, .poem + .pnote{margin-top:.5em}\n.q{margin-top:2.4em}\n.pbox + .q, .pimg + .q, .pnote + .q{margin-top:1.9em}\n.qs{text-align:justify;padding-left:1.5em;text-indent:-1.5em}\n.qs .qn{font-family:\"KMA Serif\",\"Noto Serif KR\",\"Noto Serif CJK KR\",serif;font-weight:700;font-size:1.13em;display:inline-block;min-width:1.33em;text-indent:0;letter-spacing:0}\n.qb{position:relative;border:var(--tw) solid #000;padding:.35em .55em .4em;margin:.6em 0 .35em}\n.qb.lab{margin-top:1.1em;padding-top:.75em}\n.qb.cont{border-top-style:dashed;margin-top:0;padding-top:.35em}\n.qb.pbrk{border-bottom-style:dashed;margin-bottom:0}\n.qbl{position:absolute;left:50%;top:0;transform:translate(-50%,-52%);background:#fff;padding:0 .45em;white-space:nowrap;letter-spacing:0;line-height:1.2}\n.qbt{white-space:pre-wrap;text-align:justify}.qb.par .qbt{white-space:normal}.qbt .pp.ni{text-indent:0}.qfree{margin:.35em 0 .1em;text-align:justify}\n.qc{display:grid;gap:0 1.2em;margin-top:.7em;padding-left:.3em}\n.qc > div{padding-left:1.25em;text-indent:-1.25em}\n.qna{margin-top:.35em;font-size:.88em;color:#444}\n.qt{display:grid;gap:0 .8em;margin-top:.7em;padding-left:.3em;text-align:center}\n.qt .qtn{text-align:left}\n.qt.tl{text-align:left}\n.q.part{margin-top:.25em}\n.pimg{position:relative;overflow:hidden;margin:.35em auto 0;break-inside:avoid;container-type:inline-size}\n.pimg .bxl{position:absolute;background:#000}\n.pimg.pbx{width:100%;padding:0 .5em;border-left:var(--tw) solid #000;border-right:var(--tw) solid #000}\n.pimg.pbx.bt{padding-top:.3em;border-top:var(--tw) solid #000}\n.pimg.pbx.bb{padding-bottom:.35em;border-bottom:var(--tw) solid #000}\n.pbx .pbi{position:relative;overflow:hidden}\n.pbx .pbi img{display:block}\n.pimg img{display:block;width:100%;height:auto}\n.pimg + .pimg{margin-top:0}\n.qs + .pimg{margin-top:.45em}\n.chk{position:absolute;left:0;right:0;bottom:0;border:var(--tw) solid #000;padding:.5em .7em;font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif;font-size:.86em;line-height:1.5;letter-spacing:-.02em}\n.chk b{display:block;margin-bottom:.2em}\n.chk p{margin:0;padding-left:.9em;text-indent:-.9em}\n.sh-key{position:absolute;font-family:\"KMA Sans\",\"Noto Sans KR\",\"Noto Sans CJK KR\",sans-serif;font-size:9.5pt;line-height:1.35;letter-spacing:0}\n.sh-key h3{margin:0 0 3mm;font-size:13pt;text-align:center}\n.sh-key .kc{display:flex;gap:6mm;align-items:flex-start}\n.sh-key table{flex:1;border-collapse:collapse}\n.sh-key th,.sh-key td{border:.25mm solid #333;padding:1mm 1.5mm;text-align:center}\n.sh-key th{background:#eee;font-weight:700}\n.sh-key td.l{text-align:left;font-size:.88em}\n.sheet u.ul{text-decoration:underline;text-decoration-thickness:.2mm;text-underline-offset:.22em;text-decoration-skip-ink:none}\n.sheet .bx{border:.2mm solid #000;padding:0 .15em;margin:0 .05em;-webkit-box-decoration-break:clone;box-decoration-break:clone}\n";
   var CIR = "①②③④⑤", PXMM = 96 / 25.4;
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   /* v125: 수능 글의 밑줄·글자 상자 — account.js의 KMA.em(없으면 표시 글자만 뺀다) */
@@ -128,15 +128,75 @@
   }
 
   /* ---------- 조각(block) 만들기 ---------- */
-  function imgBlock(o, cls, mmPerPx) {
-    var cs = cuts(o), hd = o.hd > 0 && o.hd < o.h - 20 ? o.hd : 0, bx = cs.bx || {};
+  /* v148c(선생님 지시: 모든 출력의 양식은 같아야 한다): 지문 그림 안의 바깥 상자(원본 시험지의 선)를 찾는다 →
+     그림의 선은 잘라 내고, 글 지문과 같은 테두리(.pbx, --tw 굵기의 검은 선)와 같은 안쪽 여백으로 다시 두른다.
+     상자 밖에 글이 있는 그림(표 + 상자 등)은 그대로 둔다. 돌려주는 값: {x0,x1,y0,y1(잘라 보일 안쪽), tx0,tx1,ty0,ty1(글 자리)} */
+  var BOXQ = {};
+  function boxOf(o, hd) {
+    var key = o.src + "|" + hd; if (key in BOXQ) return BOXQ[key];
+    var res = null;
+    try {
+      var W = o.w, H = o.h, c = document.createElement("canvas"); c.width = W; c.height = H; var x = c.getContext("2d", { willReadFrequently: true });
+      x.fillStyle = "#fff"; x.fillRect(0, 0, W, H); x.drawImage(o.im, 0, 0);
+      var d = x.getImageData(0, 0, W, H).data, dk = function (xx, yy) { var p = (yy * W + xx) * 4; return d[p] + d[p + 1] + d[p + 2] < 560; };
+      var need = (H - hd) * 0.5;
+      var run = function (xx) { var best = [0, 0, 0], cr = 0, st = 0, gp = 0; for (var yy = hd; yy < H; yy++) { if (dk(xx, yy)) { if (!cr) st = yy; cr += 1 + gp; gp = 0; if (cr > best[0]) best = [cr, st, yy]; } else if (cr && gp < 2) gp++; else { cr = 0; gp = 0; } } return best; };
+      var grp = function (from, to, step) { var a = -1, b = -1, r0 = null; for (var xx = from; xx !== to; xx += step) { var r = run(xx); if (r[0] > need) { if (a < 0) { a = xx; r0 = r; } b = xx; } else if (a >= 0) break; } return a < 0 ? null : { a: Math.min(a, b), b: Math.max(a, b), t: r0[1], e: r0[2] }; };
+      var L = grp(0, Math.round(W * 0.1), 1), R = grp(W - 1, Math.round(W * 0.9), -1);
+      if (!L && !R) {
+        /* 상자 없는 지문 그림(PSAT·일부 LEET 원본은 상자가 없음): 글 지문처럼 그림 전체를 같은 테두리로 두른다 */
+        var a0 = W, a1 = -1, b0 = -1, b1 = -1, y2, x3;
+        for (y2 = hd; y2 < H; y2++) for (x3 = 0; x3 < W; x3++) if (dk(x3, y2)) { if (x3 < a0) a0 = x3; if (x3 > a1) a1 = x3; if (b0 < 0) b0 = y2; b1 = y2; }
+        if (a1 > a0 && b1 > b0) res = { ab: 0, T: hd, x0: 0, x1: W, y0: hd, y1: H, tx0: a0, tx1: a1 + 1, ty0: b0, ty1: b1 + 1 };
+      }
+      else if (L && R && Math.abs(L.t - R.t) < 8 && Math.abs(L.e - R.e) < 8) {
+        var rowFull = function (yy) { var best = 0, cr = 0, gp = 0; for (var xx = L.a; xx <= R.b; xx++) { if (dk(xx, yy)) { cr += 1 + gp; gp = 0; if (cr > best) best = cr; } else if (cr && gp < 3) gp++; else { cr = 0; gp = 0; } } return best > (R.b - L.a) * 0.97; };   /* 이름표(<자료 2> 등)가 선 가운데 있는 상자는 그대로 둔다 */
+        var T = -1, Tb = -1, B = -1, Bt = -1, yy;
+        for (yy = Math.max(hd, Math.min(L.t, R.t) - 3); yy <= Math.min(H - 1, Math.max(L.t, R.t) + 8); yy++) if (rowFull(yy)) { if (T < 0) T = yy; Tb = yy; }
+        for (yy = Math.min(H - 1, Math.max(L.e, R.e) + 3); yy >= Math.max(0, Math.min(L.e, R.e) - 8); yy--) if (rowFull(yy)) { if (B < 0) B = yy; Bt = yy; }
+        if (T >= 0 && B > T + 20) {
+          /* 상자 밖(머리말 아래 ~ 윗선 위, 아랫선 아래, 옆선 바깥)에 글이 있으면 그대로 둔다 */
+          var out = 0, xx2;
+          /* 윗선 위(머리 글·자료 표 등)는 그대로 그림으로 싣고, 아랫선 아래나 옆선 바깥에 글이 있으면 상자를 바꾸지 않는다 */
+          for (yy = T; yy < H && out <= 40; yy++) for (xx2 = 0; xx2 < W; xx2++) { if (!dk(xx2, yy)) continue; if (yy > B || xx2 < L.a || xx2 > R.b) out++; }
+          if (out <= 40) {   /* 점 몇 개(티끌)는 무시 */
+            var tx0 = W, tx1 = -1, ty0 = -1, ty1 = -1;
+            for (yy = Tb + 2; yy < Bt - 1; yy++) for (xx2 = L.b + 2; xx2 < R.a - 1; xx2++) if (dk(xx2, yy)) { if (xx2 < tx0) tx0 = xx2; if (xx2 > tx1) tx1 = xx2; if (ty0 < 0) ty0 = yy; ty1 = yy; }
+            var ab = 0; for (yy = hd; yy < T - 2 && !ab; yy++) for (xx2 = 0; xx2 < W; xx2++) if (dk(xx2, yy)) { ab = 1; break; }
+            if (tx1 > tx0 && ty1 > ty0) res = { ab: ab, T: T, x0: L.b + 1, x1: R.a, y0: Tb + 1, y1: Bt, tx0: tx0, tx1: tx1 + 1, ty0: ty0, ty1: ty1 + 1 };
+          }
+        }
+      }
+    } catch (e) { res = null; }
+    return (BOXQ[key] = res);
+  }
+
+  /* ---------- 조각(block) 만들기 ---------- */
+  function imgBlock(o, cls, mmPerPx, g) {
+    var cs = cuts(o), hd = o.hd > 0 && o.hd < o.h - 20 ? o.hd : 0;
     var ys = [hd].concat(cs.filter(function (y) { return y > hd + 4; }), [o.h]), wmm = Math.round(o.w * mmPerPx * 10) / 10;
-    /* v143: 상자 안에서 끊긴 조각은 끊긴 쪽에 상자 가로선을 그어 닫는다(그림의 선과 같은 두께) */
-    var line = function (b, top) { return '<i class="bxl" style="left:' + (b.l / o.w * 100).toFixed(3) + "%;width:" + ((b.r - b.l) / o.w * 100).toFixed(3) + "%;height:calc(100cqw * " + (b.t / o.w).toFixed(5) + ");" + (top ? "top:0" : "bottom:0") + '"></i>'; };
+    var bq = cls === "pfg" && g ? boxOf(o, hd) : null;
+    if (bq) {
+      /* 글 지문 상자(.pbox)와 같은 안쪽 여백(위 .3em, 옆 .5em, 아래 .35em)은 CSS 로 — 그림은 글 자리만 잘라 싣는다 */
+      var X0 = Math.max(0, bq.tx0 - 1), X1 = Math.min(o.w, bq.tx1 + 1), CW = X1 - X0;
+      var Y0 = Math.max(hd, bq.ty0 - 1), Y1 = Math.min(o.h, bq.ty1 + 1);
+      var TA = bq.ab ? bq.T - 2 : -1;   /* 윗선 위: 머리 글·자료 등은 그림 그대로 */
+      return { t: "text", tok: ys.slice(1), make: function (i, j) {
+        var a = ys[i], b = ys[j], html = "";
+        if (a < TA) { var b0 = Math.min(b, TA); html += '<div class="pimg pfg" style="width:min(100%,' + wmm + "mm);aspect-ratio:" + o.w + "/" + Math.max(1, b0 - a) + '"><img src="' + esc(o.src) + '" alt="" style="margin-top:-' + (a / o.w * 100).toFixed(3) + '%"></div>'; }
+        var y0 = Math.max(Y0, a), y1 = Math.min(Y1, b);
+        if (y1 > y0 || (b > TA && a < Y1)) {
+          var h = Math.max(1, y1 - y0);
+          /* v148b: 단·쪽에서 이어지는 상자는 끊긴 쪽을 열어 둔다 — 윗선은 상자가 시작하는 조각에만, 아랫선은 끝나는 조각에만 */
+          html += '<div class="pimg pfg pbx' + (a <= Y0 ? " bt" : "") + (b >= Y1 ? " bb" : "") + '"><div class="pbi" style="aspect-ratio:' + CW + "/" + h + '"><img src="' + esc(o.src) + '" alt="" style="width:' + (o.w / CW * 100).toFixed(3) + "%;max-width:none;margin-left:-" + (X0 / CW * 100).toFixed(3) + "%;margin-top:-" + (y0 / CW * 100).toFixed(3) + '%"></div></div>';
+        }
+        return a < TA && html.indexOf("pbx") > 0 ? '<div class="pimgs">' + html + "</div>" : html;
+      } };
+    }
     return { t: "text", tok: ys.slice(1), make: function (i, j) {
-      var y0 = ys[i], y1 = ys[j], deco = "";
+      var y0 = ys[i], y1 = ys[j];
       /* v148b(선생님 지시): 단·쪽에서 이어지는 지문 상자는 수능 문제지처럼 끊긴 쪽을 열어 둔다(닫는 가로선을 긋지 않음) */
-      return '<div class="pimg ' + (cls || "") + '" style="width:min(100%,' + wmm + "mm);aspect-ratio:" + o.w + "/" + Math.max(1, y1 - y0) + '"><img src="' + esc(o.src) + '" alt="" style="margin-top:-' + (y0 / o.w * 100).toFixed(3) + '%">' + deco + "</div>";
+      return '<div class="pimg ' + (cls || "") + '" style="width:min(100%,' + wmm + "mm);aspect-ratio:" + o.w + "/" + Math.max(1, y1 - y0) + '"><img src="' + esc(o.src) + '" alt="" style="margin-top:-' + (y0 / o.w * 100).toFixed(3) + '%"></div>';
     } };
   }
   /* v147: 그림 맨 위 첫 글줄(머리말 '[1~3] 다음 글을…') 아래의 흰 줄 자리 — 떼어 낼 높이 */
@@ -232,7 +292,7 @@
           var ns = groups[o.key] || [o.n];
           B.push({ t: "head", html: '<div class="gh"><span class="rg">[' + (ns.length > 1 || o.key ? rangeLabel(ns) : o.n) + "]</span>다음 글을 읽고 물음에 답하시오.</div>" });
           o.pimgs.forEach(function (r) { if (!r.ok) return; if (g.sn && /^adv:(leet|im):/.test(it.k || "") && r.hd == null) r.hd = headCut(r);   /* v147: 원본 지문 그림 맨 위의 머리말 줄은 떼고 시험지 머리말로 */
-            B.push(imgBlock(r, "pfg", r.dpi ? 25.4 / r.dpi : 0.127)); });
+            B.push(imgBlock(r, "pfg", r.dpi ? 25.4 / r.dpi : 0.127, g)); });
           if (pas) {
             if (isPoem(pas)) { var L = pas.replace(/^\n+|\s+$/g, "").split("\n"); B.push({ t: "text", tok: L, box: gk, make: function (i, j) { return '<div class="poem">' + em(L.slice(i, j).join("\n")) + "</div>"; } }); }
             else pas.trim().split(/\n+/).map(function (x) { return x.trim(); }).filter(Boolean).forEach(function (x) {
@@ -310,7 +370,7 @@
     function tryPut(node, box) { var undo = put(node, box); if (!over()) return true; undo(); return false; }
     var lineH = g.pt * 1.6 * 96 / 72;
     /* v148b(선생님 지시): 단·쪽에서 이어지는 지문 상자 — 앞 조각은 아래 선 없이 단 끝까지, 이어지는 조각은 위 선 없이(수능 문제지처럼 이어지는 느낌) */
-    function openBot(box) { var f = cur.lastElementChild; if (!f || !f.classList.contains("pbox") || f.dataset.g !== box) return; f.classList.add("ob"); var h = cur.getBoundingClientRect().bottom - f.getBoundingClientRect().top - 1; if (h > f.getBoundingClientRect().height) f.style.minHeight = h.toFixed(1) + "px"; }
+    function openBot(box) { var f = cur.lastElementChild; if (f && f.classList.contains("pimgs")) f = f.lastElementChild; if (!f || !((f.classList.contains("pbox") && f.dataset.g === box) || (f.classList.contains("pbx") && !f.classList.contains("bb")))) return; f.classList.add("ob"); var h = cur.getBoundingClientRect().bottom - f.getBoundingClientRect().top - 1; if (h > f.getBoundingClientRect().height) f.style.minHeight = h.toFixed(1) + "px"; }
     function placeText(b) {
       var i = 0, cont = false, n = b.tok.length, guard = 0;
       while (i < n && guard++ < 400) {
