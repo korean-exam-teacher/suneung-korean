@@ -623,7 +623,7 @@
     fav: FBCFG ? favApi("sn") : null,
     favOf: FBCFG ? function (ns) { ns = String(ns || "").replace(/[^a-z0-9]/g, ""); return ns ? favApi(ns) : null; } : null,
     gmExam: gmExam,
-    em: mkh, pasH: pasH, brkCss: BRKCSS, snm: snm, snApply: snApply, snPas: snPas   /* v125: 수능 글의 밑줄·글자 상자 */
+    em: mkh, pasH: pasH, brkPrep: brkPrep, brkCss: BRKCSS, snm: snm, snApply: snApply, snPas: snPas   /* v125: 수능 글의 밑줄·글자 상자 */
   };
   /* v121: 그림을 받지 못했을 때 — 어느 화면이든 두 번 더 받아 보고(1초·3초 뒤), 과제의 공무원 문항 그림은 그래도 안 되면 회차 통째 파일에서 꺼내 온다 */
   document.addEventListener("error", function (ev) {
@@ -723,7 +723,7 @@
     ".kma-run .kgq{font-size:16.5px;margin:8px 0}.kma-run .kgq img{margin:8px auto}.kma-run .kgp{white-space:normal;font-size:15.5px}.kma-run .kgp .gmx-poem{white-space:pre-wrap}.kma-run .gmx-qbl{--gmx-bg:var(--k-bg)}"
   ].join("\n");
   document.head.appendChild(css);
-  if (!document.getElementById("kma-font")) { var kf = document.createElement("link"); kf.id = "kma-font"; kf.rel = "stylesheet"; kf.href = "/suneung-korean/fonts/kma/kma.css?v=147"; document.head.appendChild(kf); }
+  if (!document.getElementById("kma-font")) { var kf = document.createElement("link"); kf.id = "kma-font"; kf.rel = "stylesheet"; kf.href = "/suneung-korean/fonts/kma/kma.css?v=150"; document.head.appendChild(kf); }
 
   var pill = document.createElement("button"); pill.type = "button"; pill.className = "kma kma-pill";
   var dim = document.createElement("div"); dim.className = "kma kma-dim"; dim.hidden = true;
@@ -974,7 +974,7 @@
   var printP = null;
   function printRun() {
     var a = CUR; if (!a) return;
-    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=148c"));
+    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=150"));
     printP.then(function () { window.KMAPrint.open(a, {}); }).catch(function () { printP = null; var m = document.getElementById("kmaRM"); if (m) m.textContent = "인쇄 화면을 불러오지 못했어요."; });
   }
   function closeRun(quiet) { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; document.body.classList.remove("kma-running"); CUR = null; LIVEOPEN = ""; liveTell(); if (quiet !== true) openPanel(); }

@@ -88,7 +88,7 @@
     ".gmx u.ul,.gmx-q u.ul{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.22em;text-decoration-skip-ink:none}" +
     ".gmx .bx,.gmx-q .bx{border:1px solid currentColor;padding:0 .15em;margin:0 .05em;-webkit-box-decoration-break:clone;box-decoration-break:clone}";
   function css() {
-    if (!document.getElementById("kma-font")) { var l = document.createElement("link"); l.id = "kma-font"; l.rel = "stylesheet"; l.href = "/suneung-korean/fonts/kma/kma.css?v=147"; document.head.appendChild(l); }
+    if (!document.getElementById("kma-font")) { var l = document.createElement("link"); l.id = "kma-font"; l.rel = "stylesheet"; l.href = "/suneung-korean/fonts/kma/kma.css?v=150"; document.head.appendChild(l); }
     if (!document.getElementById("gmx-css")) { var s = document.createElement("style"); s.id = "gmx-css"; s.textContent = CSS; document.head.appendChild(s); }
   }
   css();
