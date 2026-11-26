@@ -494,7 +494,7 @@
     }
     if (gms.length && !A._gmt && !A._gmOff) {
       A._gmt = {};
-      Promise.all(gms.map(function (e) { return fetch(GMT + e + ".json?v=147").then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) { A._gmt[e] = d; }, function () {}); })).then(function () { open(A, opt); });
+      Promise.all(gms.map(function (e) { return fetch(GMT + e + ".json?v=151").then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) { A._gmt[e] = d; }, function () {}); })).then(function () { open(A, opt); });
       return;
     }
     opt = opt || {}; close();

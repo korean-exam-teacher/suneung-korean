@@ -974,7 +974,7 @@
   var printP = null;
   function printRun() {
     var a = CUR; if (!a) return;
-    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=150"));
+    printP = printP || (window.KMAPrint ? Promise.resolve() : loadJs("/suneung-korean/js/asgprint.js?v=151"));
     printP.then(function () { window.KMAPrint.open(a, {}); }).catch(function () { printP = null; var m = document.getElementById("kmaRM"); if (m) m.textContent = "인쇄 화면을 불러오지 못했어요."; });
   }
   function closeRun(quiet) { stopTick(); run.hidden = true; document.documentElement.style.overflow = ""; document.body.classList.remove("kma-running"); CUR = null; LIVEOPEN = ""; liveTell(); if (quiet !== true) openPanel(); }
@@ -1113,7 +1113,7 @@
   }
   /* v145: 공무원 문항 글자 자료 — gmtext.js(화면·인쇄 같은 글) */
   var GMTP = null;
-  function gmText() { if (window.GMText) return Promise.resolve(window.GMText); return GMTP || (GMTP = loadJs("/suneung-korean/js/gmtext.js?v=147").then(function () { return window.GMText || null; }, function () { GMTP = null; return null; })); }
+  function gmText() { if (window.GMText) return Promise.resolve(window.GMText); return GMTP || (GMTP = loadJs("/suneung-korean/js/gmtext.js?v=151").then(function () { return window.GMText || null; }, function () { GMTP = null; return null; })); }
   function gmQ(it) { if (!window.GMText) return null; var t = txOf(it), T = t ? GMText.get(t.e, t.kind) : it.gm ? GMText.get(it.gm.e) : null, q = T && GMText.q(T, t ? t.n : it.gm.n); return q && q.ask !== undefined ? q : null; }
   /* v147: PSAT 문항 열쇠 adv:psat:PS2025A-07 → {회차, 번호, 묶음} */
   /* 화면(과제 풀기)에서 글자로 보이는 것은 PSAT만 — LEET·임용 화면은 원본 그림(선생님 방침 2026-11-25). 인쇄(asgprint)는 LEET 2024~2026도 글자 */

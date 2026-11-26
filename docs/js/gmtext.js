@@ -4,7 +4,7 @@
    GMText.q(자료, 번호) → {ask, fig, body, ch[]}|null (그림으로만 있는 문항은 {img}) · GMText.ind(html) 문단 들여쓰기 */
 (function () {
   if (window.GMText) return;
-  var B = "/advanced-korean/gm/t/", V = "147", C = {}, P = {}, BASE = { gm: B, psat: "/advanced-korean/tx/psat/", leet: "/advanced-korean/tx/leet/" };
+  var B = "/advanced-korean/gm/t/", V = "151", C = {}, P = {}, BASE = { gm: B, psat: "/advanced-korean/tx/psat/", leet: "/advanced-korean/tx/leet/" };
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   /* 표시 글자(U+FDD0~7: 밑줄·글자 상자·굵게·고딕) → 태그. account.js mkh 와 같은 규칙(그 파일이 늦게 읽혀도 되도록 여기에 따로 둔다) */
   function em(s) {
