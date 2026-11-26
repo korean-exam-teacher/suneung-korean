@@ -273,7 +273,7 @@ function basicItem(key){ BSC=BSC||script('/middle-korean/data/basic.js?v=97').th
 function evItem(k){ var m=/^adv:gm:(.+)-(\d+)$/.exec(k);
   if(m) return script('/advanced-korean/gm/index.js?v=102').then(function(){ var G=window.GM_DATA, q=G.items[m[1]+'-'+m[2]]||{}, e=G.exams.filter(function(x){ return x.id===m[1]; })[0]||{};
     return {it:{k:k,title:(e.title||m[1])+' '+(+m[2])+'번',gm:{e:m[1],n:+m[2]},nc:e.nc||4},ans:+q.ans||0}; });
-  if(/^adv:(psat|leet|im):/.test(k)) return fromSrc('adv','/advanced-korean/asg_adv.js?v=151',k);
+  if(/^adv:(psat|leet|im):/.test(k)) return fromSrc('adv','/advanced-korean/asg_adv.js?v=154',k);
   if(/^non:/.test(k)) return fromSrc('non','/nonsul-korean/asg_non.js?v=103',k);
   var key=k.replace(/^(sn|hak):/,'');
   if(/^basic:/.test(key)) return basicItem(key);
@@ -460,9 +460,9 @@ function showItem(it,el){
 var SRCS=[
   {k:'gm',  n:'공무원 국어', f:'/advanced-korean/gm/index.js?v=102'},
   {k:'sn',  n:'수능·모의평가', f:'/suneung-korean/asg_sn.js?v=142'},
-  {k:'psat',n:'PSAT 언어논리', f:'/advanced-korean/asg_adv.js?v=151'},
-  {k:'leet',n:'LEET', f:'/advanced-korean/asg_adv.js?v=151'},
-  {k:'im',  n:'중등임용', f:'/advanced-korean/asg_adv.js?v=151'},
+  {k:'psat',n:'PSAT 언어논리', f:'/advanced-korean/asg_adv.js?v=154'},
+  {k:'leet',n:'LEET', f:'/advanced-korean/asg_adv.js?v=154'},
+  {k:'im',  n:'중등임용', f:'/advanced-korean/asg_adv.js?v=154'},
   {k:'non', n:'대학 논술', f:'/nonsul-korean/asg_non.js?v=103'}];
 var MK={src:'gm',q:'',a:{},t:'',from:null,g:'',y:'',e:'',page:1,open:null,bk:[],it:{},step:1,hide:true,n:10,even:false,am:'',kind:'',min:0,open2:null,cls:''}, LOADED={}, GMQ={}, NRM={}, USED={};
 function script(src){ if(LOADED[src]) return LOADED[src]; LOADED[src]=new Promise(function(res,rej){ var a=document.createElement('script'); a.src=src; a.onload=res; a.onerror=function(){ delete LOADED[src]; rej(); }; document.head.appendChild(a); }); return LOADED[src]; }
