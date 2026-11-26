@@ -4,7 +4,7 @@
    GMText.q(자료, 번호) → {ask, fig, body, ch[]}|null (그림으로만 있는 문항은 {img}) · GMText.ind(html) 문단 들여쓰기 */
 (function () {
   if (window.GMText) return;
-  var B = "/advanced-korean/gm/t/", V = "151", C = {}, P = {}, BASE = { gm: B, psat: "/advanced-korean/tx/psat/", leet: "/advanced-korean/tx/leet/" };
+  var B = "/advanced-korean/gm/t/", V = "152", C = {}, P = {}, BASE = { gm: B, psat: "/advanced-korean/tx/psat/", leet: "/advanced-korean/tx/leet/" };
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   /* 표시 글자(U+FDD0~7: 밑줄·글자 상자·굵게·고딕) → 태그. account.js mkh 와 같은 규칙(그 파일이 늦게 읽혀도 되도록 여기에 따로 둔다) */
   function em(s) {
@@ -61,8 +61,9 @@
       if (m) { lab = m[1].replace(/\s+/g, " ").trim(); var k = 0, j = 0; while (j < m[0].length && k < raw.length) { if (!/[\uFDD0-\uFDD7]/.test(raw[k])) j++; k++; } body = raw.slice(k); }
       var l2 = lab.replace(/\s/g, "");
       /* v147: 이름표 없는 상자(PSAT 지문 상자 등)는 문단마다 들여 쓴다(목록·대화 줄은 그대로) */
-      var bt = lab ? em(body) : String(body).trim().split(/\n+/).map(function (x) { var p = x.replace(/[\uFDD0-\uFDD7]/g, "").trim(); return '<div class="gmx-bp' + (NOIND.test(p) || p.length < 20 ? " ni" : "") + '">' + em(x.trim()) + "</div>"; }).join("");
-      return '<div class="gmx-qb' + (lab ? " lab" : " par") + '">' + (lab ? '<div class="gmx-qbl">&lt;' + esc(l2.length <= 2 ? Array.from(l2).join(" ") : lab) + "&gt;</div>" : "") + '<div class="gmx-qbt">' + bt + "</div></div>";
+      var poemB = !lab && isPoem(String(body).replace(/[\uFDD0-\uFDD7]/g, ""));   /* v152: 이름표 없는 상자의 시는 줄 그대로 */
+      var bt = (lab || poemB) ? em(poemB ? String(body).replace(/^\n+|\s+$/g, "") : body) : String(body).trim().split(/\n+/).map(function (x) { var p = x.replace(/[\uFDD0-\uFDD7]/g, "").trim(); return '<div class="gmx-bp' + (NOIND.test(p) || p.length < 20 ? " ni" : "") + '">' + em(x.trim()) + "</div>"; }).join("");
+      return '<div class="gmx-qb' + (lab ? " lab" : poemB ? "" : " par") + '">' + (lab ? '<div class="gmx-qbl">&lt;' + esc(l2.length <= 2 ? Array.from(l2).join(" ") : lab) + "&gt;</div>" : "") + '<div class="gmx-qbt">' + bt + "</div></div>";
     }).join("");
     /* v147: 상자 밖 글(주석 ※ 등) — 테두리 없이 */
     if (tq.free) body += '<div class="gmx-free">' + String(tq.free).trim().split(/\n+/).map(function (x) { return "<div>" + em(x.trim()) + "</div>"; }).join("") + "</div>";
